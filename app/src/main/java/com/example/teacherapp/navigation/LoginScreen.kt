@@ -43,157 +43,89 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
+val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
 @Composable
-fun LoginScreen(
-    navController: NavController = rememberNavController(),
-    modifier: Modifier = Modifier
-) {
+fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf("") }
-    val context = LocalContext.current
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+        Text(text = "Welcome Back", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(32.dp))
 
-            Text(
-                text = "Blah blah",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email Address") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
-            TextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                colors = TextFieldDefaults.colors(
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    errorContainerColor = Color.Transparent,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                modifier = Modifier
-                    .width(300.dp)
-                    .height(60.dp)
-                    .background(Color.White, shape = RoundedCornerShape(50))
-                    .border(1.dp, Color.Black, shape = RoundedCornerShape(50))
-                    .padding(horizontal = 16.dp),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.Black,
-                    fontSize = 16.sp
-                )
-            )
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
 
-            TextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation(),
-                colors = TextFieldDefaults.colors(
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    errorContainerColor = Color.Transparent,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                modifier = Modifier
-                    .width(300.dp)
-                    .height(60.dp)
-                    .background(Color.White, shape = RoundedCornerShape(50))
-                    .border(1.dp, Color.Black, shape = RoundedCornerShape(50))
-                    .padding(horizontal = 16.dp),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.Black,
-                    fontSize = 16.sp
-                )
-            )
+        Spacer(modifier = Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = {
+                if (email.isBlank() || password.isBlank()) {
+                    Toast.makeText(context, "Please enter your credentials", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
 
-            Button(
-                onClick = {
-                    auth.signInWithEmailAndPassword(email.trim(), password.trim())
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                val userId = auth.currentUser?.uid
+                auth.signInWithEmailAndPassword(email.trim(), password.trim())
+                    .addOnSuccessListener { result ->
+                        val userId = result.user?.uid
+                        if (userId != null) {
+                            // Check if the user has completed their profile setup
+                            db.collection("users").document(userId).get()
+                                .addOnSuccessListener { document ->
+                                    val isSetupComplete = document.getBoolean("isSetupComplete") ?: false
 
-                                if (userId != null) {
-                                    db.collection("users").document(userId).get()
-                                        .addOnSuccessListener { document ->
-                                            if (document.exists()) {
-                                                Toast.makeText(context, "Welcome back!", Toast.LENGTH_SHORT).show()
-                                                navController.navigate("main_screen") {
-                                                    popUpTo("login_screen") { inclusive = true }
-                                                }
-                                            } else {
-                                                errorMessage = "Profile data not found."
-                                            }
+                                    if (isSetupComplete) {
+                                        navController.navigate("main_screen") {
+                                            popUpTo("login_screen") { inclusive = true }
                                         }
-                                        .addOnFailureListener {
-                                            errorMessage = "Database error: ${it.localizedMessage}"
-                                        }
+                                    } else {
+                                        navController.navigate("setup_profile_screen")
+                                    }
                                 }
-                            } else {
-                                errorMessage = task.exception?.localizedMessage ?: "Login failed"
-                            }
                         }
-                },
-                enabled = email.isNotEmpty() && password.isNotEmpty(),
-                modifier = Modifier
-                    .width(300.dp),
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF505D8A), // Normal button color (blue)
-                    disabledContainerColor = Color(0xFF757575) // Darker grey when disabled
-                )
-
-            ) {
-                Text(
-                    "Login", fontSize = 18.sp,
-                    color = Color.White
-                )
-            }
-
-            if (errorMessage.isNotEmpty()) {
-                Text(
-                    text = errorMessage,
-                    color = Color.Red,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Don't have an account? Sign Up",
-                modifier = Modifier
-                    .clickable { navController.navigate("register_screen") }
-            )
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(context, "Login Error: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+            },
+            modifier = Modifier.fillMaxWidth().height(50.dp)
+        ) {
+            Text("Sign In")
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Don't have an account? Sign up",
+            modifier = Modifier
+                .clickable { navController.navigate("register_screen") }
+        )
     }
 }

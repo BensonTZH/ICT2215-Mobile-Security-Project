@@ -78,6 +78,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
             label = { Text("Confirm Password") },
+            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
 
