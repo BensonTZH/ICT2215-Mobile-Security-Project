@@ -1,12 +1,10 @@
 package com.example.teacherapp.navigation
 import android.widget.Toast
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,39 +13,36 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.window.PopupProperties
+import com.example.teacherapp.models.AppData
 
 
 @Composable
@@ -57,6 +52,7 @@ fun SetupProfileScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
+
 
     Column(
         modifier = Modifier
@@ -102,38 +98,117 @@ fun SetupProfileScreen(navController: NavController) {
 @Composable
 fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
     val context = LocalContext.current
-    var subject by remember { mutableStateOf("") }
-    var name by remember{mutableStateOf("")}
+
+    // 1. Data States
+    var name by remember { mutableStateOf("") }
+    var subjectInput by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+
+    val daysOfWeek = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    var selectedDays by remember { mutableStateOf(setOf<String>()) }
+
+    val filteredSubjects = AppData.allSubjects.filter {
+        it.contains(subjectInput, ignoreCase = true)
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Name") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
-        OutlinedTextField(
-            value = subject,
-            onValueChange = { subject = it },
-            label = { Text("Subject Area (e.g. Math)") },
-            modifier = Modifier.fillMaxWidth()
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = subjectInput,
+                onValueChange = {
+                    subjectInput = it
+                    expanded = it.isNotEmpty() // Show dropdown when user types
+                },
+                label = { Text("Subject Area") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        if (filteredSubjects.isNotEmpty()) {
+                            subjectInput = filteredSubjects.first()
+                            expanded = false
+                        }
+                    }
+                )
+            )
+
+            DropdownMenu(
+                expanded = expanded && filteredSubjects.isNotEmpty(),
+                onDismissRequest = { expanded = false },
+                properties = PopupProperties(focusable = false),
+                modifier = Modifier.fillMaxWidth(0.9f)
+            ) {
+                filteredSubjects.forEach { selection ->
+                    DropdownMenuItem(
+                        text = { Text(selection) },
+                        onClick = {
+                            subjectInput = selection
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = "Select Availability",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 8.dp)
         )
+
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            daysOfWeek.forEach { day ->
+                val isSelected = selectedDays.contains(day)
+                FilterChip(
+                    selected = isSelected,
+                    onClick = {
+                        selectedDays = if (isSelected) {
+                            selectedDays - day // Remove if already there
+                        } else {
+                            selectedDays + day // Add if not there
+                        }
+                    },
+                    label = { Text(day) },
+                    leadingIcon = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    } else null
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
-                // 1. Check if the form is NOT empty
-                if (subject.trim().isNotBlank()) {
-                    // 2. Pass the data back to SetupProfileScreen
+                if (subjectInput.trim().isNotBlank() && name.isNotBlank()) {
                     onComplete(mapOf(
                         "name" to name,
-                        "subject" to subject.trim(),
-                        "role" to "teacher"
+                        "subject" to subjectInput.trim(),
+                        "role" to "teacher",
+                        "availability" to selectedDays.toList().sortedBy { daysOfWeek.indexOf(it) }
                     ))
                 } else {
-                    // 3. Show a warning if it is empty
-                    Toast.makeText(context, "Please enter a subject", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth()

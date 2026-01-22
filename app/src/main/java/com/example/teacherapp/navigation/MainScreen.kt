@@ -14,39 +14,72 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.QuestionAnswer
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.GroupAdd
-import androidx.compose.material.icons.filled.UploadFile
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Class
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LibraryBooks
-import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(navController: NavController) {
     // These should be fetched from your Firestore 'users' document
-    var userRole by remember { mutableStateOf("teacher") }
-    val userName by remember { mutableStateOf("User") }
+    var userRole by remember { mutableStateOf("") }
+    var userName by remember { mutableStateOf("User") }
+    var isLoading by remember { mutableStateOf(true) }
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val userId = auth.currentUser?.uid
+
+
+    LaunchedEffect(userId) {
+        if (userId != null) {
+            db.collection("users").document(userId).get()
+                .addOnSuccessListener { document ->
+                    if (document != null) {
+                        userRole = document.getString("role") ?: "student"
+                        userName = document.getString("name") ?: "User"
+                    }
+                    isLoading = false
+                }
+                .addOnFailureListener {
+                    isLoading = false // Handle error here
+                }
+        }
+    }
 
     Scaffold(
-        topBar = { /* Your TopBar with Mail, Profile, Cog */ }
-    ) { innerPadding ->
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                },
+                // Actions are the icons on the right side
+                actions = {
+                    IconButton(onClick = { /* TODO: Navigate to Mail */ }) {
+                        Icon(imageVector = Icons.Default.Email, contentDescription = "Mail")
+                    }
+                    IconButton(onClick = { navController.navigate("profile_screen") }) {
+                        Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
+                    }
+                    IconButton(onClick = { navController.navigate("settings_screen") }) {
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                )
+            )
+        }
+    ){ innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -86,6 +119,7 @@ fun TeacherDashboard(navController: NavController) {
             SquareActionButton("Messages", Icons.Default.QuestionAnswer, Modifier.weight(1f)) {
                 navController.navigate("inbox")
             }
+
             // Empty spacer to keep the button on the left as a square
             Spacer(modifier = Modifier.weight(1f))
         }
@@ -98,10 +132,10 @@ fun StudentDashboard(navController: NavController) {
         // Row 1: Max 2 buttons
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SquareActionButton("Find a\nTeacher", Icons.Default.Search, Modifier.weight(1f)) {
-                navController.navigate("teacher_discovery")
+                navController.navigate("discovery_screen")
             }
             SquareActionButton("My Study\nGroups", Icons.Default.Class, Modifier.weight(1f)) {
-                navController.navigate("student_groups")
+//                navController.navigate("student_groups")
             }
         }
         // Row 2: 1 button

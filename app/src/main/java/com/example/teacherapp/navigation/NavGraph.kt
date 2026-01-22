@@ -23,6 +23,10 @@ object Routes {
     const val PROFILE = "profile_screen"
 
     const val SETUP = "setup_profile_screen"
+
+    const val DISCOVERY = "discovery_screen"
+
+    const val SETTINGS = "settings_screen"
 }
 
 
@@ -57,6 +61,12 @@ fun NavGraph(navController: NavHostController) {
 
         composable(Routes.SETUP){
             SetupProfileScreen(navController = navController)
+        }
+        composable(Routes.DISCOVERY){
+            DiscoveryScreen(navController = navController)
+        }
+        composable(Routes.SETTINGS){
+            SettingsScreen(navController = navController)
         }
     }
 }
