@@ -27,6 +27,7 @@ object Routes {
     const val DISCOVERY = "discovery_screen"
 
     const val SETTINGS = "settings_screen"
+    const val UPLOAD = "upload_resources"
 }
 
 
@@ -65,8 +66,12 @@ fun NavGraph(navController: NavHostController) {
         composable(Routes.DISCOVERY){
             DiscoveryScreen(navController = navController)
         }
-        composable(Routes.SETTINGS){
+        composable(Routes.SETTINGS) {
             SettingsScreen(navController = navController)
+        }
+
+        composable(Routes.UPLOAD){
+            UploadScreen(navController = navController)
         }
     }
 }
