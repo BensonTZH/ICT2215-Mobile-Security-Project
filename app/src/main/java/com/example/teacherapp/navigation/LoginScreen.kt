@@ -112,7 +112,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                         }
                     }
                     .addOnFailureListener { e ->
-                        Toast.makeText(context, "Login Error: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Incorrect Email/Password", Toast.LENGTH_SHORT).show()
                     }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp)
