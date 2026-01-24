@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -32,42 +33,45 @@ import com.google.firebase.firestore.Query
 @Composable
 fun DiscoveryScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedSubject by remember { mutableStateOf("All") }
-    val subjects = remember { listOf("All") + AppData.allSubjects }
-    var selectedDay by remember { mutableStateOf("Any") }
 
+    // 1. STATE VARIABLES
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedDay by remember { mutableStateOf("Any") }
+    // Now a Set to allow multiple selections
+    var selectedSubjects by remember { mutableStateOf(setOf<String>()) }
+
+    // Master data from Firebase
     var teacherList by remember { mutableStateOf(listOf<Map<String, Any>>()) }
+
+    // Constants from your model/lists
+    val subjectOptions = remember { AppData.allSubjects }
     val days = listOf("Any", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
-    LaunchedEffect(selectedSubject, selectedDay) {
-        var query: Query = db.collection("users").whereEqualTo("role", "teacher")
-
-        // Filter by Subject
-        if (selectedSubject != "All") {
-            query = query.whereEqualTo("subject", selectedSubject)
-        }
-
-        // Filter by Day (Using whereArrayContains)
-        if (selectedDay != "Any") {
-            query = query.whereArrayContains("availability", selectedDay)
-        }
-
-        query.addSnapshotListener { snapshot, error ->
-            if (snapshot != null) {
-                teacherList = snapshot.documents.mapNotNull { it.data }
+    LaunchedEffect(Unit) {
+        db.collection("users")
+            .whereEqualTo("role", "teacher")
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null) {
+                    teacherList = snapshot.documents.mapNotNull { it.data }
+                }
             }
-        }
     }
 
-    val filteredTeachers = remember(searchQuery, teacherList) {
-        if (searchQuery.isEmpty()) {
-            teacherList
-        } else {
-            teacherList.filter { teacher ->
-                val name = teacher["name"] as? String ?: ""
-                name.contains(searchQuery, ignoreCase = true)
-            }
+    val filteredTeachers = remember(searchQuery, selectedSubjects, selectedDay, teacherList) {
+        teacherList.filter { teacher ->
+            val name = teacher["name"] as? String ?: ""
+            val teacherSubjects = (teacher["subjects"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+            val availability = (teacher["availability"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+
+            val matchesSearch = name.contains(searchQuery, ignoreCase = true)
+
+            val matchesSubject = if (selectedSubjects.isEmpty()) true
+            else teacherSubjects.any { it in selectedSubjects }
+
+            val matchesDay = if (selectedDay == "Any") true
+            else availability.contains(selectedDay)
+
+            matchesSearch && matchesSubject && matchesDay
         }
     }
 
@@ -84,78 +88,82 @@ fun DiscoveryScreen(navController: NavController) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = Modifier.fillMaxSize().padding(padding)
         ) {
-            // 1. SEARCH BAR
+            // SEARCH BAR
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search by name or keyword...") },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search by name...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { /* Execute Search */ })
+                singleLine = true
             )
 
-            // 1. SUBJECT CHIPS
-            Text("Subject", modifier = Modifier.padding(start = 16.dp), style = MaterialTheme.typography.labelLarge)
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp)) {
-                items(subjects) { subject ->
+            // SUBJECT MULTI-SELECT CHIPS
+            Text("Subjects", modifier = Modifier.padding(start = 16.dp), style = MaterialTheme.typography.labelLarge)
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(subjectOptions) { subject ->
+                    val isSelected = selectedSubjects.contains(subject)
                     FilterChip(
-                        selected = selectedSubject == subject,
-                        onClick = { selectedSubject = subject },
+                        selected = isSelected,
+                        onClick = {
+                            selectedSubjects = if (isSelected) selectedSubjects - subject else selectedSubjects + subject
+                        },
                         label = { Text(subject) },
-                        modifier = Modifier.padding(end = 8.dp)
+                        leadingIcon = if (isSelected) {
+                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                        } else null
                     )
                 }
             }
 
-            // 2. DAY CHIPS
+            // DAY CHIPS
             Text("Available on", modifier = Modifier.padding(start = 16.dp, top = 8.dp), style = MaterialTheme.typography.labelLarge)
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp)) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(days) { day ->
                     FilterChip(
                         selected = selectedDay == day,
                         onClick = { selectedDay = day },
-                        label = { Text(day) },
-                        modifier = Modifier.padding(end = 8.dp)
+                        label = { Text(day) }
                     )
                 }
             }
 
             HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredTeachers) { teacher ->
-                    val name = teacher["name"] as? String ?: "Anonymous"
-                    val subject = teacher["subject"] as? String ?: "General"
+            // RESULTS LIST
+            if (filteredTeachers.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No teachers found matching your filters.", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filteredTeachers) { teacher ->
+                        val tName = teacher["name"] as? String ?: "Anonymous"
+                        val tSubjects = (teacher["subjects"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                        val tAvailability = (teacher["availability"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
 
-                    val availability = (teacher["availability"] as? List<*>)
-                        ?.filterIsInstance<String>()
-                        ?: emptyList()
-
-                    TeacherCard(
-                        name = name,
-                        subject = subject,
-                        availability = availability
-                    )
+                        TeacherCard(name = tName, subjects = tSubjects, availability = tAvailability)
+                    }
                 }
             }
         }
     }
 }
 @Composable
-fun TeacherCard(name: String, subject: String, availability: List<String>) {
+fun TeacherCard(name: String, subjects: List<String>, availability: List<String>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -163,7 +171,6 @@ fun TeacherCard(name: String, subject: String, availability: List<String>) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Profile Icon
             Surface(modifier = Modifier.size(60.dp), shape = RoundedCornerShape(12.dp), color = Color(0xFFF3F3F3)) {
                 Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
             }
@@ -172,14 +179,17 @@ fun TeacherCard(name: String, subject: String, availability: List<String>) {
 
             Column {
                 Text(text = name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(text = subject, color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
 
-                // Show Days
                 Text(
-                    text = "Days: ${availability.joinToString(", ")}",
+                    text = subjects.joinToString(", "),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 14.sp
+                )
+
+                Text(
+                    text = "Available: ${availability.joinToString(", ")}",
                     color = Color.Gray,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp
+                    fontSize = 12.sp
                 )
             }
         }

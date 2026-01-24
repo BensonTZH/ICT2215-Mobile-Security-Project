@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,13 +37,18 @@ import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.InputChip
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.window.PopupProperties
 import com.example.teacherapp.models.AppData
+import com.example.teacherapp.models.AppData.daysOfWeek
 
 
 @Composable
@@ -95,20 +101,19 @@ fun SetupProfileScreen(navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
     val context = LocalContext.current
-
-    // 1. Data States
     var name by remember { mutableStateOf("") }
     var subjectInput by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
 
-    val daysOfWeek = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    var selectedSubjects by remember { mutableStateOf(setOf<String>()) }
     var selectedDays by remember { mutableStateOf(setOf<String>()) }
 
     val filteredSubjects = AppData.allSubjects.filter {
-        it.contains(subjectInput, ignoreCase = true)
+        it.contains(subjectInput, ignoreCase = true) && !selectedSubjects.contains(it)
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -116,45 +121,50 @@ fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
             value = name,
             onValueChange = { name = it },
             label = { Text("Name") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            modifier = Modifier.fillMaxWidth()
         )
 
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = subjectInput,
-                onValueChange = {
-                    subjectInput = it
-                    expanded = it.isNotEmpty() // Show dropdown when user types
-                },
-                label = { Text("Subject Area") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        if (filteredSubjects.isNotEmpty()) {
-                            subjectInput = filteredSubjects.first()
-                            expanded = false
-                        }
-                    }
-                )
-            )
+        // --- SUBJECT SELECTION ---
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Subjects I Teach", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
 
-            DropdownMenu(
-                expanded = expanded && filteredSubjects.isNotEmpty(),
-                onDismissRequest = { expanded = false },
-                properties = PopupProperties(focusable = false),
-                modifier = Modifier.fillMaxWidth(0.9f)
-            ) {
-                filteredSubjects.forEach { selection ->
-                    DropdownMenuItem(
-                        text = { Text(selection) },
-                        onClick = {
-                            subjectInput = selection
-                            expanded = false
-                        }
+            // Display selected subjects as chips
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                selectedSubjects.forEach { subject ->
+                    InputChip(
+                        selected = true,
+                        onClick = { selectedSubjects = selectedSubjects - subject },
+                        label = { Text(subject) },
+                        trailingIcon = { Icon(Icons.Default.Close, "Remove", modifier = Modifier.size(16.dp)) }
                     )
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = subjectInput,
+                    onValueChange = { subjectInput = it; expanded = it.isNotEmpty() },
+                    label = { Text("Add a Subject") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { expanded = false })
+                )
+
+                DropdownMenu(
+                    expanded = expanded && filteredSubjects.isNotEmpty(),
+                    onDismissRequest = { expanded = false },
+                    properties = PopupProperties(focusable = false)
+                ) {
+                    filteredSubjects.forEach { selection ->
+                        DropdownMenuItem(
+                            text = { Text(selection) },
+                            onClick = {
+                                selectedSubjects = selectedSubjects + selection
+                                subjectInput = "" // Clear input after selection
+                                expanded = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -200,15 +210,15 @@ fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
 
         Button(
             onClick = {
-                if (subjectInput.trim().isNotBlank() && name.isNotBlank()) {
+                if (name.isNotBlank() && selectedSubjects.isNotEmpty()) {
                     onComplete(mapOf(
                         "name" to name,
-                        "subject" to subjectInput.trim(),
+                        "subjects" to selectedSubjects.toList(),
                         "role" to "teacher",
-                        "availability" to selectedDays.toList().sortedBy { daysOfWeek.indexOf(it) }
+                        "availability" to selectedDays.toList().sortedBy { AppData.daysOfWeek.indexOf(it) }
                     ))
                 } else {
-                    Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Please add a name and at least one subject", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -218,12 +228,21 @@ fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun StudentForm(onComplete: (Map<String, Any>) -> Unit) {
     val context = LocalContext.current
+    var name by remember { mutableStateOf("") }
     var gradeLevel by remember { mutableStateOf("") }
-    var interest by remember { mutableStateOf("") }
-    var name by remember{mutableStateOf("")}
+
+    // --- MULTI-SUBJECT STATE ---
+    var interestInput by remember { mutableStateOf("") }
+    var selectedInterests by remember { mutableStateOf(setOf<String>()) }
+    var expanded by remember { mutableStateOf(false) }
+
+    val filteredInterests = AppData.allSubjects.filter {
+        it.contains(interestInput, ignoreCase = true) && !selectedInterests.contains(it)
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
@@ -236,30 +255,68 @@ fun StudentForm(onComplete: (Map<String, Any>) -> Unit) {
         OutlinedTextField(
             value = gradeLevel,
             onValueChange = { gradeLevel = it },
-            label = { Text("Grade/Year Level (e.g. Year 10)") },
+            label = { Text("Grade/Year Level") },
             modifier = Modifier.fillMaxWidth()
         )
 
-        OutlinedTextField(
-            value = interest,
-            onValueChange = { interest = it },
-            label = { Text("What do you want to learn? (e.g. Algebra)") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        // --- INTEREST CHIPS SECTION ---
+        Text("I want to learn:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            selectedInterests.forEach { interest ->
+                InputChip(
+                    selected = true,
+                    onClick = { selectedInterests = selectedInterests - interest },
+                    label = { Text(interest) },
+                    trailingIcon = { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                )
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = interestInput,
+                onValueChange = {
+                    interestInput = it
+                    expanded = it.isNotEmpty()
+                },
+                label = { Text("Search subjects...") },
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = { Icon(Icons.Default.Search, null) }
+            )
+
+            DropdownMenu(
+                expanded = expanded && filteredInterests.isNotEmpty(),
+                onDismissRequest = { expanded = false },
+                properties = PopupProperties(focusable = false)
+            ) {
+                filteredInterests.forEach { subject ->
+                    DropdownMenuItem(
+                        text = { Text(subject) },
+                        onClick = {
+                            selectedInterests = selectedInterests + subject
+                            interestInput = ""
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
 
         Button(
             onClick = {
-                // 1. Check if BOTH fields are not empty
-                if (gradeLevel.trim().isNotBlank() && interest.trim().isNotBlank()) {
-                    // 2. Pass the map back to the parent
+                if (name.isNotBlank() && selectedInterests.isNotEmpty()) {
                     onComplete(mapOf(
                         "name" to name,
                         "grade" to gradeLevel.trim(),
-                        "interest" to interest.trim(),
+                        "interests" to selectedInterests.toList(), // Saved as a List
                         "role" to "student"
                     ))
                 } else {
-                    Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Please enter your name and at least one interest", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth()
