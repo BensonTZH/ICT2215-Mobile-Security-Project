@@ -50,6 +50,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.teacherapp.R
+import com.example.teacherapp.upload.CloudinaryUploader
+import com.example.teacherapp.upload.ResourcesRepo
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,10 +64,55 @@ fun UploadScreen(navController: NavHostController) {
     var showDialogUploading by remember { mutableStateOf(false) }
 
     // Function to handle form submission, uploading to database
-    val handleSubmit = { fileName: String, description: String ->
-        // TODO: Link sumbission to database
-        Toast.makeText(navController.context, "File: $fileName\nDescription: $description", Toast.LENGTH_SHORT).show()
+//    val handleSubmit = { fileName: String, description: String ->
+//        // TODO: Link submission to database
+//        Toast.makeText(navController.context, "File: $fileName\nDescription: $description", Toast.LENGTH_SHORT).show()
+//    }
+
+    val handleSubmit = let@{ inputFileName: String, description: String ->
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+        if (fileUri == null) {
+            Toast.makeText(navController.context, "Please select a file first.", Toast.LENGTH_SHORT).show()
+            return@let
+        }
+
+        if (uid == null) {
+            Toast.makeText(navController.context, "You must be logged in.", Toast.LENGTH_SHORT).show()
+            return@let
+        }
+
+        val uploadPreset = navController.context
+            .getString(R.string.cloudinary_upload_preset)
+
+        CloudinaryUploader.uploadFile(
+            uri = fileUri!!,
+            uploadPreset = uploadPreset,
+            onSuccess = { secureUrl, publicId, originalFilename ->
+                val finalName =
+                    inputFileName.ifBlank { (originalFilename ?: "Untitled") }
+
+                ResourcesRepo.saveResourceMetadata(
+                    fileName = finalName,
+                    description = description,
+                    cloudinaryUrl = secureUrl,
+                    cloudinaryPublicId = publicId,
+                    uploaderUid = uid,
+                    onSuccess = {
+                        Toast.makeText(navController.context, "Upload successful!", Toast.LENGTH_SHORT).show()
+                        showDialogUploading = false // close dialog after success
+                    },
+                    onError = { msg ->
+                        Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show()
+                    }
+                )
+            },
+            onError = { msg ->
+                Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show()
+            }
+        )
     }
+
 
     Scaffold(
         topBar = {
@@ -200,7 +249,8 @@ fun UploadDialog(
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     // Button to select file
-                    Button(onClick = { launcher.launch("application/*") }
+                    // Button(onClick = { launcher.launch("application/*") }
+                    Button(onClick = { launcher.launch("*/*") }
                     ) {
                         Text("Click to upload")
                     }
