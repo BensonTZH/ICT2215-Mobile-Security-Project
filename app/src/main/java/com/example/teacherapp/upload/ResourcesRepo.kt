@@ -3,8 +3,10 @@ package com.example.teacherapp.upload
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 
 object ResourcesRepo {
+    // Write/Save resource to firestore
     fun saveResourceMetadata(
         fileName: String,
         description: String,
