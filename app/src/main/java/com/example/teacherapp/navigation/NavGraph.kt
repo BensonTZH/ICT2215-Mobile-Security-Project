@@ -27,6 +27,11 @@ object Routes {
     const val DISCOVERY = "discovery_screen"
 
     const val SETTINGS = "settings_screen"
+
+
+    const val INBOX = "inbox_screen"
+
+    const val CHAT = "chat_screen"
 }
 
 
@@ -67,6 +72,15 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Routes.SETTINGS){
             SettingsScreen(navController = navController)
+        }
+
+        composable(Routes.INBOX) {
+            InboxScreen(navController = navController)
+        }
+
+        composable("${Routes.CHAT}/{otherUserId}") { backStackEntry ->
+            val otherUserId = backStackEntry.arguments?.getString("otherUserId") ?: return@composable
+            MessageScreen(navController = navController, otherUserId = otherUserId)
         }
     }
 }

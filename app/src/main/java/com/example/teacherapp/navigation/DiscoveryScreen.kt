@@ -5,8 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.material.icons.Icons
@@ -14,20 +12,15 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.compose.ui.window.PopupProperties
 import com.example.teacherapp.models.AppData
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +45,12 @@ fun DiscoveryScreen(navController: NavController) {
             .whereEqualTo("role", "teacher")
             .addSnapshotListener { snapshot, _ ->
                 if (snapshot != null) {
-                    teacherList = snapshot.documents.mapNotNull { it.data }
+//                    teacherList = snapshot.documents.mapNotNull { it.data }
+                    teacherList = snapshot.documents.map { doc ->
+                        val data = doc.data ?: emptyMap()
+                        data + mapOf("uid" to doc.id)
+                    }
+
                 }
             }
     }
@@ -154,8 +152,18 @@ fun DiscoveryScreen(navController: NavController) {
                         val tName = teacher["name"] as? String ?: "Anonymous"
                         val tSubjects = (teacher["subjects"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
                         val tAvailability = (teacher["availability"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                        val teacherId = teacher["uid"] as? String ?: ""
 
-                        TeacherCard(name = tName, subjects = tSubjects, availability = tAvailability)
+                        TeacherCard(
+                            name = tName,
+                            subjects = tSubjects,
+                            availability = tAvailability,
+                            onMessageClick = {
+                                if (teacherId.isNotBlank()) {
+                                    navController.navigate("${Routes.CHAT}/$teacherId")
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -163,21 +171,33 @@ fun DiscoveryScreen(navController: NavController) {
     }
 }
 @Composable
-fun TeacherCard(name: String, subjects: List<String>, availability: List<String>) {
+fun TeacherCard(
+    name: String,
+    subjects: List<String>,
+    availability: List<String>,
+    onMessageClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(modifier = Modifier.size(60.dp), shape = RoundedCornerShape(12.dp), color = Color(0xFFF3F3F3)) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(60.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFF3F3F3)
+            ) {
                 Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(text = name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
                 Text(
@@ -191,6 +211,16 @@ fun TeacherCard(name: String, subjects: List<String>, availability: List<String>
                     color = Color.Gray,
                     fontSize = 12.sp
                 )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Button(
+                onClick = onMessageClick,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Message")
             }
         }
     }

@@ -114,13 +114,14 @@ fun TeacherDashboard(navController: NavController) {
                 navController.navigate("manage_groups")
             }
         }
-        // Row 2: 1 button
+
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SquareActionButton("Messages", Icons.Default.QuestionAnswer, Modifier.weight(1f)) {
-                navController.navigate("inbox")
+//                navController.navigate("inbox")
+                  navController.navigate(Routes.INBOX)
+
             }
 
-            // Empty spacer to keep the button on the left as a square
             Spacer(modifier = Modifier.weight(1f))
         }
     }
@@ -142,6 +143,13 @@ fun StudentDashboard(navController: NavController) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SquareActionButton("Study\nResources", Icons.Default.LibraryBooks, Modifier.weight(1f)) {
                 navController.navigate("view_resources")
+            }
+            Spacer(modifier = Modifier.weight(1f))
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            SquareActionButton("Inbox", Icons.Default.QuestionAnswer, Modifier.weight(1f)) {
+                navController.navigate(Routes.INBOX)
             }
             Spacer(modifier = Modifier.weight(1f))
         }
