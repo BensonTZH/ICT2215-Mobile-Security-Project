@@ -15,7 +15,8 @@ object CloudinaryUploader {
     ) {
         MediaManager.get().upload(uri)
             .unsigned(uploadPreset)
-            .option("resource_type", "raw") // for PDF/docs/zip/etc
+//            .option("resource_type", "raw") // for PDF/docs/zip/etc
+            .option("resource_type", "auto")
             .callback(object : UploadCallback {
                 override fun onStart(requestId: String) {}
 

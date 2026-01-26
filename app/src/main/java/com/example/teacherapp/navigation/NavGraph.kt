@@ -28,6 +28,7 @@ object Routes {
 
     const val SETTINGS = "settings_screen"
     const val UPLOAD = "upload_resources"
+    const val RESOURCES = "view_resources"
 }
 
 
@@ -69,9 +70,11 @@ fun NavGraph(navController: NavHostController) {
         composable(Routes.SETTINGS) {
             SettingsScreen(navController = navController)
         }
-
         composable(Routes.UPLOAD){
             UploadScreen(navController = navController)
+        }
+        composable(Routes.RESOURCES){
+            ResourceScreen(navController = navController)
         }
     }
 }

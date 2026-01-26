@@ -52,31 +52,3 @@ class ResourcesViewModel : ViewModel() {
         super.onCleared()
     }
 }
-
-//class ResourcesViewModel : ViewModel() {
-//
-//    private val db = FirebaseFirestore.getInstance()
-//    private var listener: ListenerRegistration? = null
-//
-//    val resources = mutableStateListOf<ResourceItem>()
-//
-//    fun startListening(
-//        onError: (String) -> Unit
-//    ) {
-//        listener = db.collection("resources")
-//            .orderBy("timestamp")
-//            .addSnapshotListener { snap, e ->
-//                if (e != null) {
-//                    onError(e.message ?: "Failed to fetch")
-//                    return@addSnapshotListener
-//                }
-//                resources.clear()
-//                resources.addAll(snap?.toObjects(ResourceItem::class.java) ?: emptyList())
-//            }
-//    }
-//
-//    override fun onCleared() {
-//        listener?.remove()
-//        super.onCleared()
-//    }
-//}

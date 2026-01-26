@@ -63,6 +63,8 @@ import com.example.teacherapp.upload.ResourcesRepo
 import com.example.teacherapp.upload.ResourcesViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import android.content.Context
+import android.provider.OpenableColumns
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -167,6 +169,7 @@ fun UploadScreen(navController: NavHostController) {
                 Text("Upload Resources")
             }
 
+            // List of resources
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -239,6 +242,7 @@ fun UploadScreen(navController: NavHostController) {
 
     // Show the dialog if showDialog is true
     UploadDialog(
+        context = navController.context,
         showDialog = showDialogUploading,
         onDismiss = { showDialogUploading = false },  // Close the dialog when dismissing
         onSubmit = handleSubmit,  // Submit form data
@@ -252,6 +256,7 @@ fun UploadScreen(navController: NavHostController) {
 
 @Composable
 fun UploadDialog(
+    context: Context,
     showDialog: Boolean,
     onDismiss: () -> Unit,
     onSubmit: (String, String) -> Unit,
@@ -266,12 +271,19 @@ fun UploadDialog(
         val launcher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.GetContent(),
             onResult = { uri: Uri? ->
-                // Handle file selection
                 if (uri != null) {
-                    fileName = uri.lastPathSegment ?: "Unknown file"
-                    onFileSelect(uri, fileName)  // Update the fileUri and fileName
+                    val pickedName = getDisplayName(context, uri) // includes extension
+                    fileName = pickedName
+                    onFileSelect(uri, pickedName)
                 }
             }
+//            onResult = { uri: Uri? ->
+//                // Handle file selection
+//                if (uri != null) {
+//                    fileName = uri.lastPathSegment ?: "Unknown file"
+//                    onFileSelect(uri, fileName)  // Update the fileUri and fileName
+//                }
+//            }
         )
 
         // AlertDialog for form
@@ -318,6 +330,16 @@ fun UploadDialog(
             }
         )
     }
+}
+
+fun getDisplayName(context: Context, uri: Uri): String {
+    val cr = context.contentResolver
+    val cursor = cr.query(uri, null, null, null, null) ?: return "Unknown"
+    cursor.use {
+        val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        if (it.moveToFirst() && nameIndex >= 0) return it.getString(nameIndex)
+    }
+    return "Unknown"
 }
 
 
