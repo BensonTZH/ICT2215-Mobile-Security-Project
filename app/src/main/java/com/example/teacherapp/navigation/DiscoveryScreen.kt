@@ -1,5 +1,6 @@
 package com.example.teacherapp.navigation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -158,6 +159,12 @@ fun DiscoveryScreen(navController: NavController) {
                             name = tName,
                             subjects = tSubjects,
                             availability = tAvailability,
+                            onCardClick = {
+                                if (teacherId.isNotBlank()) {
+                                    // Navigate to the Public Profile and pass the teacher's ID
+                                    navController.navigate("${Routes.PUBLIC_PROFILE}/$teacherId")
+                                }
+                            },
                             onMessageClick = {
                                 if (teacherId.isNotBlank()) {
                                     navController.navigate("${Routes.CHAT}/$teacherId")
@@ -175,10 +182,12 @@ fun TeacherCard(
     name: String,
     subjects: List<String>,
     availability: List<String>,
+    onCardClick: () -> Unit,
     onMessageClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .clickable { onCardClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

@@ -32,6 +32,8 @@ object Routes {
     const val INBOX = "inbox_screen"
 
     const val CHAT = "chat_screen"
+
+    const val PUBLIC_PROFILE = "public_profile_screen"
 }
 
 
@@ -81,6 +83,13 @@ fun NavGraph(navController: NavHostController) {
         composable("${Routes.CHAT}/{otherUserId}") { backStackEntry ->
             val otherUserId = backStackEntry.arguments?.getString("otherUserId") ?: return@composable
             MessageScreen(navController = navController, otherUserId = otherUserId)
+        }
+
+        composable(
+            route = "${Routes.PUBLIC_PROFILE}/{teacherId}"
+        ) { backStackEntry ->
+            val teacherId = backStackEntry.arguments?.getString("teacherId")
+            PublicProfileScreen(navController, teacherId)
         }
     }
 }
