@@ -74,6 +74,9 @@ fun UploadScreen(navController: NavHostController) {
     var fileName by remember { mutableStateOf("No file selected") }
     var showDialogUploading by remember { mutableStateOf(false) }
 
+    // Edit Dialog Variables
+    var editingItem by remember { mutableStateOf<ResourceItem?>(null) }
+
     // Firestore Variables extracts
     val vm: ResourcesViewModel = viewModel()
     val resources = vm.resources
@@ -84,29 +87,91 @@ fun UploadScreen(navController: NavHostController) {
         }
     }
 
-    // Handles submission of resources from dialog
-    val handleSubmit = let@{ inputFileName: String, description: String ->
+    val handleCreateOrUpdate = let@{ docId: String?, inputFileName: String, description: String, pickedUri: Uri? ->
+
         val uid = FirebaseAuth.getInstance().currentUser?.uid
-
-        if (fileUri == null) {
-            Toast.makeText(navController.context, "Please select a file first.", Toast.LENGTH_SHORT).show()
-            return@let
-        }
-
         if (uid == null) {
             Toast.makeText(navController.context, "You must be logged in.", Toast.LENGTH_SHORT).show()
             return@let
         }
 
-        val uploadPreset = navController.context
-            .getString(R.string.cloudinary_upload_preset)
+        // ===== EDIT MODE =====
+        if (docId != null) {
+            val current = editingItem
+            if (current == null) {
+                Toast.makeText(navController.context, "Edit item not found.", Toast.LENGTH_SHORT).show()
+                return@let
+            }
+
+            // If no new file picked -> just update fields in Firestore
+            if (pickedUri == null) {
+                val updates = mapOf(
+                    "fileName" to inputFileName,
+                    "description" to description
+                )
+
+                ResourcesRepo.updateResourceMetadata(
+                    docId = docId,
+                    updates = updates,
+                    onSuccess = {
+                        Toast.makeText(navController.context, "Updated!", Toast.LENGTH_SHORT).show()
+                        showDialogUploading = false
+                        editingItem = null
+                    },
+                    onError = { msg -> Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show() }
+                )
+                return@let
+            }
+
+            // New file picked -> upload to Cloudinary, then update Firestore url/publicId + fields
+            val uploadPreset = navController.context.getString(R.string.cloudinary_upload_preset)
+
+            CloudinaryUploader.uploadFile(
+                uri = pickedUri,
+                uploadPreset = uploadPreset,
+                onSuccess = { secureUrl, publicId, originalFilename ->
+
+                    val finalName = inputFileName.ifBlank { (originalFilename ?: current.fileName) }
+
+                    val updates = mapOf(
+                        "fileName" to finalName,
+                        "description" to description,
+                        "cloudinaryUrl" to secureUrl,
+                        "cloudinaryPublicId" to publicId
+                    )
+
+                    ResourcesRepo.updateResourceMetadata(
+                        docId = docId,
+                        updates = updates,
+                        onSuccess = {
+                            // Optional: delete old cloudinary asset (needs backend)
+                            // ResourcesRepo.requestDeleteCloudinaryAsset(current.cloudinaryPublicId)
+
+                            Toast.makeText(navController.context, "Updated + Replaced file!", Toast.LENGTH_SHORT).show()
+                            showDialogUploading = false
+                            editingItem = null
+                        },
+                        onError = { msg -> Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show() }
+                    )
+                },
+                onError = { msg -> Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show() }
+            )
+            return@let
+        }
+
+        // ===== CREATE MODE =====
+        if (pickedUri == null) {
+            Toast.makeText(navController.context, "Please select a file first.", Toast.LENGTH_SHORT).show()
+            return@let
+        }
+
+        val uploadPreset = navController.context.getString(R.string.cloudinary_upload_preset)
 
         CloudinaryUploader.uploadFile(
-            uri = fileUri!!,
+            uri = pickedUri,
             uploadPreset = uploadPreset,
             onSuccess = { secureUrl, publicId, originalFilename ->
-                val finalName =
-                    inputFileName.ifBlank { (originalFilename ?: "Untitled") }
+                val finalName = inputFileName.ifBlank { (originalFilename ?: "Untitled") }
 
                 ResourcesRepo.saveResourceMetadata(
                     fileName = finalName,
@@ -116,7 +181,8 @@ fun UploadScreen(navController: NavHostController) {
                     uploaderUid = uid,
                     onSuccess = {
                         Toast.makeText(navController.context, "Upload successful!", Toast.LENGTH_SHORT).show()
-                        showDialogUploading = false // close dialog after success
+                        showDialogUploading = false
+                        editingItem = null
                     },
                     onError = { msg ->
                         Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show()
@@ -215,11 +281,8 @@ fun UploadScreen(navController: NavHostController) {
 
                             // Edit button
                             IconButton(onClick = {
-                                Toast.makeText(
-                                    navController.context,
-                                    "Edit: ${item.fileName}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                editingItem = item
+                                showDialogUploading = true
                             }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit")
                             }
@@ -244,92 +307,108 @@ fun UploadScreen(navController: NavHostController) {
     UploadDialog(
         context = navController.context,
         showDialog = showDialogUploading,
-        onDismiss = { showDialogUploading = false },  // Close the dialog when dismissing
-        onSubmit = handleSubmit,  // Submit form data
-        onFileSelect = { uri, name ->
-            // Handle file URI and name after file is selected
-            fileUri = uri
-            fileName = name
+        mode = if (editingItem == null) DialogMode.CREATE else DialogMode.EDIT,
+        initialFileName = editingItem?.fileName ?: "",
+        initialDescription = editingItem?.description ?: "",
+        onDismiss = {
+            showDialogUploading = false
+            editingItem = null
+        },
+        onSubmit = { fileName, description, pickedUri ->
+            handleCreateOrUpdate(editingItem?.id, fileName, description, pickedUri)
+            // Do NOT dismiss here; close on success in callbacks
         }
     )
 }
 
+enum class DialogMode { CREATE, EDIT }
 @Composable
 fun UploadDialog(
     context: Context,
     showDialog: Boolean,
+    mode: DialogMode,
+    initialFileName: String,
+    initialDescription: String,
     onDismiss: () -> Unit,
-    onSubmit: (String, String) -> Unit,
-    onFileSelect: (Uri?, String) -> Unit
+    onSubmit: (String, String, Uri?) -> Unit
 ) {
-    // Dialog should be displayed when showDialog is true
-    if (showDialog) {
-        var fileName by remember { mutableStateOf("") }
-        var description by remember { mutableStateOf("") }
+    if (!showDialog) return
 
-        // File picker launcher
-        val launcher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent(),
-            onResult = { uri: Uri? ->
-                if (uri != null) {
-                    val pickedName = getDisplayName(context, uri) // includes extension
-                    fileName = pickedName
-                    onFileSelect(uri, pickedName)
-                }
+    var fileName by remember { mutableStateOf(initialFileName) }
+    var description by remember { mutableStateOf(initialDescription) }
+    var pickedUri by remember { mutableStateOf<Uri?>(null) }
+    var pickedDisplayName by remember { mutableStateOf<String?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            if (uri != null) {
+                pickedUri = uri
+                val dn = getDisplayName(context, uri)
+                pickedDisplayName = dn
+                // if user didn’t type a name, default to picked name
+                if (fileName.isBlank()) fileName = dn
             }
-//            onResult = { uri: Uri? ->
-//                // Handle file selection
-//                if (uri != null) {
-//                    fileName = uri.lastPathSegment ?: "Unknown file"
-//                    onFileSelect(uri, fileName)  // Update the fileUri and fileName
-//                }
-//            }
-        )
+        }
+    )
 
-        // AlertDialog for form
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Fill in the details") },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Button to select file (all files)
-                    Button(onClick = { launcher.launch("*/*") }
-                    ) {
-                        Text("Click to upload")
-                    }
-                    // TODO: Name of file, Description, Group to tag to (dropdown)
-                    TextField(
-                        value = fileName,
-                        onValueChange = { fileName = it },
-                        label = { Text("File Name") },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                    )
-                    TextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Description") },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                    )
-                }
-            },
-            confirmButton = {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (mode == DialogMode.CREATE) "Upload Resource" else "Edit Resource") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+
                 Button(
-                    onClick = {
-                        // Handle form submission
-                        onSubmit(fileName, description)
-                        onDismiss()  // Close the dialog after submission
-                    }
+                    onClick = { launcher.launch("*/*") },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Submit")
+                    Text(if (mode == DialogMode.CREATE) "Click to upload" else "Replace file (optional)")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+
+                if (pickedDisplayName != null) {
+                    Text(
+                        text = "Selected: $pickedDisplayName",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
                 }
+
+                TextField(
+                    value = fileName,
+                    onValueChange = { fileName = it },
+                    label = { Text("File Name") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                )
+
+                TextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                )
             }
-        )
-    }
+        },
+        confirmButton = {
+            Button(onClick = {
+                // Create requires a file; Edit does not
+                if (mode == DialogMode.CREATE && pickedUri == null) {
+                    Toast.makeText(context, "Please select a file first.", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                onSubmit(fileName, description, pickedUri)
+            }) {
+                Text(if (mode == DialogMode.CREATE) "Submit" else "Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 fun getDisplayName(context: Context, uri: Uri): String {

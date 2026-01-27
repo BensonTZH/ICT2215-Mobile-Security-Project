@@ -39,6 +39,20 @@ object ResourcesRepo {
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener { e -> onError(e.message ?: "Failed to save metadata") }
     }
+
+    fun updateResourceMetadata(
+        docId: String,
+        updates: Map<String, Any>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        FirebaseFirestore.getInstance()
+            .collection("resources")
+            .document(docId)
+            .update(updates)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e -> onError(e.message ?: "Failed to update resource") }
+    }
 }
 
 object FileDownloader {
@@ -73,30 +87,4 @@ object FileDownloader {
 
         Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
     }
-
-//    fun downloadToDownloads(
-//        context: Context,
-//        url: String,
-//        fileName: String
-//    ) {
-//        if (url.isBlank()) {
-//            Toast.makeText(context, "Missing file URL", Toast.LENGTH_SHORT).show()
-//            return
-//        }
-//
-//        val safeName = fileName.ifBlank { "download" }
-//
-//        val request = DownloadManager.Request(url.toUri())
-//            .setTitle(safeName)
-//            .setDescription("Downloading...")
-//            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-//            .setAllowedOverMetered(true)
-//            .setAllowedOverRoaming(true)
-//            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, safeName)
-//
-//        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-//        dm.enqueue(request)
-//
-//        Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
-//    }
 }
