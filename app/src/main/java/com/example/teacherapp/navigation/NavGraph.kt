@@ -27,13 +27,13 @@ object Routes {
     const val DISCOVERY = "discovery_screen"
 
     const val SETTINGS = "settings_screen"
-
-
     const val INBOX = "inbox_screen"
 
     const val CHAT = "chat_screen"
 
     const val PUBLIC_PROFILE = "public_profile_screen"
+    const val UPLOAD = "upload_resources"
+    const val RESOURCES = "view_resources"
 }
 
 
@@ -72,7 +72,7 @@ fun NavGraph(navController: NavHostController) {
         composable(Routes.DISCOVERY){
             DiscoveryScreen(navController = navController)
         }
-        composable(Routes.SETTINGS){
+        composable(Routes.SETTINGS) {
             SettingsScreen(navController = navController)
         }
 
@@ -90,6 +90,12 @@ fun NavGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val teacherId = backStackEntry.arguments?.getString("teacherId")
             PublicProfileScreen(navController, teacherId)
+        }
+        composable(Routes.UPLOAD){
+            UploadScreen(navController = navController)
+        }
+        composable(Routes.RESOURCES){
+            ResourceScreen(navController = navController)
         }
     }
 }

@@ -1,3 +1,4 @@
+// Reverted to old main screen, moved the new one to MainScreen_2. Cus i need see the teacher screen
 package com.example.teacherapp.navigation
 
 import androidx.compose.foundation.layout.*
