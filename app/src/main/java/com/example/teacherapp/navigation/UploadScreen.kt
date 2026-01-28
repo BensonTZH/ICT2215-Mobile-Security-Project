@@ -65,6 +65,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import android.content.Context
 import android.provider.OpenableColumns
+import android.util.Log
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Check
+import com.example.teacherapp.users.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,12 +86,12 @@ fun UploadScreen(navController: NavHostController) {
     val resources = vm.resources
 
     LaunchedEffect(Unit) {
-        vm.startListening { msg ->
-            Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show()
+        vm.startListeningTeacher { msg ->
+            Log.d("UploadScreen", "Message: $msg")
         }
     }
 
-    val handleCreateOrUpdate = let@{ docId: String?, inputFileName: String, description: String, pickedUri: Uri? ->
+    val handleCreateOrUpdate = let@{ docId: String?, inputFileName: String, description: String, pickedUri: Uri?, selectedSubject: String? ->
 
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) {
@@ -105,10 +109,10 @@ fun UploadScreen(navController: NavHostController) {
 
             // If no new file picked -> just update fields in Firestore
             if (pickedUri == null) {
-                val updates = mapOf(
-                    "fileName" to inputFileName,
-                    "description" to description
-                )
+                val updates: MutableMap<String, Any> = mutableMapOf()
+                if (inputFileName.isNotBlank()) updates["fileName"] = inputFileName
+                if (description.isNotBlank()) updates["description"] = description
+                if (!selectedSubject.isNullOrBlank()) updates["subject"] = selectedSubject
 
                 ResourcesRepo.updateResourceMetadata(
                     docId = docId,
@@ -133,12 +137,14 @@ fun UploadScreen(navController: NavHostController) {
 
                     val finalName = inputFileName.ifBlank { (originalFilename ?: current.fileName) }
 
-                    val updates = mapOf(
+                    // Create updates map, excluding null values
+                    val updates: MutableMap<String, Any> = mutableMapOf(
                         "fileName" to finalName,
-                        "description" to description,
                         "cloudinaryUrl" to secureUrl,
                         "cloudinaryPublicId" to publicId
                     )
+                    if (description.isNotBlank()) updates["description"] = description
+                    if (!selectedSubject.isNullOrBlank()) updates["subject"] = selectedSubject
 
                     ResourcesRepo.updateResourceMetadata(
                         docId = docId,
@@ -173,12 +179,18 @@ fun UploadScreen(navController: NavHostController) {
             onSuccess = { secureUrl, publicId, originalFilename ->
                 val finalName = inputFileName.ifBlank { (originalFilename ?: "Untitled") }
 
+                // Create updates map, excluding null values
+                val updates: MutableMap<String, Any> = mutableMapOf(
+                    "fileName" to finalName,
+                    "cloudinaryUrl" to secureUrl,
+                    "cloudinaryPublicId" to publicId,
+                    "uploaderUid" to uid
+                )
+                if (description.isNotBlank()) updates["description"] = description
+                if (!selectedSubject.isNullOrBlank()) updates["subject"] = selectedSubject
+
                 ResourcesRepo.saveResourceMetadata(
-                    fileName = finalName,
-                    description = description,
-                    cloudinaryUrl = secureUrl,
-                    cloudinaryPublicId = publicId,
-                    uploaderUid = uid,
+                    updates = updates,
                     onSuccess = {
                         Toast.makeText(navController.context, "Upload successful!", Toast.LENGTH_SHORT).show()
                         showDialogUploading = false
@@ -260,6 +272,7 @@ fun UploadScreen(navController: NavHostController) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
 
+                            // TODO: Show subject of each resources
                             // File info
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -314,9 +327,8 @@ fun UploadScreen(navController: NavHostController) {
             showDialogUploading = false
             editingItem = null
         },
-        onSubmit = { fileName, description, pickedUri ->
-            handleCreateOrUpdate(editingItem?.id, fileName, description, pickedUri)
-            // Do NOT dismiss here; close on success in callbacks
+        onSubmit = { fileName, description, pickedUri, selectedSubject->
+            handleCreateOrUpdate(editingItem?.id, fileName, description, pickedUri, selectedSubject)
         }
     )
 }
@@ -330,7 +342,7 @@ fun UploadDialog(
     initialFileName: String,
     initialDescription: String,
     onDismiss: () -> Unit,
-    onSubmit: (String, String, Uri?) -> Unit
+    onSubmit: (String, String, Uri?, String?) -> Unit // Modify this to accept a single subject
 ) {
     if (!showDialog) return
 
@@ -338,6 +350,19 @@ fun UploadDialog(
     var description by remember { mutableStateOf(initialDescription) }
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
     var pickedDisplayName by remember { mutableStateOf<String?>(null) }
+
+    // ViewModel to fetch subjects
+    val userViewModel: UserViewModel = viewModel()
+
+    // Call to load user data (and subjects)
+    val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
+    if (currentUserUid != null) {
+        userViewModel.loadUserData(currentUserUid)
+    }
+    val subjects = userViewModel.subjects
+
+    // Single selected subject
+    var selectedSubject by remember { mutableStateOf<String?>(null) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -348,6 +373,7 @@ fun UploadDialog(
                 pickedDisplayName = dn
                 // if user didn’t type a name, default to picked name
                 if (fileName.isBlank()) fileName = dn
+                Log.d("UploadDialog", "Picked file: $pickedDisplayName")
             }
         }
     )
@@ -391,6 +417,28 @@ fun UploadDialog(
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
                 )
+
+                // Display subjects in a list for single selection
+                Text("Select Subject")
+                LazyColumn {
+                    items(subjects) { subject ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(4.dp)
+                                .clickable {
+                                    selectedSubject = subject // Update the selected subject
+                                }
+                        ) {
+                            Text(subject)
+                            Spacer(modifier = Modifier.weight(1f))
+                            if (selectedSubject == subject) {
+                                Icon(Icons.Default.Check, contentDescription = "Selected")
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -400,7 +448,8 @@ fun UploadDialog(
                     Toast.makeText(context, "Please select a file first.", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                onSubmit(fileName, description, pickedUri)
+                // Pass the selected subject to the onSubmit callback
+                onSubmit(fileName, description, pickedUri, selectedSubject)
             }) {
                 Text(if (mode == DialogMode.CREATE) "Submit" else "Save")
             }
@@ -410,6 +459,7 @@ fun UploadDialog(
         }
     )
 }
+
 
 fun getDisplayName(context: Context, uri: Uri): String {
     val cr = context.contentResolver

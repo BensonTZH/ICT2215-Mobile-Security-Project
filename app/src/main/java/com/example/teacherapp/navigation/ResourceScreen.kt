@@ -46,6 +46,8 @@ import androidx.navigation.NavHostController
 import com.example.teacherapp.upload.FileDownloader
 import com.example.teacherapp.upload.ResourceItem
 import com.example.teacherapp.upload.ResourcesViewModel
+import com.example.teacherapp.users.UserViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 /**
  * Read-only Resources screen:
@@ -60,9 +62,9 @@ fun ResourceScreen(navController: NavHostController) {
     val resources = vm.resources
 
     LaunchedEffect(Unit) {
-        vm.startListening { msg ->
-            Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show()
-        }
+            vm.startListeningStudent { msg ->
+                Toast.makeText(navController.context, msg, Toast.LENGTH_SHORT).show()
+            }
     }
 
     Scaffold(

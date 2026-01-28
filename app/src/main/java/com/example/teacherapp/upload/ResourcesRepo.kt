@@ -15,24 +15,15 @@ import androidx.core.net.toUri
 object ResourcesRepo {
     // Write/Save resource to firestore
     fun saveResourceMetadata(
-        fileName: String,
-        description: String,
-        cloudinaryUrl: String,
-        cloudinaryPublicId: String,
-        uploaderUid: String,
+        updates: Map<String, Any>, // Accept map instead of individual parameters
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         val db = FirebaseFirestore.getInstance()
 
-        val data = hashMapOf(
-            "fileName" to fileName,
-            "description" to description,
-            "cloudinaryUrl" to cloudinaryUrl,
-            "cloudinaryPublicId" to cloudinaryPublicId,
-            "uploaderUid" to uploaderUid,
-            "timestamp" to FieldValue.serverTimestamp()
-        )
+        // Add timestamp to the map if needed
+        val data = updates.toMutableMap()
+        data["timestamp"] = FieldValue.serverTimestamp()
 
         db.collection("resources")
             .add(data)

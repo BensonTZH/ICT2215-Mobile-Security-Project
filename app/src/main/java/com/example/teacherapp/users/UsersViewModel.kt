@@ -1,0 +1,61 @@
+package com.example.teacherapp.users
+
+import android.util.Log
+import androidx.compose.runtime.mutableStateListOf
+import androidx.lifecycle.ViewModel
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentId
+
+
+open class UserItem(
+    @DocumentId val id: String = "",
+    val email: String = "",
+    val name: String = "",
+    val isSetupComplete: Boolean = false,
+    val role: String = "",
+    val uid: String = ""
+)
+
+data class TeacherItem(
+    val availability: List<String> = emptyList(),
+    val subjects: List<String> = emptyList(),
+) : UserItem()
+
+data class StudentItem(
+    val grade: String = "",
+    val interests: List<String> = emptyList()
+) : UserItem() // Inherit from UserItem
+
+class UserViewModel : ViewModel() {
+
+    // List of subjects for the current user
+    val subjects = mutableStateListOf<String>()
+    var role: String? = null  // Store the role here
+
+    // Fetch user data and update the subjects list
+    fun loadUserData(uid: String) {
+        // Clear previous data
+        subjects.clear()
+
+        // Fetch data from the repository
+        UserRepo.getUserData(uid, onSuccess = { user, userRole ->
+            role = userRole // Store the user role
+            Log.d("UserViewModel", "User role: $role")
+
+            // Check if the user is a TeacherItem or StudentItem
+            when (user) {
+                is TeacherItem -> {
+                    // If the user is a Teacher, collect subjects
+                    subjects.addAll(user.subjects)
+                    Log.d("UserViewModel", "Teacher subjects: ${user.subjects}")
+                }
+                is StudentItem -> {
+                    // Handle Student-specific data (like interests)
+                    Log.d("UserViewModel", "Student interests: ${user.interests}")
+                }
+            }
+        }, onError = { errorMessage ->
+            Log.d("UserViewModel", "Cannot collect subject or interests list: $errorMessage")
+        })
+    }
+}
