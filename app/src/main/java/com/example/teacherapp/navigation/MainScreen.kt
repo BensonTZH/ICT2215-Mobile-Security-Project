@@ -1,38 +1,28 @@
-// Reverted to old main screen, moved the new one to MainScreen_2. Cus i need see the teacher screen
 package com.example.teacherapp.navigation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import androidx.navigation.compose.rememberNavController
 import androidx.compose.material.icons.Icons
-import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.QuestionAnswer
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Class
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.LibraryBooks
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(navController: NavController) {
-    // These should be fetched from your Firestore 'users' document
+    // Firebase setup
     var userRole by remember { mutableStateOf("") }
     var userName by remember { mutableStateOf("User") }
     var isLoading by remember { mutableStateOf(true) }
@@ -40,7 +30,7 @@ fun MainScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
     val userId = auth.currentUser?.uid
 
-
+    // Fetch user data (role and name)
     LaunchedEffect(userId) {
         if (userId != null) {
             db.collection("users").document(userId).get()
@@ -58,29 +48,10 @@ fun MainScreen(navController: NavController) {
     }
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                },
-                // Actions are the icons on the right side
-                actions = {
-                    IconButton(onClick = { /* TODO: Navigate to Mail */ }) {
-                        Icon(imageVector = Icons.Default.Email, contentDescription = "Mail")
-                    }
-                    IconButton(onClick = { navController.navigate("profile_screen") }) {
-                        Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
-                    }
-                    IconButton(onClick = { navController.navigate("settings_screen") }) {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                )
-            )
+        bottomBar = {
+            CustomBottomNavigation(navController) // Adding custom bottom navigation bar here
         }
-    ){ innerPadding ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -94,6 +65,7 @@ fun MainScreen(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Conditionally display either TeacherDashboard or StudentDashboard based on user role
             if (userRole == "teacher") {
                 TeacherDashboard(navController)
             } else {
@@ -118,9 +90,7 @@ fun TeacherDashboard(navController: NavController) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SquareActionButton("Messages", Icons.Default.QuestionAnswer, Modifier.weight(1f)) {
-//                navController.navigate("inbox")
-                  navController.navigate(Routes.INBOX)
-
+                navController.navigate(Routes.INBOX)
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -156,6 +126,7 @@ fun StudentDashboard(navController: NavController) {
         }
     }
 }
+
 @Composable
 fun SquareActionButton(
     title: String,
@@ -190,5 +161,60 @@ fun SquareActionButton(
                 lineHeight = 18.sp
             )
         }
+    }
+}
+
+@Composable
+fun CustomBottomNavigation(navController: NavController) {
+    // Custom Bottom Navigation using Row and IconButton
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BottomNavItem(
+            label = "Home",
+            icon = Icons.Filled.Home,
+            onClick = { navController.navigate(Routes.MAIN) }
+        )
+        BottomNavItem(
+            label = "Discover",
+            icon = Icons.Filled.Search,
+            onClick = { navController.navigate(Routes.DISCOVERY) }
+        )
+        BottomNavItem(
+            label = "Inbox",
+            icon = Icons.Filled.QuestionAnswer,
+            onClick = { navController.navigate(Routes.INBOX) }
+        )
+        BottomNavItem(
+            label = "Alerts",
+            icon = Icons.Filled.Notifications,
+            onClick = { navController.navigate(Routes.INBOX) } //change the route next time
+        )
+        BottomNavItem(
+            label = "Profile",
+            icon = Icons.Filled.Person,
+            onClick = { navController.navigate(Routes.PROFILE) }
+        )
+    }
+}
+
+@Composable
+fun BottomNavItem(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp)
+    ) {
+        Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp))
+        Text(text = label, fontSize = 12.sp)
     }
 }
