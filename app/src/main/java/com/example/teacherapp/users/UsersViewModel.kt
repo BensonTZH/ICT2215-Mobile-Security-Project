@@ -2,6 +2,7 @@ package com.example.teacherapp.users
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
@@ -31,6 +32,7 @@ class UserViewModel : ViewModel() {
     // List of subjects for the current user
     val subjects = mutableStateListOf<String>()
     var role: String? = null  // Store the role here
+    val uidToName = mutableStateMapOf<String, String>()
 
     // Fetch user data and update the subjects list
     fun loadUserData(uid: String) {
@@ -57,5 +59,16 @@ class UserViewModel : ViewModel() {
         }, onError = { errorMessage ->
             Log.d("UserViewModel", "Cannot collect subject or interests list: $errorMessage")
         })
+    }
+
+    fun loadNamesForUids(uids: List<String>) {
+        val missing = uids.distinct().filter { it.isNotBlank() && !uidToName.containsKey(it) }
+        if (missing.isEmpty()) return
+
+        UserRepo.getUsersNames(
+            uids = missing,
+            onSuccess = { map -> uidToName.putAll(map) },
+            onError = { err -> Log.e("UserViewModel", err) }
+        )
     }
 }

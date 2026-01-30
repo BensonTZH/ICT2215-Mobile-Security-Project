@@ -67,8 +67,13 @@ import android.content.Context
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.TopAppBar
 import com.example.teacherapp.users.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -211,26 +216,17 @@ fun UploadScreen(navController: NavHostController) {
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                },
-                // Actions are the icons on the right side
-                actions = {
-                    IconButton(onClick = { /* TODO: Navigate to Mail */ }) {
-                        Icon(imageVector = Icons.Default.Email, contentDescription = "Mail")
+            Column {
+                TopAppBar(
+                    title = { Text("Upload") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
-                    IconButton(onClick = { navController.navigate("profile_screen") }) {
-                        Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
-                    }
-                    IconButton(onClick = { navController.navigate("settings_screen") }) {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
                 )
-            )
+                Divider()
+            }
         },
         bottomBar = {
             Column {
@@ -349,6 +345,7 @@ fun UploadScreen(navController: NavHostController) {
 }
 
 enum class DialogMode { CREATE, EDIT }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UploadDialog(
     context: Context,
@@ -375,6 +372,7 @@ fun UploadDialog(
         userViewModel.loadUserData(currentUserUid)
     }
     val subjects = userViewModel.subjects
+    var expanded by remember { mutableStateOf(false) }
 
     // Single selected subject
     var selectedSubject by remember { mutableStateOf<String?>(null) }
@@ -435,22 +433,34 @@ fun UploadDialog(
 
                 // Display subjects in a list for single selection
                 Text("Select Subject")
-                LazyColumn {
-                    items(subjects) { subject ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(4.dp)
-                                .clickable {
-                                    selectedSubject = subject // Update the selected subject
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    TextField(
+                        value = selectedSubject ?: "",
+                        onValueChange = {},            // must exist, but we keep it readOnly
+                        readOnly = true,
+                        label = { Text("Subject") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        subjects.forEach { subject ->
+                            DropdownMenuItem(
+                                text = { Text(subject) },
+                                onClick = {
+                                    selectedSubject = subject
+                                    expanded = false
                                 }
-                        ) {
-                            Text(subject)
-                            Spacer(modifier = Modifier.weight(1f))
-                            if (selectedSubject == subject) {
-                                Icon(Icons.Default.Check, contentDescription = "Selected")
-                            }
+                            )
                         }
                     }
                 }

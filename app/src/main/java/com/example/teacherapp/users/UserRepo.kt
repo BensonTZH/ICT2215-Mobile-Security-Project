@@ -50,4 +50,39 @@ object UserRepo {
                 onError(exception.message ?: "Unknown error")
             }
     }
+
+    fun getUsersNames(
+        uids: List<String>,
+        onSuccess: (Map<String, String>) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val db = FirebaseFirestore.getInstance()
+        val result = mutableMapOf<String, String>()
+
+        val chunks = uids.distinct().chunked(10)
+
+        fun fetchChunk(i: Int) {
+            if (i >= chunks.size) {
+                onSuccess(result)
+                return
+            }
+
+            db.collection("users")
+                .whereIn("uid", chunks[i]) // if your docId == uid, see note below
+                .get()
+                .addOnSuccessListener { snap ->
+                    for (doc in snap.documents) {
+                        val uid = doc.getString("uid") ?: doc.id
+                        val name = doc.getString("name") ?: "Unknown"
+                        result[uid] = name
+                    }
+                    fetchChunk(i + 1)
+                }
+                .addOnFailureListener { e ->
+                    onError(e.message ?: "Failed to fetch names")
+                }
+        }
+
+        fetchChunk(0)
+    }
 }

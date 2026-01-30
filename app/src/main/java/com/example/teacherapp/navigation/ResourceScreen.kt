@@ -1,6 +1,10 @@
 package com.example.teacherapp.navigation
 
+import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,7 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -22,15 +29,18 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,12 +59,37 @@ import com.example.teacherapp.upload.ResourceItem
 import com.example.teacherapp.upload.ResourcesViewModel
 import com.example.teacherapp.users.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
+data class ResourceGroup(
+    val uploaderUid: String,
+    val subject: String,
+    val items: List<ResourceItem>
+)
 
+private fun buildGroups(resources: List<ResourceItem>): List<ResourceGroup> {
+    return resources
+        .groupBy { it.uploaderUid to it.subject }
+        .map { (key, items) ->
+            ResourceGroup(
+                uploaderUid = key.first,
+                subject = key.second,
+                items = items
+            )
+        }
+        .sortedWith(compareBy({ it.uploaderUid }, { it.subject }))
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResourceScreen(navController: NavHostController) {
     val vm: ResourcesViewModel = viewModel()
     val resources = vm.resources
+    val groups by remember { derivedStateOf { buildGroups(resources.toList()) } }
+
+
+    val userVm: UserViewModel = viewModel()
+    LaunchedEffect(resources.size) {
+        val uids = resources.map { it.uploaderUid }.distinct()
+        userVm.loadNamesForUids(uids)
+    }
 
     LaunchedEffect(Unit) {
             vm.startListeningStudent { msg ->
@@ -64,24 +99,17 @@ fun ResourceScreen(navController: NavHostController) {
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {},
-                actions = {
-                    IconButton(onClick = { /* TODO: Navigate to Mail */ }) {
-                        Icon(imageVector = Icons.Default.Email, contentDescription = "Mail")
+            Column {
+                TopAppBar(
+                    title = { Text("Resource") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
-                    IconButton(onClick = { navController.navigate("profile_screen") }) {
-                        Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
-                    }
-                    IconButton(onClick = { navController.navigate("settings_screen") }) {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
                 )
-            )
+                Divider()
+            }
         },
         bottomBar = {
             Column {
@@ -98,18 +126,76 @@ fun ResourceScreen(navController: NavHostController) {
             verticalArrangement = Arrangement.Top
         ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(items = resources, key = { it.id }) { item ->
+                items(groups, key = { "${it.uploaderUid}|${it.subject}" }) { group ->
+                    ResourceGroupCard(navController, group, userVm.uidToName)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ResourceGroupCard(
+    navController: NavHostController,
+    group: ResourceGroup,
+    uidToName: Map<String, String>
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val displayName = uidToName[group.uploaderUid] ?: group.uploaderUid
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        // Header row (click to expand)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = displayName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = group.subject, fontSize = 12.sp, color = Color.Gray)
+                Text(text = "${group.items.size} resource(s)", fontSize = 12.sp, color = Color.Gray)
+            }
+
+            Icon(
+                imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                contentDescription = null
+            )
+        }
+
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                group.items.forEach { item ->
                     ResourceCardDownloadConfirm(navController = navController, item = item)
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun ResourceCardDownloadConfirm(
