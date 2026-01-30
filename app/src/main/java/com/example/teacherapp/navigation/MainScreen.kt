@@ -192,7 +192,7 @@ fun CustomBottomNavigation(navController: NavController) {
         BottomNavItem(
             label = "Alerts",
             icon = Icons.Filled.Notifications,
-            onClick = { navController.navigate(Routes.INBOX) } //change the route next time
+            onClick = { navController.navigate(Routes.ALERTS) }
         )
         BottomNavItem(
             label = "Profile",

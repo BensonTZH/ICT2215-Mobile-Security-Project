@@ -34,6 +34,7 @@ object Routes {
     const val PUBLIC_PROFILE = "public_profile_screen"
     const val UPLOAD = "upload_resources"
     const val RESOURCES = "view_resources"
+    const val ALERTS = "alerts_screen"
 }
 
 
@@ -96,6 +97,9 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Routes.RESOURCES){
             ResourceScreen(navController = navController)
+        }
+        composable(Routes.ALERTS) {
+            AlertsScreen(navController = navController)
         }
     }
 }
