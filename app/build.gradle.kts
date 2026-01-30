@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -73,4 +74,5 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
     implementation("com.cloudinary:cloudinary-android:3.1.2")
+    implementation("com.google.android.gms:play-services-location")
 }
