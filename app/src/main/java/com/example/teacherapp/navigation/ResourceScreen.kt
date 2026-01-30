@@ -20,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,12 +50,6 @@ import com.example.teacherapp.upload.ResourcesViewModel
 import com.example.teacherapp.users.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 
-/**
- * Read-only Resources screen:
- * - Listens to Firestore via ResourcesViewModel (same as UploadScreen)
- * - Displays Resource cards (same Card/Row/Column layout)
- * - No Edit/Delete actions
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResourceScreen(navController: NavHostController) {
@@ -87,6 +82,12 @@ fun ResourceScreen(navController: NavHostController) {
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 )
             )
+        },
+        bottomBar = {
+            Column {
+                Divider()
+                CustomBottomNavigation(navController)
+            }
         }
     ) { innerPadding ->
         Column(
@@ -168,6 +169,14 @@ fun ResourceCardDownloadConfirm(
                         fontWeight = FontWeight.Normal
                     )
                 )
+
+                if (item.subject.isNotBlank()) {
+                    Text(
+                        text = item.subject,
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
 
                 if (item.description.isNotBlank()) {
                     Text(

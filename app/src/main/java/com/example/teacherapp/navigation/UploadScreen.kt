@@ -68,6 +68,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Divider
 import com.example.teacherapp.users.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -230,6 +231,12 @@ fun UploadScreen(navController: NavHostController) {
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 )
             )
+        },
+        bottomBar = {
+            Column {
+                Divider()
+                CustomBottomNavigation(navController)
+            }
         }
     ) { innerPadding ->
         Column(
@@ -282,6 +289,14 @@ fun UploadScreen(navController: NavHostController) {
                                         fontWeight = FontWeight.Normal
                                     )
                                 )
+
+                                if (item.subject.isNotBlank()) {
+                                    Text(
+                                        text = item.subject,
+                                        fontSize = 12.sp,
+                                        color = Color.Gray
+                                    )
+                                }
 
                                 if (item.description.isNotBlank()) {
                                     Text(
