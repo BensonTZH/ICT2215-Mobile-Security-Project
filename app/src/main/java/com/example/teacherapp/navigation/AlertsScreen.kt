@@ -57,7 +57,6 @@ fun AlertsScreen(navController: NavController) {
 
     // Teacher CRUD dialogs
     var showAddDialog by remember { mutableStateOf(false) }
-    var editingAnnouncement by remember { mutableStateOf<Announcement?>(null) }
     var deletingAnnouncement by remember { mutableStateOf<Announcement?>(null) }
 
     // 1) Fetch current user role + name
@@ -200,7 +199,6 @@ fun AlertsScreen(navController: NavController) {
                             isUnread = isUnread,
                             canEdit = (userRole == "teacher"),
                             onClick = {
-                                // Mark read when opened/clicked (student + teacher both)
                                 if (userId != null) {
                                     db.collection("users")
                                         .document(userId)
@@ -210,20 +208,17 @@ fun AlertsScreen(navController: NavController) {
                                 }
                             },
                             onTogglePin = {
-                                // teacher only: toggle pin
                                 if (userRole == "teacher") {
                                     db.collection("announcements")
                                         .document(ann.id)
                                         .update("pinned", !ann.pinned)
                                 }
                             },
-                            onEdit = {
-                                if (userRole == "teacher") editingAnnouncement = ann
-                            },
                             onDelete = {
                                 if (userRole == "teacher") deletingAnnouncement = ann
                             }
                         )
+
                     }
                 }
             }
@@ -252,29 +247,6 @@ fun AlertsScreen(navController: NavController) {
                         )
                     )
                 showAddDialog = false
-            }
-        )
-    }
-
-    // EDIT dialog
-    editingAnnouncement?.let { ann ->
-        AddOrEditAnnouncementDialog(
-            title = "Edit Announcement",
-            initialTitle = ann.title,
-            initialBody = ann.body,
-            initialPinned = ann.pinned,
-            onDismiss = { editingAnnouncement = null },
-            onSave = { title, body, pinned ->
-                db.collection("announcements")
-                    .document(ann.id)
-                    .update(
-                        mapOf(
-                            "title" to title,
-                            "body" to body,
-                            "pinned" to pinned
-                        )
-                    )
-                editingAnnouncement = null
             }
         )
     }
@@ -309,7 +281,6 @@ private fun AnnouncementCard(
     canEdit: Boolean,
     onClick: () -> Unit,
     onTogglePin: () -> Unit,
-    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -391,9 +362,6 @@ private fun AnnouncementCard(
                 ) {
                     IconButton(onClick = onTogglePin) {
                         Icon(Icons.Filled.PushPin, contentDescription = "Toggle pin")
-                    }
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit")
                     }
                     IconButton(onClick = onDelete) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete")
