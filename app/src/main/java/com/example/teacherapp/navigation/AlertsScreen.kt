@@ -150,6 +150,12 @@ fun AlertsScreen(navController: NavController) {
                     Icon(Icons.Filled.Add, contentDescription = "Add announcement")
                 }
             }
+        },
+        bottomBar = {
+            Column {
+                Divider()
+                CustomBottomNavigation(navController)
+            }
         }
     ) { innerPadding ->
         Column(

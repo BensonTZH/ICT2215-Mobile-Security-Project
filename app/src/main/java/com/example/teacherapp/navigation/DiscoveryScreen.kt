@@ -84,6 +84,12 @@ fun DiscoveryScreen(navController: NavController) {
                     }
                 }
             )
+        },
+        bottomBar = {
+            Column {
+                Divider()
+                CustomBottomNavigation(navController)
+            }
         }
     ) { padding ->
         Column(

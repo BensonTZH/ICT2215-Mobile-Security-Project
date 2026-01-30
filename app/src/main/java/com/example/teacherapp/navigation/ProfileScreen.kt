@@ -52,12 +52,19 @@ fun ProfileScreen(navController: NavController) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
+
                 actions = {
                     IconButton(onClick = { /* TODO: Implement Edit */ }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
                     }
                 }
             )
+        },
+        bottomBar = {
+            Column {
+                Divider()
+                CustomBottomNavigation(navController)
+            }
         }
     ) { padding ->
         if (isLoading) {

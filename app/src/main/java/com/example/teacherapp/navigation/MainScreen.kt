@@ -1,23 +1,24 @@
+// MainScreen.kt
 package com.example.teacherapp.navigation
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.wear.compose.material3.AppScaffold
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,16 +43,13 @@ fun MainScreen(navController: NavController) {
                     isLoading = false
                 }
                 .addOnFailureListener {
-                    isLoading = false // Handle error here
+                    isLoading = false
                 }
         }
     }
 
-    Scaffold(
-        bottomBar = {
-            CustomBottomNavigation(navController) // Adding custom bottom navigation bar here
-        }
-    ) { innerPadding ->
+    // Use shared scaffold (bottom bar + divider)
+    BotNavBar(navController = navController, showBottomBar = true) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -65,7 +63,6 @@ fun MainScreen(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Conditionally display either TeacherDashboard or StudentDashboard based on user role
             if (userRole == "teacher") {
                 TeacherDashboard(navController)
             } else {
@@ -78,7 +75,6 @@ fun MainScreen(navController: NavController) {
 @Composable
 fun TeacherDashboard(navController: NavController) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Row 1: Max 2 buttons
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SquareActionButton("Upload\nResource", Icons.Default.CloudUpload, Modifier.weight(1f)) {
                 navController.navigate("upload_resources")
@@ -92,7 +88,6 @@ fun TeacherDashboard(navController: NavController) {
             SquareActionButton("Messages", Icons.Default.QuestionAnswer, Modifier.weight(1f)) {
                 navController.navigate(Routes.INBOX)
             }
-
             Spacer(modifier = Modifier.weight(1f))
         }
     }
@@ -101,16 +96,15 @@ fun TeacherDashboard(navController: NavController) {
 @Composable
 fun StudentDashboard(navController: NavController) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Row 1: Max 2 buttons
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SquareActionButton("Find a\nTeacher", Icons.Default.Search, Modifier.weight(1f)) {
-                navController.navigate("discovery_screen")
+                navController.navigate(Routes.DISCOVERY)
             }
             SquareActionButton("My Study\nGroups", Icons.Default.Class, Modifier.weight(1f)) {
-//                navController.navigate("student_groups")
+                // navController.navigate("student_groups")
             }
         }
-        // Row 2: 1 button
+
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SquareActionButton("Study\nResources", Icons.Default.LibraryBooks, Modifier.weight(1f)) {
                 navController.navigate("view_resources")
@@ -142,7 +136,9 @@ fun SquareActionButton(
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -150,7 +146,7 @@ fun SquareActionButton(
                 imageVector = icon,
                 contentDescription = title,
                 modifier = Modifier.size(36.dp),
-                tint = Color(0xFF505D8A) // Your theme color
+                tint = Color(0xFF505D8A)
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -161,60 +157,5 @@ fun SquareActionButton(
                 lineHeight = 18.sp
             )
         }
-    }
-}
-
-@Composable
-fun CustomBottomNavigation(navController: NavController) {
-    // Custom Bottom Navigation using Row and IconButton
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        BottomNavItem(
-            label = "Home",
-            icon = Icons.Filled.Home,
-            onClick = { navController.navigate(Routes.MAIN) }
-        )
-        BottomNavItem(
-            label = "Discover",
-            icon = Icons.Filled.Search,
-            onClick = { navController.navigate(Routes.DISCOVERY) }
-        )
-        BottomNavItem(
-            label = "Inbox",
-            icon = Icons.Filled.QuestionAnswer,
-            onClick = { navController.navigate(Routes.INBOX) }
-        )
-        BottomNavItem(
-            label = "Alerts",
-            icon = Icons.Filled.Notifications,
-            onClick = { navController.navigate(Routes.ALERTS) }
-        )
-        BottomNavItem(
-            label = "Profile",
-            icon = Icons.Filled.Person,
-            onClick = { navController.navigate(Routes.PROFILE) }
-        )
-    }
-}
-
-@Composable
-fun BottomNavItem(
-    label: String,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp)
-    ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp))
-        Text(text = label, fontSize = 12.sp)
     }
 }

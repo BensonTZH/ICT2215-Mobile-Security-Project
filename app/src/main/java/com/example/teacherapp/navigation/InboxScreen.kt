@@ -116,6 +116,12 @@ fun InboxScreen(navController: NavController) {
                 )
                 Divider()
             }
+        },
+        bottomBar = {
+            Column {
+                Divider()
+                CustomBottomNavigation(navController)
+            }
         }
     ) { padding ->
         Column(
@@ -189,4 +195,5 @@ fun InboxScreen(navController: NavController) {
             }
         }
     }
+
 }
