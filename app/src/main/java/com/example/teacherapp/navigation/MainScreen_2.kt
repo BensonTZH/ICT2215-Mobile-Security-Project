@@ -28,16 +28,6 @@ import com.example.teacherapp.users.UserViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-
-// Data classes for sessions and resources
-data class Session(
-    val subject: String,
-    val teacher: String,
-    val dateTime: String,
-    val location: String,
-    val status: String
-)
-
 data class Resource(
     val title: String,
     val teacher: String,
@@ -269,13 +259,6 @@ fun StatsRow(modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StatCard(
-            icon = Icons.Default.CalendarToday,
-            count = "3",
-            label = "Sessions",
-            iconColor = Color(0xFF3B82F6),
-            modifier = Modifier.weight(1f)
-        )
-        StatCard(
             icon = Icons.Default.People,
             count = "5",
             label = "Teachers",
@@ -362,94 +345,6 @@ fun SectionHeader(title: String, actionText: String, onActionClick: () -> Unit) 
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
-        }
-    }
-}
-
-@Composable
-fun SessionCard(session: Session) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = session.subject,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1F2937)
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFDEEBFF)
-                    ) {
-                        Text(
-                            text = session.status,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF3B82F6),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = session.teacher,
-                    fontSize = 14.sp,
-                    color = Color(0xFF6B7280)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Schedule,
-                        contentDescription = "Time",
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF6B7280)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = session.dateTime,
-                        fontSize = 13.sp,
-                        color = Color(0xFF6B7280)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFFEC4899)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = session.location,
-                        fontSize = 13.sp,
-                        color = Color(0xFF6B7280)
-                    )
-                }
-            }
         }
     }
 }
