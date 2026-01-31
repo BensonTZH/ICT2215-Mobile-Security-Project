@@ -60,7 +60,7 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Routes.MAIN){
-            MainScreen(navController = navController)
+            MainScreen_2(navController = navController)
         }
 
         composable(Routes.PROFILE){
