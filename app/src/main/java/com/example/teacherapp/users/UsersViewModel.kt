@@ -36,6 +36,7 @@ class UserViewModel : ViewModel() {
     val subjects = mutableStateListOf<String>()
     var role by mutableStateOf("student")
     var name by mutableStateOf("User")
+    var email by mutableStateOf("User@gmail.com")
     val uidToName = mutableStateMapOf<String, String>()
 
     // Fetch user data and update the subjects list
@@ -47,6 +48,7 @@ class UserViewModel : ViewModel() {
         UserRepo.getUserData(uid, onSuccess = { user, userRole ->
             role = userRole // Store the user role
             name = user.name
+            email = user.email
             Log.d("UserViewModel", "User role: $role")
 
             // Check if the user is a TeacherItem or StudentItem
