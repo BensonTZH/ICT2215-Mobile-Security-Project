@@ -98,7 +98,7 @@ fun NavGraph(navController: NavHostController) {
 
         composable("${Routes.CHAT}/{otherUserId}") { backStackEntry ->
             val otherUserId = backStackEntry.arguments?.getString("otherUserId") ?: return@composable
-            MessageScreen(navController = navController, otherUserId = otherUserId)
+            MessageScreen_3(navController = navController, otherUserId = otherUserId)
         }
 
         composable(

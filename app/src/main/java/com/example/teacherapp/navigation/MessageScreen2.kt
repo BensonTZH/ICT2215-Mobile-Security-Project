@@ -33,7 +33,7 @@
 //
 //@OptIn(ExperimentalMaterial3Api::class)
 //@Composable
-//fun MessageScreen(navController: NavController, otherUserId: String) {
+//fun MessageScreen_2(navController: NavController, otherUserId: String) {
 //    val db = FirebaseFirestore.getInstance()
 //    val auth = FirebaseAuth.getInstance()
 //    val currentUser = auth.currentUser ?: return
