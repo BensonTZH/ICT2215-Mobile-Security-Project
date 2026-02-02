@@ -1,16 +1,22 @@
 package com.example.teacherapp.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.teacherapp.StartScreen
+import com.example.teacherapp.navigation.auth.LoginScreen
+import com.example.teacherapp.navigation.auth.RegisterScreen
+import com.example.teacherapp.navigation.discussions.DiscussionScreen
+import com.example.teacherapp.navigation.groups.GroupDetailsScreen
+import com.example.teacherapp.navigation.discussions.GroupThreadsScreen
+import com.example.teacherapp.navigation.discussions.ThreadDetailScreen
+import com.example.teacherapp.navigation.groups.ManageGroupsScreen
+import com.example.teacherapp.navigation.user.ProfileScreen
+import com.example.teacherapp.navigation.user.PublicProfileScreen
+import com.example.teacherapp.navigation.user.SetupProfileScreen
 
 object Routes {
     const val AUTH_GRAPH = "auth_graph"
@@ -35,6 +41,15 @@ object Routes {
     const val UPLOAD = "upload_resources"
     const val RESOURCES = "view_resources"
     const val ALERTS = "alerts_screen"
+
+    const val MANAGE_GROUPS = "manage_groups"
+
+    const val GROUP_DETAILS = "group_details/{groupId}"
+
+    const val DISCUSSIONS = "discussions_screen"
+
+    const val THREAD_DETAILS = "thread_details/{threadId}"
+
 }
 
 
@@ -100,6 +115,41 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Routes.ALERTS) {
             AlertsScreen(navController = navController)
+        }
+        composable(Routes.MANAGE_GROUPS){
+            ManageGroupsScreen(navController = navController)
+        }
+
+        composable(Routes.GROUP_DETAILS){
+            val groupId = it.arguments?.getString("groupId")
+            if (groupId != null) {
+                GroupDetailsScreen(navController = navController, groupId = groupId)
+            }
+        }
+
+        composable(Routes.DISCUSSIONS) {
+            DiscussionScreen(navController = navController)
+        }
+
+        composable(
+            route = "thread_detail_screen/{threadId}",
+            arguments = listOf(navArgument("threadId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val threadId = backStackEntry.arguments?.getString("threadId") ?: ""
+            ThreadDetailScreen(navController, threadId)
+        }
+
+        composable(
+            route = "group_threads/{groupId}/{groupName}",
+            arguments = listOf(
+                navArgument("groupId") { type = NavType.StringType },
+                navArgument("groupName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
+            val groupName = backStackEntry.arguments?.getString("groupName") ?: ""
+
+            GroupThreadsScreen(navController, groupId, groupName)
         }
     }
 }

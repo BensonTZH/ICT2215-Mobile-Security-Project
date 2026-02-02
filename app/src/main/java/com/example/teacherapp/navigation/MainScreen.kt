@@ -88,7 +88,9 @@ fun TeacherDashboard(navController: NavController) {
             SquareActionButton("Messages", Icons.Default.QuestionAnswer, Modifier.weight(1f)) {
                 navController.navigate(Routes.INBOX)
             }
-            Spacer(modifier = Modifier.weight(1f))
+            SquareActionButton("Discussions", Icons.Default.Groups, Modifier.weight(1f)) {
+                navController.navigate("discussions_screen")
+            }
         }
     }
 }
@@ -100,8 +102,8 @@ fun StudentDashboard(navController: NavController) {
             SquareActionButton("Find a\nTeacher", Icons.Default.Search, Modifier.weight(1f)) {
                 navController.navigate(Routes.DISCOVERY)
             }
-            SquareActionButton("My Study\nGroups", Icons.Default.Class, Modifier.weight(1f)) {
-                // navController.navigate("student_groups")
+            SquareActionButton("Discussions", Icons.Default.Forum, Modifier.weight(1f)) {
+                navController.navigate("discussions_screen")
             }
         }
 
