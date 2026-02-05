@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.teacherapp.navigation.groups.GroupViewModel
 import com.example.teacherapp.upload.FileDownloader
 import com.example.teacherapp.upload.ResourceItem
 import com.example.teacherapp.upload.ResourcesViewModel
@@ -82,6 +84,9 @@ private fun buildGroups(resources: List<ResourceItem>): List<ResourceGroup> {
 fun ResourceScreen(navController: NavHostController) {
     val vm: ResourcesViewModel = viewModel()
     val resources = vm.resources
+
+    val groupViewModel: GroupViewModel = viewModel()
+//    val groups by groupViewModel.groups.observeAsState(emptyList())
     val groups by remember { derivedStateOf { buildGroups(resources.toList()) } }
 
 
