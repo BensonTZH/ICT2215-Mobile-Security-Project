@@ -44,6 +44,20 @@ class GroupViewModel : ViewModel() {
             }
     }
 
+    fun fetchGroupsForStudent(studentUid: String) {
+        firestore.collection("groups")
+            .whereArrayContains("members", studentUid)
+            .get()
+            .addOnSuccessListener { documents ->
+                val groupList = documents.map { it.toObject(GroupItem::class.java) }
+                _groups.value = groupList
+            }
+            .addOnFailureListener { e ->
+                Log.e("GroupViewModel", "Error fetching student groups: ", e)
+                _groups.value = emptyList()
+            }
+    }
+
     // Fetch a specific group by its ID
     fun fetchGroupById(groupId: String, onSuccess: (GroupItem) -> Unit, onFailure: (Exception) -> Unit) {
         firestore.collection("groups")

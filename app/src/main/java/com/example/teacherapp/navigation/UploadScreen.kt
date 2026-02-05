@@ -277,7 +277,6 @@ fun UploadScreen(navController: NavHostController) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
 
-                            // TODO: Show subject of each resources
                             // File info
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -288,9 +287,9 @@ fun UploadScreen(navController: NavHostController) {
                                     )
                                 )
 
-                                if (item.subject.isNotBlank()) {
+                                if (item.group.isNotBlank()) {
                                     Text(
-                                        text = item.subject,
+                                        text = item.group,
                                         fontSize = 12.sp,
                                         color = Color.Gray
                                     )
@@ -356,7 +355,7 @@ fun UploadDialog(
     initialFileName: String,
     initialDescription: String,
     onDismiss: () -> Unit,
-    onSubmit: (String, String, Uri?, String?) -> Unit // Modify this to accept a single subject
+    onSubmit: (String, String, Uri?, String?) -> Unit
 ) {
     if (!showDialog) return
 
@@ -478,7 +477,6 @@ fun UploadDialog(
                     Toast.makeText(context, "Please select a file first.", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                // Pass the selected subject to the onSubmit callback
                 onSubmit(fileName, description, pickedUri, selectedGroup)
             }) {
                 Text(if (mode == DialogMode.CREATE) "Submit" else "Save")

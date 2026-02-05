@@ -14,7 +14,7 @@ import com.google.firebase.firestore.toObjects
 data class ResourceItem(
     @DocumentId val id: String = "",
     val fileName: String = "",
-    val subject: String = "",
+    val group: String = "",
     val description: String = "",
     val cloudinaryUrl: String = "",
     val cloudinaryPublicId: String = "",
