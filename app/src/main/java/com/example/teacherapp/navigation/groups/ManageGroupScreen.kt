@@ -98,13 +98,12 @@ fun ManageGroupsScreen(navController: NavController) {
     if (showCreateDialog) {
         CreateGroupDialog(
             onDismiss = { showCreateDialog = false },
-            onCreate = { name, level, code ->
+            onCreate = { name,code ->
                 val newDocRef = db.collection("groups").document()
 
                 val newGroup = Group(
                     id = newDocRef.id,
                     name = name,
-                    level = level,
                     inviteCode = code,
                     teacherId = teacherId ?: ""
                 )
@@ -121,14 +120,13 @@ fun ManageGroupsScreen(navController: NavController) {
 
 @Composable
 fun StudentSelectorModal(
-    currentLevel: String,
     onAddMembers: (List<String>) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
     var students by remember { mutableStateOf<List<StudentUser>>(emptyList()) }
     val selectedIds = remember { mutableStateListOf<String>() }
 
-    LaunchedEffect(currentLevel) {
+    LaunchedEffect(Unit) {
         db.collection("users")
             .whereEqualTo("role", "student")
             .get()
@@ -138,7 +136,6 @@ fun StudentSelectorModal(
     }
 
     Column(modifier = Modifier.fillMaxHeight(0.8f).padding(16.dp)) {
-        Text("Add $currentLevel Students", fontWeight = FontWeight.Bold, fontSize = 18.sp)
 
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(students) { student ->
@@ -172,7 +169,7 @@ fun StudentSelectorModal(
 @Composable
 fun CreateGroupDialog(
     onDismiss: () -> Unit,
-    onCreate: (String, String, String) -> Unit
+    onCreate: (String, String) -> Unit
 ) {
     var groupName by remember { mutableStateOf("") }
     var selectedLevel by remember { mutableStateOf("JC") }
@@ -199,17 +196,6 @@ fun CreateGroupDialog(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                Text("Target Level", fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    levels.forEach { level ->
-                        FilterChip(
-                            selected = selectedLevel == level,
-                            onClick = { selectedLevel = level },
-                            label = { Text(level) }
-                        )
-                    }
-                }
-
                 OutlinedTextField(
                     value = inviteCode,
                     onValueChange = { inviteCode = it },
@@ -231,7 +217,7 @@ fun CreateGroupDialog(
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { if (groupName.isNotBlank()) onCreate(groupName, selectedLevel, inviteCode) },
+                        onClick = { if (groupName.isNotBlank()) onCreate(groupName, inviteCode) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF505D8A)),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -259,7 +245,7 @@ fun ManageGroupCard(group: Group, onClick: () -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(group.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("${group.level} • ${group.members.size} Members", color = Color.Gray, fontSize = 13.sp)
+                Text("${group.members.size} Members", color = Color.Gray, fontSize = 13.sp)
             }
             Surface(
                 color = Color(0xFFF0F2F8),

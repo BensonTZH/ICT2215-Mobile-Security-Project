@@ -68,7 +68,6 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Invite Code: ${group?.inviteCode}", fontWeight = FontWeight.Bold)
-                    Text("Level: ${group?.level}", fontSize = 14.sp)
                 }
             }
 
@@ -107,7 +106,6 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
             sheetState = sheetState
         ) {
             StudentSelectorModal(
-                currentLevel = group?.level ?: "",
                 onAddMembers = { selectedIds ->
                     // Update Firestore using arrayUnion so we don't overwrite existing members
                     db.collection("groups").document(groupId)

@@ -1,4 +1,5 @@
 package com.example.teacherapp.navigation.discussions
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +28,7 @@ fun DiscussionScreen(navController: NavController) {
     var groups by remember { mutableStateOf<List<Group>>(emptyList()) }
     var userRole by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
+    var showJoinDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(userId) {
         if (userId != null) {
@@ -48,17 +50,37 @@ fun DiscussionScreen(navController: NavController) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-        Text(
-            text = "Your Discussion Groups",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Discussions",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            // Only show Join button if user is a student
+            if (userRole == "student") {
+                TextButton(onClick = { showJoinDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Join Group")
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFF505D8A))
+            }
         } else if (groups.isEmpty()) {
-            Text("You haven't joined any groups yet.", color = Color.Gray)
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No groups joined yet.", color = Color.Gray)
+            }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(groups) { group ->
@@ -68,6 +90,18 @@ fun DiscussionScreen(navController: NavController) {
                 }
             }
         }
+    }
+
+    // Show the Dialog when state is true
+    if (showJoinDialog) {
+        JoinGroupDialog(
+            onDismiss = { showJoinDialog = false },
+            onJoin = { inviteCode ->
+                joinGroupWithCode(db, userId, inviteCode) {
+                    showJoinDialog = false
+                }
+            }
+        )
     }
 }
 
@@ -92,4 +126,59 @@ fun GroupCard(group: Group, onClick: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+fun JoinGroupDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
+    var code by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Join Group") },
+        text = {
+            Column {
+                Text("Enter the invite code shared by your teacher.")
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { if (it.length <= 6) code = it },
+                    label = { Text("6-Digit Code") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (code.length == 6) onJoin(code) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF505D8A))
+            ) {
+                Text("Join")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+fun joinGroupWithCode(db: FirebaseFirestore, userId: String?, code: String, onComplete: () -> Unit) {
+    if (userId == null) return
+
+    db.collection("groups")
+        .whereEqualTo("inviteCode", code)
+        .get()
+        .addOnSuccessListener { snapshot ->
+            if (!snapshot.isEmpty) {
+                val groupDoc = snapshot.documents[0]
+                groupDoc.reference.update("members", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
+                    .addOnSuccessListener {
+                        Log.d("JoinGroup", "Successfully joined!")
+                        onComplete()
+                    }
+            } else {
+                Log.e("JoinGroup", "Invalid Invite Code")
+            }
+        }
 }
