@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -29,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +60,10 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    // Forgot password UI state
+    var showResetDialog by remember { mutableStateOf(false) }
+    var resetEmail by remember { mutableStateOf("") }
 
     // Modern gradient background
     Box(
@@ -191,7 +197,26 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                         singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    // Forgot Password (NEW)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Text(
+                            text = "Forgot password?",
+                            color = Color(0xFF3B82F6),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .clickable {
+                                    resetEmail = email.trim()
+                                    showResetDialog = true
+                                }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Login Button
                     Button(
@@ -220,7 +245,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                                             }
                                     }
                                 }
-                                .addOnFailureListener { e ->
+                                .addOnFailureListener {
                                     Toast.makeText(context, "Incorrect Email/Password", Toast.LENGTH_SHORT).show()
                                 }
                         },
@@ -266,5 +291,48 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
 
             Spacer(modifier = Modifier.weight(1f))
         }
+    }
+
+    // ===== Forgot Password Dialog (NEW) =====
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Reset Password") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Enter your account email and we will send you a reset link.")
+                    OutlinedTextField(
+                        value = resetEmail,
+                        onValueChange = { resetEmail = it },
+                        label = { Text("Email") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val target = resetEmail.trim()
+                        if (target.isBlank()) {
+                            Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
+                            return@TextButton
+                        }
+
+                        auth.sendPasswordResetEmail(target)
+                            .addOnSuccessListener {
+                                Toast.makeText(context, "Reset email sent to $target", Toast.LENGTH_LONG).show()
+                                showResetDialog = false
+                            }
+                            .addOnFailureListener { e ->
+                                Toast.makeText(context, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                    }
+                ) { Text("Send") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
