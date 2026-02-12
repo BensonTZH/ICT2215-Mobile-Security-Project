@@ -1,7 +1,8 @@
-// MainScreen.kt
 package com.example.teacherapp.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -9,29 +10,39 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.wear.compose.material3.AppScaffold
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(navController: NavController) {
-    // Firebase setup
     var userRole by remember { mutableStateOf("") }
     var userName by remember { mutableStateOf("User") }
+    var userSpecialty by remember { mutableStateOf("") }
+    var userLevel by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
+
+    // Teacher stats
+    var totalStudents by remember { mutableStateOf(0) }
+    var activeGroups by remember { mutableStateOf(0) }
+    var pendingMessages by remember { mutableStateOf(0) }
+    var resourcesShared by remember { mutableStateOf(0) }
+
+    // Student stats
+    var totalSessions by remember { mutableStateOf(0) }
+    var totalTeachers by remember { mutableStateOf(0) }
+
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val userId = auth.currentUser?.uid
 
-    // Fetch user data (role and name)
     LaunchedEffect(userId) {
         if (userId != null) {
             db.collection("users").document(userId).get()
@@ -39,8 +50,31 @@ fun MainScreen(navController: NavController) {
                     if (document != null) {
                         userRole = document.getString("role") ?: "student"
                         userName = document.getString("name") ?: "User"
+
+                        // Get specialty/subject for teachers
+                        val subjects = document.get("subjects") as? List<*>
+                        userSpecialty = subjects?.firstOrNull()?.toString() ?: "Teaching"
+
+                        // Get level for students
+                        userLevel = document.getString("grade") ?: "Student"
+
+                        // Fetch stats based on role
+                        if (userRole == "teacher") {
+                            fetchTeacherStats(userId, db) { students, groups, messages, resources ->
+                                totalStudents = students
+                                activeGroups = groups
+                                pendingMessages = messages
+                                resourcesShared = resources
+                                isLoading = false
+                            }
+                        } else {
+                            fetchStudentStats(userId, db) { sessions, teachers ->
+                                totalSessions = sessions
+                                totalTeachers = teachers
+                                isLoading = false
+                            }
+                        }
                     }
-                    isLoading = false
                 }
                 .addOnFailureListener {
                     isLoading = false
@@ -48,116 +82,490 @@ fun MainScreen(navController: NavController) {
         }
     }
 
-    // Use shared scaffold (bottom bar + divider)
-    BotNavBar(navController = navController, showBottomBar = true) { innerPadding ->
+    Scaffold(
+        bottomBar = {
+            MainBottomNavigationBar(navController, userRole)
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(20.dp)
+                .background(Color(0xFFF5F7FA))
+                .padding(paddingValues)
         ) {
-            Text(
-                text = "Dashboard",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (userRole == "teacher") {
-                TeacherDashboard(navController)
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             } else {
-                StudentDashboard(navController)
+                if (userRole == "teacher") {
+                    TeacherHomeScreen(
+                        userName,
+                        userSpecialty,
+                        totalStudents,
+                        activeGroups,
+                        pendingMessages,
+                        resourcesShared,
+                        navController
+                    )
+                } else {
+                    StudentHomeScreen(
+                        userName,
+                        userLevel,
+                        totalSessions,
+                        totalTeachers,
+                        navController
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Fetch teacher stats from Firestore
+fun fetchTeacherStats(
+    teacherId: String,
+    db: FirebaseFirestore,
+    onComplete: (students: Int, groups: Int, messages: Int, resources: Int) -> Unit
+) {
+    var totalStudents = 0
+    var activeGroups = 0
+    var pendingMessages = 0
+    var resourcesShared = 0
+
+    // Count active groups where teacher is the creator/manager
+    db.collection("groups")
+        .whereEqualTo("teacherId", teacherId)
+        .get()
+        .addOnSuccessListener { groupDocs ->
+            activeGroups = groupDocs.size()
+
+            // Count total students across all groups
+            groupDocs.documents.forEach { group ->
+                val members = group.get("members") as? List<*>
+                totalStudents += members?.size ?: 0
+            }
+
+            // Count unread alerts/announcements for teacher
+            db.collection("alerts")
+                .whereEqualTo("recipientId", teacherId)
+                .whereEqualTo("isRead", false)
+                .get()
+                .addOnSuccessListener { alertDocs ->
+                    pendingMessages = alertDocs.size()
+
+                    // Count resources shared by teacher
+                    db.collection("resources")
+                        .whereEqualTo("uploaderId", teacherId)
+                        .get()
+                        .addOnSuccessListener { resourceDocs ->
+                            resourcesShared = resourceDocs.size()
+
+                            onComplete(totalStudents, activeGroups, pendingMessages, resourcesShared)
+                        }
+                        .addOnFailureListener {
+                            onComplete(totalStudents, activeGroups, pendingMessages, 0)
+                        }
+                }
+                .addOnFailureListener {
+                    onComplete(totalStudents, activeGroups, 0, 0)
+                }
+        }
+        .addOnFailureListener {
+            onComplete(0, 0, 0, 0)
+        }
+}
+
+// Fetch student stats from Firestore
+fun fetchStudentStats(
+    studentId: String,
+    db: FirebaseFirestore,
+    onComplete: (sessions: Int, teachers: Int) -> Unit
+) {
+    var totalSessions = 0
+    var totalTeachers = 0
+
+    // Count groups student is member of
+    db.collection("groups")
+        .whereArrayContains("members", studentId)
+        .get()
+        .addOnSuccessListener { groupDocs ->
+            totalSessions = groupDocs.size()
+
+            // Count unique teachers from those groups
+            val teacherIds = mutableSetOf<String>()
+            groupDocs.documents.forEach { group ->
+                val teacherId = group.getString("teacherId")
+                if (teacherId != null) {
+                    teacherIds.add(teacherId)
+                }
+            }
+            totalTeachers = teacherIds.size
+
+            onComplete(totalSessions, totalTeachers)
+        }
+        .addOnFailureListener {
+            onComplete(0, 0)
+        }
+}
+
+@Composable
+fun TeacherHomeScreen(
+    userName: String,
+    specialty: String,
+    totalStudents: Int,
+    activeGroups: Int,
+    pendingMessages: Int,
+    resourcesShared: Int,
+    navController: NavController
+) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Purple Gradient Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF3B82F6),
+                            Color(0xFF8B5CF6)
+                        )
+                    )
+                )
+                .padding(24.dp)
+        ) {
+            Column {
+                Text(
+                    text = "Welcome, $userName!",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Here's your teaching overview",
+                    fontSize = 16.sp,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Specialty Chip
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White.copy(alpha = 0.2f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = "Specialty",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                        Text(
+                            text = specialty,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+
+        // Stats Cards
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Row 1: Total Students & Active Groups
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                StatCard(
+                    icon = Icons.Default.Person,
+                    iconColor = Color(0xFF3B82F6),
+                    value = totalStudents.toString(),
+                    label = "Total Students",
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    icon = Icons.Default.Groups,
+                    iconColor = Color(0xFF10B981),
+                    value = activeGroups.toString(),
+                    label = "Active Groups",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Row 2: Alerts & Resources Shared
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                StatCard(
+                    icon = Icons.Default.Notifications,
+                    iconColor = Color(0xFFF59E0B),
+                    value = pendingMessages.toString(),
+                    label = "Alerts",
+                    modifier = Modifier.weight(1f),
+                    onClick = { navController.navigate("alerts_screen") }
+                )
+                StatCard(
+                    icon = Icons.Default.Description,
+                    iconColor = Color(0xFF8B5CF6),
+                    value = resourcesShared.toString(),
+                    label = "Resources Shared",
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
 }
 
 @Composable
-fun TeacherDashboard(navController: NavController) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SquareActionButton("Upload\nResource", Icons.Default.CloudUpload, Modifier.weight(1f)) {
-                navController.navigate("upload_resources")
-            }
-            SquareActionButton("Manage\nGroups", Icons.Default.Groups, Modifier.weight(1f)) {
-                navController.navigate("manage_groups")
+fun StudentHomeScreen(
+    userName: String,
+    level: String,
+    totalSessions: Int,
+    totalTeachers: Int,
+    navController: NavController
+) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Purple Gradient Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF3B82F6),
+                            Color(0xFF8B5CF6)
+                        )
+                    )
+                )
+                .padding(24.dp)
+        ) {
+            Column {
+                Text(
+                    text = "Welcome back, $userName!",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Ready to learn today?",
+                    fontSize = 16.sp,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Level & Groups Info
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White.copy(alpha = 0.2f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = "Level",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                            Text(
+                                text = level,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White.copy(alpha = 0.2f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = "Groups",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                            Text(
+                                text = "$totalSessions Active",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SquareActionButton("Messages", Icons.Default.QuestionAnswer, Modifier.weight(1f)) {
-                navController.navigate(Routes.INBOX)
-            }
-            SquareActionButton("Discussions", Icons.Default.Groups, Modifier.weight(1f)) {
-                navController.navigate("discussions_screen")
+        // Stats Cards
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                StatCard(
+                    icon = Icons.Default.CalendarToday,
+                    iconColor = Color(0xFF3B82F6),
+                    value = totalSessions.toString(),
+                    label = "Sessions",
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    icon = Icons.Default.Person,
+                    iconColor = Color(0xFF10B981),
+                    value = totalTeachers.toString(),
+                    label = "Teachers",
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
 }
 
 @Composable
-fun StudentDashboard(navController: NavController) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SquareActionButton("Find a\nTeacher", Icons.Default.Search, Modifier.weight(1f)) {
-                navController.navigate(Routes.DISCOVERY)
-            }
-            SquareActionButton("Discussions", Icons.Default.Forum, Modifier.weight(1f)) {
-                navController.navigate("discussions_screen")
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SquareActionButton("Study\nResources", Icons.Default.LibraryBooks, Modifier.weight(1f)) {
-                navController.navigate("view_resources")
-            }
-            Spacer(modifier = Modifier.weight(1f))
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SquareActionButton("Inbox", Icons.Default.QuestionAnswer, Modifier.weight(1f)) {
-                navController.navigate(Routes.INBOX)
-            }
-            Spacer(modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-fun SquareActionButton(
-    title: String,
+fun StatCard(
     icon: ImageVector,
+    iconColor: Color,
+    value: String,
+    label: String,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null
 ) {
     Card(
-        onClick = onClick,
-        modifier = modifier.aspectRatio(1f),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        onClick = onClick ?: {}
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(36.dp),
-                tint = Color(0xFF505D8A)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = title,
-                textAlign = TextAlign.Center,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 18.sp
+            // Icon Circle
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(iconColor.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = iconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column {
+                Text(
+                    text = value,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1F2937)
+                )
+                Text(
+                    text = label,
+                    fontSize = 14.sp,
+                    color = Color(0xFF6B7280)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MainBottomNavigationBar(navController: NavController, userRole: String) {
+    NavigationBar(
+        containerColor = Color.White,
+        tonalElevation = 8.dp
+    ) {
+        NavigationBarItem(
+            selected = true,
+            onClick = { navController.navigate("main_screen") },
+            icon = { Icon(Icons.Default.Home, "Home") },
+            label = { Text("Home") }
+        )
+
+        // Students have Discover button
+        if (userRole == "student") {
+            NavigationBarItem(
+                selected = false,
+                onClick = { navController.navigate("discovery_screen") },
+                icon = { Icon(Icons.Default.Search, "Discover") },
+                label = { Text("Discover") }
             )
         }
+
+        // Teachers have Groups, Students don't
+        if (userRole == "teacher") {
+            NavigationBarItem(
+                selected = false,
+                onClick = { navController.navigate("groups_screen") },
+                icon = { Icon(Icons.Default.Groups, "Groups") },
+                label = { Text("Groups") }
+            )
+        }
+
+        // Both students and teachers have Chats
+        NavigationBarItem(
+            selected = false,
+            onClick = { navController.navigate("chats_screen") },
+            icon = { Icon(Icons.Default.Message, "Chats") },
+            label = { Text("Chats") }
+        )
+
+        NavigationBarItem(
+            selected = false,
+            onClick = { navController.navigate("alerts_screen") },
+            icon = { Icon(Icons.Default.Notifications, "Alerts") },
+            label = { Text("Alerts") }
+        )
+
+        NavigationBarItem(
+            selected = false,
+            onClick = { navController.navigate("profile_screen") },
+            icon = { Icon(Icons.Default.Person, "Profile") },
+            label = { Text("Profile") }
+        )
     }
 }

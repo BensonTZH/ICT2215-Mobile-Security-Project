@@ -57,14 +57,9 @@ object Routes {
 fun NavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = Routes.START // Always starts here
+        startDestination = Routes.LOGIN // CHANGED: Skip StartScreen, go directly to Login
     ) {
-        // Direct route to Start
-        composable(Routes.START) {
-            StartScreen(navController = navController)
-        }
-
-        // Direct route to Login
+        // Direct route to Login (now the starting screen)
         composable(Routes.LOGIN) {
             LoginScreen(navController = navController)
         }
@@ -120,6 +115,7 @@ fun NavGraph(navController: NavHostController) {
             ManageGroupsScreen(navController = navController)
         }
 
+
         composable(Routes.GROUP_DETAILS){
             val groupId = it.arguments?.getString("groupId")
             if (groupId != null) {
@@ -127,6 +123,21 @@ fun NavGraph(navController: NavHostController) {
             }
         }
 
+        composable("chats_screen") {
+            ChatsScreen(navController = navController)
+        }
+
+        composable("groups_screen") {
+            GroupsScreen(navController = navController)
+        }
+
+        composable("find_student") {
+            FindStudentScreen(navController = navController)
+        }
+
+        composable("alerts_screen") {
+            AlertsScreen(navController = navController)  // Your existing alerts screen
+        }
         composable(Routes.DISCUSSIONS) {
             DiscussionScreen(navController = navController)
         }
