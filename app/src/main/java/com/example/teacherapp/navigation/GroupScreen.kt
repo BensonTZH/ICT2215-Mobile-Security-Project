@@ -112,7 +112,10 @@ fun GroupsScreen(navController: NavController) {
             )
         },
         bottomBar = {
-            GroupsBottomNavigationBar(navController)
+            Column {
+                Divider()
+                CustomBottomNavigation(navController)
+            }
         },
         floatingActionButton = {
             if (userRole == "teacher") {
@@ -128,7 +131,7 @@ fun GroupsScreen(navController: NavController) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F7FA))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
             if (isLoading) {
@@ -448,48 +451,5 @@ fun EmptyGroupsState(userRole: String, navController: NavController) {
                 Text("Find Teachers")
             }
         }
-    }
-}
-
-@Composable
-fun GroupsBottomNavigationBar(navController: NavController) {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
-    ) {
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("main_screen") },
-            icon = { Icon(Icons.Default.Home, "Home") },
-            label = { Text("Home") }
-        )
-
-        NavigationBarItem(
-            selected = true, // Groups is selected for teachers
-            onClick = { navController.navigate("groups_screen") },
-            icon = { Icon(Icons.Default.Groups, "Groups") },
-            label = { Text("Groups") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("chats_screen") },
-            icon = { Icon(Icons.Default.Message, "Chats") },
-            label = { Text("Chats") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("alerts_screen") },
-            icon = { Icon(Icons.Default.Notifications, "Alerts") },
-            label = { Text("Alerts") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("profile_screen") },
-            icon = { Icon(Icons.Default.Person, "Profile") },
-            label = { Text("Profile") }
-        )
     }
 }

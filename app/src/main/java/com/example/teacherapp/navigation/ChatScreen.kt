@@ -169,7 +169,14 @@ fun ChatsScreen(navController: NavController) {
     }
 
     Scaffold(
-        topBar = {
+        bottomBar = {
+            Column {
+                Divider()
+                CustomBottomNavigation(navController)
+            }
+        },
+
+                topBar = {
             TopAppBar(
                 title = { Text("Chats") },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -177,13 +184,6 @@ fun ChatsScreen(navController: NavController) {
                     titleContentColor = Color.White
                 )
             )
-        },
-        bottomBar = {
-            if (userRole == "student") {
-                StudentBottomNavigationBar(navController)
-            } else {
-                TeacherBottomNavigationBar(navController)
-            }
         },
         floatingActionButton = {
             if (userRole == "teacher" && selectedTab != 0) {
@@ -211,7 +211,7 @@ fun ChatsScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F7FA))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
             // Tab Row
@@ -627,132 +627,3 @@ fun formatTimestamp(timestamp: Long): String {
     }
 }
 
-@Composable
-fun StudentBottomNavigationBar(navController: NavController) {
-    var totalUnread by remember { mutableStateOf(0) }
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-    val userId = auth.currentUser?.uid
-
-    // Listen for unread count in chats
-    LaunchedEffect(userId) {
-        if (userId != null) {
-            // Count unread in conversations
-            db.collection("conversations")
-                .whereArrayContains("participants", userId)
-                .addSnapshotListener { snapshot, _ ->
-                    val conversationUnread = snapshot?.documents?.sumOf { doc ->
-                        (doc.getLong("unreadCount_$userId") ?: 0L).toInt()
-                    } ?: 0
-
-                    // Count unread in groups
-                    db.collection("groups")
-                        .whereArrayContains("members", userId)
-                        .addSnapshotListener { groupSnapshot, _ ->
-                            val groupUnread = groupSnapshot?.documents?.sumOf { doc ->
-                                (doc.getLong("unreadCount_$userId") ?: 0L).toInt()
-                            } ?: 0
-
-                            totalUnread = conversationUnread + groupUnread
-                        }
-                }
-        }
-    }
-
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
-    ) {
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("main_screen") },
-            icon = { Icon(Icons.Default.Home, "Home") },
-            label = { Text("Home") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("discovery_screen") },
-            icon = { Icon(Icons.Default.Search, "Discover") },
-            label = { Text("Discover") }
-        )
-
-        NavigationBarItem(
-            selected = true, // Chats is selected
-            onClick = { navController.navigate("chats_screen") },
-            icon = {
-                if (totalUnread > 0) {
-                    BadgedBox(
-                        badge = {
-                            Badge {
-                                Text(if (totalUnread > 99) "99+" else totalUnread.toString())
-                            }
-                        }
-                    ) {
-                        Icon(Icons.Default.Message, "Chats")
-                    }
-                } else {
-                    Icon(Icons.Default.Message, "Chats")
-                }
-            },
-            label = { Text("Chats") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("alerts_screen") },
-            icon = { Icon(Icons.Default.Notifications, "Alerts") },
-            label = { Text("Alerts") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("profile_screen") },
-            icon = { Icon(Icons.Default.Person, "Profile") },
-            label = { Text("Profile") }
-        )
-    }
-}
-
-@Composable
-fun TeacherBottomNavigationBar(navController: NavController) {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
-    ) {
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("main_screen") },
-            icon = { Icon(Icons.Default.Home, "Home") },
-            label = { Text("Home") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("groups_screen") },
-            icon = { Icon(Icons.Default.Groups, "Groups") },
-            label = { Text("Groups") }
-        )
-
-        NavigationBarItem(
-            selected = true, // Chats is selected
-            onClick = { navController.navigate("chats_screen") },
-            icon = { Icon(Icons.Default.Message, "Chats") },
-            label = { Text("Chats") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("alerts_screen") },
-            icon = { Icon(Icons.Default.Notifications, "Alerts") },
-            label = { Text("Alerts") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("profile_screen") },
-            icon = { Icon(Icons.Default.Person, "Profile") },
-            label = { Text("Profile") }
-        )
-    }
-}

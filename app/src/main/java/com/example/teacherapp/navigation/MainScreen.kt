@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.teacherapp.navigation.CustomBottomNavigation
+import androidx.compose.material3.HorizontalDivider
 
 @Composable
 fun MainScreen(navController: NavController) {
@@ -84,13 +86,18 @@ fun MainScreen(navController: NavController) {
 
     Scaffold(
         bottomBar = {
-            MainBottomNavigationBar(navController, userRole)
+            Column {
+                HorizontalDivider()
+                CustomBottomNavigation(navController)
+            }
         }
-    ) { paddingValues ->
+    )
+
+    { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F7FA))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
             if (isLoading) {
@@ -510,62 +517,5 @@ fun StatCard(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun MainBottomNavigationBar(navController: NavController, userRole: String) {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
-    ) {
-        NavigationBarItem(
-            selected = true,
-            onClick = { navController.navigate("main_screen") },
-            icon = { Icon(Icons.Default.Home, "Home") },
-            label = { Text("Home") }
-        )
-
-        // Students have Discover button
-        if (userRole == "student") {
-            NavigationBarItem(
-                selected = false,
-                onClick = { navController.navigate("discovery_screen") },
-                icon = { Icon(Icons.Default.Search, "Discover") },
-                label = { Text("Discover") }
-            )
-        }
-
-        // Teachers have Groups, Students don't
-        if (userRole == "teacher") {
-            NavigationBarItem(
-                selected = false,
-                onClick = { navController.navigate("groups_screen") },
-                icon = { Icon(Icons.Default.Groups, "Groups") },
-                label = { Text("Groups") }
-            )
-        }
-
-        // Both students and teachers have Chats
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("chats_screen") },
-            icon = { Icon(Icons.Default.Message, "Chats") },
-            label = { Text("Chats") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("alerts_screen") },
-            icon = { Icon(Icons.Default.Notifications, "Alerts") },
-            label = { Text("Alerts") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("profile_screen") },
-            icon = { Icon(Icons.Default.Person, "Profile") },
-            label = { Text("Profile") }
-        )
     }
 }
