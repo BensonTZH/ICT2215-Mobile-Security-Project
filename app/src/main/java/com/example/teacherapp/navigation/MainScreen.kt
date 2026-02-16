@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.teacherapp.navigation.admin.AdminHomeScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.teacherapp.navigation.CustomBottomNavigation
@@ -108,7 +109,9 @@ fun MainScreen(navController: NavController) {
                     CircularProgressIndicator()
                 }
             } else {
-                if (userRole == "teacher") {
+                if (userRole == "administrator") {
+                    AdminHomeScreen(navController = navController)
+                } else if (userRole == "teacher") {
                     TeacherHomeScreen(
                         userName,
                         userSpecialty,
@@ -116,7 +119,8 @@ fun MainScreen(navController: NavController) {
                         activeGroups,
                         pendingMessages,
                         resourcesShared,
-                        navController
+                        navController,
+                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) }
                     )
                 } else {
                     StudentHomeScreen(
@@ -124,7 +128,8 @@ fun MainScreen(navController: NavController) {
                         userLevel,
                         totalSessions,
                         totalTeachers,
-                        navController
+                        navController,
+                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) }
                     )
                 }
             }
@@ -227,7 +232,8 @@ fun TeacherHomeScreen(
     activeGroups: Int,
     pendingMessages: Int,
     resourcesShared: Int,
-    navController: NavController
+    navController: NavController,
+    onSubmitTicket: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -337,6 +343,14 @@ fun TeacherHomeScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Button(
+                onClick = onSubmitTicket,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Submit Ticket to Support")
+            }
         }
     }
 }
@@ -347,7 +361,8 @@ fun StudentHomeScreen(
     level: String,
     totalSessions: Int,
     totalTeachers: Int,
-    navController: NavController
+    navController: NavController,
+    onSubmitTicket: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -458,6 +473,14 @@ fun StudentHomeScreen(
                     label = "Teachers",
                     modifier = Modifier.weight(1f)
                 )
+            }
+
+            Button(
+                onClick = onSubmitTicket,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Submit Ticket to Support")
             }
         }
     }

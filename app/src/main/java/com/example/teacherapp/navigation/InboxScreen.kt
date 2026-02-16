@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.teacherapp.navigation.admin.AdminTicketsInboxScreen
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -44,13 +45,22 @@ fun InboxScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser ?: return
 
+    var userRole by remember { mutableStateOf("student") }
     var chats by remember { mutableStateOf<List<ChatSummary>>(emptyList()) }
     val nameCache = remember { mutableStateMapOf<String, String>() }
 
     var searchQuery by remember { mutableStateOf("") }
 
-    // Listen for chats involving the current user
     LaunchedEffect(currentUser.uid) {
+        db.collection("users").document(currentUser.uid).get()
+            .addOnSuccessListener { doc ->
+                userRole = doc.getString("role") ?: "student"
+            }
+    }
+
+    // Listen for chats involving the current user
+    LaunchedEffect(currentUser.uid, userRole) {
+        if (userRole == "administrator") return@LaunchedEffect
         db.collection("chats")
             .whereArrayContains("participants", currentUser.uid)
             .orderBy("lastTimestamp")
@@ -86,7 +96,8 @@ fun InboxScreen(navController: NavController) {
     }
 
     // Fetch names for the other users
-    LaunchedEffect(chats) {
+    LaunchedEffect(chats, userRole) {
+        if (userRole == "administrator") return@LaunchedEffect
         chats.forEach { chat ->
             val otherUid = chat.participants.firstOrNull { it != currentUser.uid } ?: return@forEach
             if (otherUid.isBlank()) return@forEach
@@ -124,6 +135,17 @@ fun InboxScreen(navController: NavController) {
             }
         }
     ) { padding ->
+        if (userRole == "administrator") {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                AdminTicketsInboxScreen(navController = navController)
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
