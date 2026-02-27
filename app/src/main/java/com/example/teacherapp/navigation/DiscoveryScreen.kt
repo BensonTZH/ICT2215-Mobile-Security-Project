@@ -21,12 +21,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.teacherapp.models.AppData
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoveryScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
+    val currentUid = FirebaseAuth.getInstance().currentUser?.uid
 
     // 1. STATE VARIABLES
     var searchQuery by remember { mutableStateOf("") }
@@ -36,12 +38,20 @@ fun DiscoveryScreen(navController: NavController) {
 
     // Master data from Firebase
     var teacherList by remember { mutableStateOf(listOf<Map<String, Any>>()) }
+    var currentUserRole by remember { mutableStateOf("student") }
 
     // Constants from your model/lists
     val subjectOptions = remember { AppData.allSubjects }
     val days = listOf("Any", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
     LaunchedEffect(Unit) {
+        if (currentUid != null) {
+            db.collection("users").document(currentUid).get()
+                .addOnSuccessListener { doc ->
+                    currentUserRole = doc.getString("role") ?: "student"
+                }
+        }
+
         db.collection("users")
             .whereEqualTo("role", "teacher")
             .addSnapshotListener { snapshot, _ ->
@@ -173,9 +183,12 @@ fun DiscoveryScreen(navController: NavController) {
                             },
                             onMessageClick = {
                                 if (teacherId.isNotBlank()) {
-                                    navController.navigate("${Routes.CHAT}/$teacherId")
+                                    if (currentUserRole != "administrator") {
+                                        navController.navigate("${Routes.CHAT}/$teacherId")
+                                    }
                                 }
-                            }
+                            },
+                            messageEnabled = currentUserRole != "administrator"
                         )
                     }
                 }
@@ -189,7 +202,8 @@ fun TeacherCard(
     subjects: List<String>,
     availability: List<String>,
     onCardClick: () -> Unit,
-    onMessageClick: () -> Unit
+    onMessageClick: () -> Unit,
+    messageEnabled: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -232,10 +246,11 @@ fun TeacherCard(
 
             Button(
                 onClick = onMessageClick,
+                enabled = messageEnabled,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Message")
+                Text(if (messageEnabled) "Message" else "Tickets Only")
             }
         }
     }

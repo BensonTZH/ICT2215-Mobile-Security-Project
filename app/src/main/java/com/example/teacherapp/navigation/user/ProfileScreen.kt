@@ -104,9 +104,11 @@ fun ProfileScreen(navController: NavController) {
             )
         },
         bottomBar = {
-            Column {
-                Divider()
-                CustomBottomNavigation(navController)
+            if (!isLoading && roleRaw.isNotBlank() && roleRaw != "administrator") {
+                Column {
+                    Divider()
+                    CustomBottomNavigation(navController)
+                }
             }
         }
     ) { padding ->

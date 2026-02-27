@@ -1,4 +1,4 @@
-package com.example.teacherapp.navigation.admin
+package com.example.teacherapp.navigation.support
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +37,7 @@ import com.example.teacherapp.support.SupportTicketRepo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminTicketDetailScreen(navController: NavController, ticketId: String) {
+fun TicketDetailScreen(navController: NavController, ticketId: String) {
     val context = LocalContext.current
     var ticket by remember { mutableStateOf<SupportTicket?>(null) }
     var messages by remember { mutableStateOf<List<SupportTicketMessage>>(emptyList()) }
@@ -50,6 +50,7 @@ fun AdminTicketDetailScreen(navController: NavController, ticketId: String) {
             onError = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
         )
     }
+
     DisposableEffect(ticketId) {
         val reg = SupportTicketRepo.listenTicketMessages(
             ticketId = ticketId,
@@ -62,7 +63,7 @@ fun AdminTicketDetailScreen(navController: NavController, ticketId: String) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ticket Detail") },
+                title = { Text("Ticket Conversation") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -83,11 +84,10 @@ fun AdminTicketDetailScreen(navController: NavController, ticketId: String) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(item.subject, fontWeight = FontWeight.Bold)
-            Text("From: ${item.creatorName} (${item.creatorRole})")
             Text("Status: ${item.status}")
             Text(item.description)
 
@@ -107,7 +107,7 @@ fun AdminTicketDetailScreen(navController: NavController, ticketId: String) {
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it },
-                    label = { Text("Reply to user") },
+                    label = { Text("Reply") },
                     enabled = item.status != "resolved",
                     modifier = Modifier.weight(1f)
                 )
@@ -128,24 +128,6 @@ fun AdminTicketDetailScreen(navController: NavController, ticketId: String) {
             }
             if (item.status == "resolved") {
                 Text("Replies are disabled for resolved tickets.")
-            }
-
-            Button(
-                onClick = {
-                    val newStatus = if (item.status == "open") "resolved" else "open"
-                    SupportTicketRepo.updateTicketStatus(
-                        ticketId = ticketId,
-                        newStatus = newStatus,
-                        onSuccess = {
-                            ticket = item.copy(status = newStatus)
-                            Toast.makeText(context, "Status updated", Toast.LENGTH_SHORT).show()
-                        },
-                        onError = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (item.status == "open") "Mark Resolved" else "Reopen Ticket")
             }
         }
     }

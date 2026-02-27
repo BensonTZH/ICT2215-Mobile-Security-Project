@@ -16,11 +16,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,11 +46,22 @@ fun AdminUsersScreen(navController: NavController) {
     val context = LocalContext.current
     var users by remember { mutableStateOf<List<Map<String, Any?>>>(emptyList()) }
     var deletingUid by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
 
     DisposableEffect(Unit) {
         val reg = AdminRepo.listenManagedUsers(
-            onUpdate = { users = it.sortedBy { u -> (u["name"] as? String ?: "").lowercase() } },
-            onError = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+            onUpdate = {
+                users = it.sortedBy { u -> (u["name"] as? String ?: "").lowercase() }
+                isLoading = false
+                errorMessage = null
+            },
+            onError = {
+                isLoading = false
+                errorMessage = it
+                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            }
         )
         onDispose { reg.remove() }
     }
@@ -70,40 +83,102 @@ fun AdminUsersScreen(navController: NavController) {
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            items(users, key = { (it["uid"] as? String) ?: "" }) { user ->
-                val uid = user["uid"] as? String ?: return@items
-                val role = user["role"] as? String ?: ""
-                ListItem(
-                    headlineContent = {
-                        Text((user["name"] as? String).orEmpty().ifBlank { "Unnamed" }, fontWeight = FontWeight.SemiBold)
-                    },
-                    supportingContent = {
-                        Column {
-                            Text((user["email"] as? String).orEmpty())
-                            Text("Role: $role")
-                        }
-                    },
-                    trailingContent = {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit",
-                                modifier = Modifier.clickable { navController.navigate("admin_user_edit/$uid") }
-                            )
-                            Spacer(modifier = Modifier.padding(2.dp))
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete",
-                                modifier = Modifier.clickable { deletingUid = uid }
+        val filteredUsers = users.filter { user ->
+            val name = (user["name"] as? String).orEmpty()
+            name.contains(searchQuery, ignoreCase = true)
+        }
+
+        when {
+            isLoading -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("Loading users...")
+                }
+            }
+            errorMessage != null -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("Failed to load users: ${errorMessage.orEmpty()}")
+                }
+            }
+            users.isEmpty() -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("No student/teacher users found.")
+                }
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    item {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            label = { Text("Search by name") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                        )
+                    }
+                    if (filteredUsers.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No users match your search.",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
-                )
+                    items(filteredUsers, key = { (it["uid"] as? String) ?: "" }) { user ->
+                        val uid = user["uid"] as? String ?: return@items
+                        val role = user["role"] as? String ?: ""
+                        ListItem(
+                            headlineContent = {
+                                Text((user["name"] as? String).orEmpty().ifBlank { "Unnamed" }, fontWeight = FontWeight.SemiBold)
+                            },
+                            supportingContent = {
+                                Column {
+                                    Text((user["email"] as? String).orEmpty())
+                                    Text("Role: $role")
+                                }
+                            },
+                            trailingContent = {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit",
+                                        modifier = Modifier.clickable { navController.navigate("admin_user_edit/$uid") }
+                                    )
+                                    Spacer(modifier = Modifier.padding(2.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        modifier = Modifier.clickable { deletingUid = uid }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
             }
         }
     }

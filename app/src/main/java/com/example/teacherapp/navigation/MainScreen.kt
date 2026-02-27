@@ -87,9 +87,11 @@ fun MainScreen(navController: NavController) {
 
     Scaffold(
         bottomBar = {
-            Column {
-                HorizontalDivider()
-                CustomBottomNavigation(navController)
+            if (!isLoading && userRole.isNotBlank() && userRole != "administrator") {
+                Column {
+                    HorizontalDivider()
+                    CustomBottomNavigation(navController)
+                }
             }
         }
     )
@@ -120,7 +122,8 @@ fun MainScreen(navController: NavController) {
                         pendingMessages,
                         resourcesShared,
                         navController,
-                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) }
+                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) },
+                        onMyTickets = { navController.navigate(Routes.MY_TICKETS) }
                     )
                 } else {
                     StudentHomeScreen(
@@ -129,7 +132,8 @@ fun MainScreen(navController: NavController) {
                         totalSessions,
                         totalTeachers,
                         navController,
-                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) }
+                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) },
+                        onMyTickets = { navController.navigate(Routes.MY_TICKETS) }
                     )
                 }
             }
@@ -233,7 +237,8 @@ fun TeacherHomeScreen(
     pendingMessages: Int,
     resourcesShared: Int,
     navController: NavController,
-    onSubmitTicket: () -> Unit
+    onSubmitTicket: () -> Unit,
+    onMyTickets: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -351,6 +356,13 @@ fun TeacherHomeScreen(
             ) {
                 Text("Submit Ticket to Support")
             }
+            OutlinedButton(
+                onClick = onMyTickets,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("My Support Tickets")
+            }
         }
     }
 }
@@ -362,7 +374,8 @@ fun StudentHomeScreen(
     totalSessions: Int,
     totalTeachers: Int,
     navController: NavController,
-    onSubmitTicket: () -> Unit
+    onSubmitTicket: () -> Unit,
+    onMyTickets: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -481,6 +494,13 @@ fun StudentHomeScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Submit Ticket to Support")
+            }
+            OutlinedButton(
+                onClick = onMyTickets,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("My Support Tickets")
             }
         }
     }

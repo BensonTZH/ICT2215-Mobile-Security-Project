@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.teacherapp.navigation.Routes
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -23,9 +24,18 @@ fun PublicProfileScreen(navController: NavController, teacherId: String?) {
     val db = FirebaseFirestore.getInstance()
     var teacherData by remember { mutableStateOf<Map<String, Any>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var currentRole by remember { mutableStateOf("student") }
+    val currentUid = FirebaseAuth.getInstance().currentUser?.uid
 
     // Fetch Teacher Details
     LaunchedEffect(teacherId) {
+        if (currentUid != null) {
+            db.collection("users").document(currentUid).get()
+                .addOnSuccessListener { doc ->
+                    currentRole = doc.getString("role") ?: "student"
+                }
+        }
+
         if (teacherId != null) {
             db.collection("users").document(teacherId).get()
                 .addOnSuccessListener { document ->
@@ -47,13 +57,15 @@ fun PublicProfileScreen(navController: NavController, teacherId: String?) {
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = {navController.navigate("${Routes.CHAT}/$teacherId")},
-                icon = { Icon(Icons.Default.Email, contentDescription = null) },
-                text = { Text("Message Teacher") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White
-            )
+            if (currentRole != "administrator") {
+                ExtendedFloatingActionButton(
+                    onClick = { navController.navigate("${Routes.CHAT}/$teacherId") },
+                    icon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    text = { Text("Message Teacher") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White
+                )
+            }
         }
     ) { padding ->
         if (isLoading) {

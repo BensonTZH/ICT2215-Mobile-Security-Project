@@ -33,6 +33,7 @@ fun SubmitTicketScreen(navController: NavController) {
     val context = LocalContext.current
     var subject by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -69,6 +70,8 @@ fun SubmitTicketScreen(navController: NavController) {
 
             Button(
                 onClick = {
+                    if (isSubmitting) return@Button
+                    isSubmitting = true
                     SupportTicketRepo.createTicket(
                         subject = subject,
                         description = description,
@@ -76,13 +79,16 @@ fun SubmitTicketScreen(navController: NavController) {
                             Toast.makeText(context, "Ticket submitted", Toast.LENGTH_SHORT).show()
                             navController.popBackStack()
                         },
-                        onError = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+                        onError = {
+                            isSubmitting = false
+                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                        }
                     )
                 },
-                enabled = subject.isNotBlank() && description.isNotBlank(),
+                enabled = subject.isNotBlank() && description.isNotBlank() && !isSubmitting,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Submit")
+                Text(if (isSubmitting) "Submitting..." else "Submit")
             }
         }
     }
