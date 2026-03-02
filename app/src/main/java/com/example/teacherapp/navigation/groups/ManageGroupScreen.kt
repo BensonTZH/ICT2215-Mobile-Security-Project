@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.example.teacherapp.navigation.BotNavBar
 import com.example.teacherapp.models.Group
 import com.example.teacherapp.models.StudentUser
 import com.google.firebase.auth.FirebaseAuth
@@ -43,7 +44,7 @@ fun ManageGroupsScreen(navController: NavController) {
         }
     }
 
-    _root_ide_package_.com.example.teacherapp.navigation.BotNavBar(
+    BotNavBar(
         navController = navController,
         showBottomBar = true
     ) { innerPadding ->
@@ -240,26 +241,27 @@ fun ManageGroupCard(group: Group, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                imageVector = Icons.Default.Groups,
+                contentDescription = "Group",
+                tint = Color(0xFF505D8A),
+                modifier = Modifier.size(36.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(group.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("${group.members.size} Members", color = Color.Gray, fontSize = 13.sp)
+                Text("Invite: ${group.inviteCode}", color = Color.Gray, fontSize = 13.sp)
             }
-            Surface(
-                color = Color(0xFFF0F2F8),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = group.inviteCode,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF505D8A),
-                    fontSize = 12.sp
-                )
-            }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.LightGray)
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Go",
+                tint = Color.Gray
+            )
         }
     }
 }

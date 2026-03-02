@@ -1,11 +1,14 @@
 package com.example.teacherapp.navigation.discussions
+
 import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,31 +25,62 @@ import com.google.firebase.firestore.FirebaseFirestore
 @Composable
 fun DiscussionScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
-    val auth = FirebaseAuth.getInstance()
-    val userId = auth.currentUser?.uid
+
+    // --- FIX: reactive UID (works after login / app restart) ---
+    var userId by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid) }
+    DisposableEffect(Unit) {
+        val auth = FirebaseAuth.getInstance()
+        val listener = FirebaseAuth.AuthStateListener { fa ->
+            userId = fa.currentUser?.uid
+        }
+        auth.addAuthStateListener(listener)
+        onDispose { auth.removeAuthStateListener(listener) }
+    }
 
     var groups by remember { mutableStateOf<List<Group>>(emptyList()) }
-    var userRole by remember { mutableStateOf("") }
+    var userRole by remember { mutableStateOf<String?>(null) } // null = loading
     var isLoading by remember { mutableStateOf(true) }
     var showJoinDialog by remember { mutableStateOf(false) }
 
+    fun isPrivileged(role: String?): Boolean = role == "teacher" || role == "administrator"
+
     LaunchedEffect(userId) {
-        if (userId != null) {
-            db.collection("users").document(userId).get().addOnSuccessListener { doc ->
+        groups = emptyList()
+        userRole = null
+        isLoading = true
+
+        val uid = userId
+        if (uid == null) {
+            isLoading = false
+            return@LaunchedEffect
+        }
+
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
                 userRole = doc.getString("role") ?: "student"
 
-                val groupQuery = if (userRole == "teacher") {
-                    db.collection("groups").whereEqualTo("teacherId", userId)
+                val query = if (isPrivileged(userRole)) {
+                    db.collection("groups").whereEqualTo("teacherId", uid)
                 } else {
-                    db.collection("groups").whereArrayContains("members", userId)
+                    db.collection("groups").whereArrayContains("members", uid)
                 }
 
-                groupQuery.addSnapshotListener { snapshot, _ ->
+                query.addSnapshotListener { snapshot, err ->
+                    if (err != null) {
+                        Log.e("DiscussionScreen", "groups listener error", err)
+                        groups = emptyList()
+                        isLoading = false
+                        return@addSnapshotListener
+                    }
                     groups = snapshot?.toObjects(Group::class.java) ?: emptyList()
                     isLoading = false
                 }
             }
-        }
+            .addOnFailureListener { e ->
+                Log.e("DiscussionScreen", "failed to read user role", e)
+                userRole = "student"
+                isLoading = false
+            }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
@@ -61,7 +95,7 @@ fun DiscussionScreen(navController: NavController) {
                 fontWeight = FontWeight.Bold
             )
 
-            // Only show Join button if user is a student
+            // Only students join groups
             if (userRole == "student") {
                 TextButton(onClick = { showJoinDialog = true }) {
                     Icon(Icons.Default.Add, contentDescription = null)
@@ -73,40 +107,41 @@ fun DiscussionScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFF505D8A))
+        when {
+            isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF505D8A))
+                }
             }
-        } else if (groups.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No groups joined yet.", color = Color.Gray)
+            groups.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No groups available.", color = Color.Gray)
+                }
             }
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(groups) { group ->
-                    GroupCard(group = group) {
-                        navController.navigate("group_threads/${group.id}/${group.name}")
+            else -> {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(groups) { group ->
+                        GroupCard(group = group) {
+                            navController.navigate("group_threads/${group.id}/${group.name}")
+                        }
                     }
                 }
             }
         }
     }
 
-    // Show the Dialog when state is true
     if (showJoinDialog) {
         JoinGroupDialog(
             onDismiss = { showJoinDialog = false },
             onJoin = { inviteCode ->
-                joinGroupWithCode(db, userId, inviteCode) {
-                    showJoinDialog = false
-                }
+                joinGroupWithCode(db, userId, inviteCode) { showJoinDialog = false }
             }
         )
     }
 }
 
 @Composable
-fun GroupCard(group: Group, onClick: () -> Unit) {
+private fun GroupCard(group: Group, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -129,7 +164,7 @@ fun GroupCard(group: Group, onClick: () -> Unit) {
 }
 
 @Composable
-fun JoinGroupDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
+private fun JoinGroupDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
     var code by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -153,9 +188,7 @@ fun JoinGroupDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
             Button(
                 onClick = { if (code.length == 6) onJoin(code) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF505D8A))
-            ) {
-                Text("Join")
-            }
+            ) { Text("Join") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -163,7 +196,12 @@ fun JoinGroupDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
     )
 }
 
-fun joinGroupWithCode(db: FirebaseFirestore, userId: String?, code: String, onComplete: () -> Unit) {
+private fun joinGroupWithCode(
+    db: FirebaseFirestore,
+    userId: String?,
+    code: String,
+    onComplete: () -> Unit
+) {
     if (userId == null) return
 
     db.collection("groups")
@@ -172,13 +210,14 @@ fun joinGroupWithCode(db: FirebaseFirestore, userId: String?, code: String, onCo
         .addOnSuccessListener { snapshot ->
             if (!snapshot.isEmpty) {
                 val groupDoc = snapshot.documents[0]
-                groupDoc.reference.update("members", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
-                    .addOnSuccessListener {
-                        Log.d("JoinGroup", "Successfully joined!")
-                        onComplete()
-                    }
+                groupDoc.reference
+                    .update("members", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
+                    .addOnSuccessListener { onComplete() }
             } else {
                 Log.e("JoinGroup", "Invalid Invite Code")
             }
+        }
+        .addOnFailureListener { e ->
+            Log.e("JoinGroup", "Join failed", e)
         }
 }

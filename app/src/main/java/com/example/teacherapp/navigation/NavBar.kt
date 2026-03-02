@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 @Composable
 fun BotNavBar(
     navController: NavController,
+    userRole: String? = null,
     showBottomBar: Boolean = true,
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -28,7 +29,7 @@ fun BotNavBar(
             if (showBottomBar) {
                 Column {
                     HorizontalDivider()
-                    CustomBottomNavigation(navController)
+                    CustomBottomNavigation(navController = navController, userRole = userRole)
                 }
             }
         }
@@ -38,7 +39,10 @@ fun BotNavBar(
 }
 
 @Composable
-fun CustomBottomNavigation(navController: NavController) {
+fun CustomBottomNavigation(
+    navController: NavController,
+    userRole: String? = null
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -64,6 +68,19 @@ fun CustomBottomNavigation(navController: NavController) {
                 }
             }
         )
+
+        // Teacher-only: admin/group management
+        if (userRole == "teacher") {
+            BottomNavItem(
+                label = "Groups",
+                icon = Icons.Filled.Group,
+                onClick = {
+                    navController.navigate(Routes.MANAGE_GROUPS) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
         BottomNavItem(
             label = "Inbox",
             icon = Icons.Filled.QuestionAnswer,

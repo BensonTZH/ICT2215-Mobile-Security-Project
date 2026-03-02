@@ -3,6 +3,7 @@ package com.example.teacherapp.navigation
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -14,7 +15,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -62,11 +63,12 @@ import com.google.android.gms.location.LocationServices
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.FieldValue
+import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.google.firebase.firestore.ListenerRegistration
-import kotlinx.coroutines.tasks.await
-import android.content.ActivityNotFoundException
 
 @SuppressLint("MissingPermission")
 private suspend fun getCurrentLatLng(activity: Activity?): Pair<Double, Double>? {
@@ -75,7 +77,6 @@ private suspend fun getCurrentLatLng(activity: Activity?): Pair<Double, Double>?
     return Pair(loc.latitude, loc.longitude)
 }
 
-//Timestamp testing
 fun formatTimestamp(timestamp: Timestamp): String {
     val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
     return sdf.format(timestamp.toDate())
@@ -84,7 +85,6 @@ fun formatTimestamp(timestamp: Timestamp): String {
 fun chatIdFor(uid1: String, uid2: String): String =
     listOf(uid1, uid2).sorted().joinToString("_")
 
-
 fun openMap(
     context: android.content.Context,
     lat: Double,
@@ -92,7 +92,6 @@ fun openMap(
     label: String?
 ) {
     val encodedLabel = Uri.encode(label ?: "Location")
-
     val geoUri = Uri.parse("geo:$lat,$lng?q=$lat,$lng($encodedLabel)")
     val geoIntent = Intent(Intent.ACTION_VIEW, geoUri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
@@ -113,7 +112,6 @@ fun openMap(
     }
 }
 
-//Message model
 data class Message(
     val type: String = "text",           // "text" | "location"
     val message: String = "",            // for text
@@ -125,22 +123,61 @@ data class Message(
     val label: String? = null
 )
 
+private suspend fun fetchUserRole(db: FirebaseFirestore, uid: String): String {
+    return try {
+        val doc = db.collection("users").document(uid).get().await()
+        doc.getString("role") ?: "student"
+    } catch (_: Exception) {
+        "student"
+    }
+}
+
+private fun resolveTeacherStudentIds(
+    senderId: String,
+    senderRole: String,
+    recipientId: String,
+    recipientRole: String
+): Pair<String?, String?> {
+    val teacherId: String?
+    val studentId: String?
+
+    if (senderRole == "teacher" && recipientRole == "student") {
+        teacherId = senderId
+        studentId = recipientId
+    } else if (senderRole == "student" && recipientRole == "teacher") {
+        teacherId = recipientId
+        studentId = senderId
+    } else {
+        teacherId = null
+        studentId = null
+    }
+    return Pair(teacherId, studentId)
+}
+
+private fun computeNeedsResponse(
+    senderRole: String,
+    recipientRole: String
+): Boolean {
+    // needsResponse is true when a STUDENT sends to a TEACHER (teacher should respond).
+    return senderRole == "student" && recipientRole == "teacher"
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessageScreen_3(navController: NavController, otherUserId: String)
-{
-    //Firebase setup
+fun MessageScreen_3(navController: NavController, otherUserId: String) {
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser ?: return
 
-    //Track messages + other user's name
     var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
     var otherUserName by remember { mutableStateOf("Unknown") }
     val chatId = chatIdFor(currentUser.uid, otherUserId)
 
-    // Location Setup
+    // Roles for Part-1 "quick response" + teacher dashboard stats
+    var currentUserRole by remember { mutableStateOf("student") }
+    var otherUserRole by remember { mutableStateOf("student") }
+
+    // Location setup
     val context = LocalContext.current
     val activity = LocalActivity.current
     var pendingSendLocation by remember { mutableStateOf(false) }
@@ -149,54 +186,14 @@ fun MessageScreen_3(navController: NavController, otherUserId: String)
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         Log.d("MessageScreen", "Permission result: $granted")
-        if (granted) {
-            pendingSendLocation = true
-        } else {
-            Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
-        }
+        if (granted) pendingSendLocation = true
+        else Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
     }
 
-    LaunchedEffect(pendingSendLocation) {
-        if (!pendingSendLocation) return@LaunchedEffect
-        pendingSendLocation = false
-
-        val latLng = getCurrentLatLng(activity) ?: run {
-            Log.e("MessageScreen", "Location unavailable")
-            return@LaunchedEffect
-        }
-
-        val (lat, lng) = latLng
-        val now = Timestamp.now()
-
-        val msgRef = db.collection("messages").document()
-        val chatRef = db.collection("chats").document(chatId)
-
-        val msgData = mapOf(
-            "chatId" to chatId,
-            "type" to "location",
-            "message" to "", // empty for location
-            "label" to "My location",
-            "latitude" to lat,
-            "longitude" to lng,
-            "senderId" to currentUser.uid,
-            "recipientId" to otherUserId,
-            "participants" to listOf(currentUser.uid, otherUserId),
-            "timestamp" to now
-        )
-
-        val chatData = mapOf(
-            "participants" to listOf(currentUser.uid, otherUserId),
-            "lastMessage" to "📍 Location shared",
-            "lastTimestamp" to now,
-            "lastSenderId" to currentUser.uid
-        )
-
-        db.runBatch { batch ->
-            batch.set(msgRef, msgData)
-            batch.set(chatRef, chatData, com.google.firebase.firestore.SetOptions.merge())
-        }.addOnFailureListener { e ->
-            Log.e("MessageScreen", "Send location failed", e)
-        }
+    // Fetch roles once (used for needsResponse + teacherId/studentId)
+    LaunchedEffect(currentUser.uid, otherUserId) {
+        currentUserRole = fetchUserRole(db, currentUser.uid)
+        otherUserRole = fetchUserRole(db, otherUserId)
     }
 
     fun requestAndSendLocation() {
@@ -204,14 +201,11 @@ fun MessageScreen_3(navController: NavController, otherUserId: String)
             context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
-        if (granted) {
-            pendingSendLocation = true
-        } else {
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+        if (granted) pendingSendLocation = true
+        else locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
-    //Get the other user name
+    // Fetch the other user's display name
     LaunchedEffect(otherUserId) {
         db.collection("users").document(otherUserId).get()
             .addOnSuccessListener { doc ->
@@ -222,8 +216,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String)
             }
     }
 
-
-    // Realtime chat
+    // Realtime messages
     DisposableEffect(chatId) {
         val reg: ListenerRegistration = db.collection("messages")
             .whereEqualTo("chatId", chatId)
@@ -254,9 +247,64 @@ fun MessageScreen_3(navController: NavController, otherUserId: String)
         onDispose { reg.remove() }
     }
 
+    // Send location (updates chats with needsResponse + teacherId/studentId for dashboard)
+    LaunchedEffect(pendingSendLocation) {
+        if (!pendingSendLocation) return@LaunchedEffect
+        pendingSendLocation = false
 
+        val latLng = getCurrentLatLng(activity) ?: run {
+            Log.e("MessageScreen", "Location unavailable")
+            return@LaunchedEffect
+        }
 
-    Scaffold (
+        val (lat, lng) = latLng
+        val now = Timestamp.now()
+
+        val (teacherId, studentId) = resolveTeacherStudentIds(
+            senderId = currentUser.uid,
+            senderRole = currentUserRole,
+            recipientId = otherUserId,
+            recipientRole = otherUserRole
+        )
+        val needsResponse = computeNeedsResponse(currentUserRole, otherUserRole)
+
+        val msgRef = db.collection("messages").document()
+        val chatRef = db.collection("chats").document(chatId)
+
+        val msgData = mapOf(
+            "chatId" to chatId,
+            "type" to "location",
+            "message" to "",
+            "label" to "My location",
+            "latitude" to lat,
+            "longitude" to lng,
+            "senderId" to currentUser.uid,
+            "recipientId" to otherUserId,
+            "participants" to listOf(currentUser.uid, otherUserId),
+            "timestamp" to now
+        )
+
+        val chatData = hashMapOf(
+            "participants" to listOf(currentUser.uid, otherUserId),
+            "lastMessage" to "📍 Location shared",
+            "lastTimestamp" to now,
+            "lastSenderId" to currentUser.uid,
+            "lastSenderRole" to currentUserRole,
+            "needsResponse" to needsResponse,
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        if (teacherId != null) chatData["teacherId"] = teacherId
+        if (studentId != null) chatData["studentId"] = studentId
+
+        db.runBatch { batch ->
+            batch.set(msgRef, msgData)
+            batch.set(chatRef, chatData, SetOptions.merge())
+        }.addOnFailureListener { e ->
+            Log.e("MessageScreen", "Send location failed", e)
+        }
+    }
+
+    Scaffold(
         topBar = {
             Column {
                 TopAppBar(
@@ -270,8 +318,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String)
                 Divider()
             }
         }
-
-    ){ paddingValues ->
+    ) { paddingValues ->
         MessageScreenUI(
             modifier = Modifier
                 .fillMaxSize()
@@ -281,18 +328,20 @@ fun MessageScreen_3(navController: NavController, otherUserId: String)
             onSend = { text ->
                 val now = Timestamp.now()
 
-                messages = messages + Message(
-                    message = text,
+                val (teacherId, studentId) = resolveTeacherStudentIds(
                     senderId = currentUser.uid,
+                    senderRole = currentUserRole,
                     recipientId = otherUserId,
-                    timestamp = now
+                    recipientRole = otherUserRole
                 )
+                val needsResponse = computeNeedsResponse(currentUserRole, otherUserRole)
 
                 val msgRef = db.collection("messages").document()
                 val chatRef = db.collection("chats").document(chatId)
 
                 val msgData = mapOf(
                     "chatId" to chatId,
+                    "type" to "text",
                     "message" to text,
                     "senderId" to currentUser.uid,
                     "recipientId" to otherUserId,
@@ -300,16 +349,21 @@ fun MessageScreen_3(navController: NavController, otherUserId: String)
                     "timestamp" to now
                 )
 
-                val chatData = mapOf(
+                val chatData = hashMapOf(
                     "participants" to listOf(currentUser.uid, otherUserId),
                     "lastMessage" to text,
                     "lastTimestamp" to now,
-                    "lastSenderId" to currentUser.uid
+                    "lastSenderId" to currentUser.uid,
+                    "lastSenderRole" to currentUserRole,
+                    "needsResponse" to needsResponse,
+                    "updatedAt" to FieldValue.serverTimestamp()
                 )
+                if (teacherId != null) chatData["teacherId"] = teacherId
+                if (studentId != null) chatData["studentId"] = studentId
 
                 db.runBatch { batch ->
                     batch.set(msgRef, msgData)
-                    batch.set(chatRef, chatData, com.google.firebase.firestore.SetOptions.merge())
+                    batch.set(chatRef, chatData, SetOptions.merge())
                 }.addOnFailureListener { e ->
                     Log.e("MessageScreen", "Send failed", e)
                 }
@@ -317,11 +371,9 @@ fun MessageScreen_3(navController: NavController, otherUserId: String)
             onSendLocation = { requestAndSendLocation() }
         )
     }
-
-
 }
 
-//message bubble
+// message bubble
 @Composable
 fun MessageItem(message: Message, isCurrentUser: Boolean) {
     val alignment = if (isCurrentUser) Alignment.End else Alignment.Start
@@ -330,20 +382,17 @@ fun MessageItem(message: Message, isCurrentUser: Boolean) {
     val timeColor = Color(0xFF6B7280)
     val context = LocalContext.current
 
-    // Draw the bubble and open Maps
     if (message.type == "location" && message.latitude != null && message.longitude != null) {
         val lat = message.latitude
         val lng = message.longitude
-        val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng(${Uri.encode(message.label ?: "Location")})")
-        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
 
-        val bubbleShape = if (isCurrentUser) RoundedCornerShape(20.dp,20.dp,6.dp,20.dp)
-        else RoundedCornerShape(20.dp,20.dp,20.dp,6.dp)
+        val bubbleShape = if (isCurrentUser) RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp)
+        else RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
 
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
         ) {
             Surface(shape = bubbleShape, shadowElevation = 2.dp, color = bubbleColor) {
@@ -380,7 +429,6 @@ fun MessageItem(message: Message, isCurrentUser: Boolean) {
         return
     }
 
-    // Tail effect: less rounded on the "tail" corner
     val bubbleShape = if (isCurrentUser) {
         RoundedCornerShape(
             topStart = 20.dp,
@@ -403,7 +451,6 @@ fun MessageItem(message: Message, isCurrentUser: Boolean) {
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalAlignment = alignment
     ) {
-        // Bubble
         Surface(
             shape = bubbleShape,
             shadowElevation = 2.dp,
@@ -415,7 +462,7 @@ fun MessageItem(message: Message, isCurrentUser: Boolean) {
                 color = textColor,
                 modifier = Modifier
                     .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .widthIn(max = 280.dp) // prevents full-width bubbles
+                    .widthIn(max = 280.dp)
             )
         }
 
@@ -465,7 +512,9 @@ fun MessageScreenUI(
                 )
             }
         }
+
         Divider()
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -490,12 +539,9 @@ fun MessageScreenUI(
                 }
             )
 
-
             Spacer(modifier = Modifier.width(8.dp))
 
-            Button(onClick = onSendLocation) {
-                Text("📍")
-            }
+            Button(onClick = onSendLocation) { Text("📍") }
 
             Button(onClick = {
                 val text = messageText.text.trim()
@@ -503,31 +549,28 @@ fun MessageScreenUI(
                     onSend(text)
                     messageText = TextFieldValue("")
                 }
-            }) {
-                Text("Send")
-            }
+            }) { Text("Send") }
         }
     }
 }
 
-// just for me to see UI can ignore
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, widthDp = 360, heightDp = 720)
 @Composable
 fun MessageScreenWithTopBarPreview() {
     val mockMessages = listOf(
-        Message("Hi, are you free for consultation?", "student", "teacher", timestamp = Timestamp.now()),
-        Message("Yes, I am available at 4pm.", "teacher", "student", timestamp = Timestamp.now()),
-        Message("Great, see you then!", "student", "teacher", timestamp = Timestamp.now())
+        Message("text", "Hi, are you free for consultation?", "student", "teacher", timestamp = Timestamp.now()),
+        Message("text", "Yes, I am available at 4pm.", "teacher", "student", timestamp = Timestamp.now()),
+        Message("text", "Great, see you then!", "student", "teacher", timestamp = Timestamp.now())
     )
 
     MaterialTheme {
         Scaffold(
             topBar = {
-                androidx.compose.material3.TopAppBar(
+                TopAppBar(
                     title = { Text("Chat with Alice") },
                     navigationIcon = {
-                        IconButton(onClick = { }) { // no-op in preview
+                        IconButton(onClick = { }) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
@@ -546,4 +589,3 @@ fun MessageScreenWithTopBarPreview() {
         }
     }
 }
-
