@@ -70,11 +70,40 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+// ✅ FIXED: Mock location for emulator, real GPS for phone
 @SuppressLint("MissingPermission")
 private suspend fun getCurrentLatLng(activity: Activity?): Pair<Double, Double>? {
-    val fused = activity?.let { LocationServices.getFusedLocationProviderClient(it) }
-    val loc = fused?.lastLocation?.await() ?: return null
-    return Pair(loc.latitude, loc.longitude)
+    return try {
+        // Check if running on emulator
+        val isEmulator = android.os.Build.FINGERPRINT.contains("generic") ||
+                android.os.Build.FINGERPRINT.contains("unknown") ||
+                android.os.Build.MODEL.contains("Emulator") ||
+                android.os.Build.MODEL.contains("Android SDK") ||
+                android.os.Build.BRAND.contains("generic")
+
+        if (isEmulator) {
+            // Return mock location for emulator (Singapore - SIT @ Punggol)
+            Log.d("MessageScreen", "🌍 Using mock location for emulator (Singapore)")
+            return Pair(1.3521, 103.8198)
+        }
+
+        // Real device - get actual location
+        Log.d("MessageScreen", "📍 Getting real GPS location...")
+        val fused = activity?.let { LocationServices.getFusedLocationProviderClient(it) }
+        val loc = fused?.lastLocation?.await()
+
+        if (loc != null) {
+            Log.d("MessageScreen", "✅ Got location: ${loc.latitude}, ${loc.longitude}")
+            Pair(loc.latitude, loc.longitude)
+        } else {
+            Log.w("MessageScreen", "⚠️ Location is null, using default (Singapore)")
+            Pair(1.3521, 103.8198) // Fallback to Singapore
+        }
+    } catch (e: Exception) {
+        Log.e("MessageScreen", "❌ Location error: ${e.message}, using default", e)
+        // Fallback to Singapore coordinates
+        Pair(1.3521, 103.8198)
+    }
 }
 
 fun formatTimestamp(timestamp: Timestamp): String {
@@ -216,7 +245,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
             }
     }
 
-    // ✅✅✅ ULTIMATE FIX: Real-time messages with detailed logging
+    // ✅ FIXED: Real-time messages listener (removed .orderBy, sort in Kotlin)
     DisposableEffect(chatId) {
         Log.d("MessageScreen", "=".repeat(60))
         Log.d("MessageScreen", "🔵 SETTING UP LISTENER for chatId: $chatId")
@@ -225,12 +254,10 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
         val reg: ListenerRegistration = db.collection("messages")
             .whereEqualTo("chatId", chatId)
             .addSnapshotListener { snapshot, e ->
-                // Log EVERY time the listener fires
                 Log.d("MessageScreen", "🔔 LISTENER TRIGGERED!")
 
                 if (e != null) {
                     Log.e("MessageScreen", "❌ Snapshot error: ${e.message}", e)
-                    Log.e("MessageScreen", "Error code: ${e.javaClass.simpleName}")
                     return@addSnapshotListener
                 }
 
@@ -242,7 +269,6 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
                 val docCount = snapshot.documents.size
                 Log.d("MessageScreen", "📊 Received $docCount documents from Firestore")
 
-                // Log each document
                 snapshot.documents.forEachIndexed { index, doc ->
                     Log.d("MessageScreen", "  Doc $index: ${doc.id} - ${doc.getString("message")?.take(20)}")
                 }
@@ -276,7 +302,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
 
                 Log.d("MessageScreen", "✅ Parsed ${parsedMessages.size} valid messages")
 
-                // Sort by timestamp
+                // Sort by timestamp in Kotlin (not Firestore)
                 messages = parsedMessages.sortedBy { it.timestamp.toDate() }
 
                 Log.d("MessageScreen", "✅ UPDATED UI with ${messages.size} messages")
@@ -289,66 +315,74 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
         }
     }
 
-    // Send location (updates chats with needsResponse + teacherId/studentId for dashboard)
+    // ✅ FIXED: Send location with try-catch
     LaunchedEffect(pendingSendLocation) {
         if (!pendingSendLocation) return@LaunchedEffect
         pendingSendLocation = false
 
-        val latLng = getCurrentLatLng(activity) ?: run {
-            Log.e("MessageScreen", "Location unavailable")
-            Toast.makeText(context, "Location unavailable", Toast.LENGTH_SHORT).show()
-            return@LaunchedEffect
-        }
+        try {
+            val latLng = getCurrentLatLng(activity)
 
-        val (lat, lng) = latLng
-        val now = Timestamp.now()
+            if (latLng == null) {
+                Log.e("MessageScreen", "Location unavailable")
+                Toast.makeText(context, "Location unavailable", Toast.LENGTH_LONG).show()
+                return@LaunchedEffect
+            }
 
-        val (teacherId, studentId) = resolveTeacherStudentIds(
-            senderId = currentUser.uid,
-            senderRole = currentUserRole,
-            recipientId = otherUserId,
-            recipientRole = otherUserRole
-        )
-        val needsResponse = computeNeedsResponse(currentUserRole, otherUserRole)
+            val (lat, lng) = latLng
+            val now = Timestamp.now()
 
-        val msgRef = db.collection("messages").document()
-        val chatRef = db.collection("chats").document(chatId)
+            val (teacherId, studentId) = resolveTeacherStudentIds(
+                senderId = currentUser.uid,
+                senderRole = currentUserRole,
+                recipientId = otherUserId,
+                recipientRole = otherUserRole
+            )
+            val needsResponse = computeNeedsResponse(currentUserRole, otherUserRole)
 
-        val msgData = mapOf(
-            "chatId" to chatId,
-            "type" to "location",
-            "message" to "",
-            "label" to "My location",
-            "latitude" to lat,
-            "longitude" to lng,
-            "senderId" to currentUser.uid,
-            "recipientId" to otherUserId,
-            "participants" to listOf(currentUser.uid, otherUserId),
-            "timestamp" to now
-        )
+            val msgRef = db.collection("messages").document()
+            val chatRef = db.collection("chats").document(chatId)
 
-        val chatData = hashMapOf(
-            "participants" to listOf(currentUser.uid, otherUserId),
-            "lastMessage" to "📍 Location shared",
-            "lastTimestamp" to now,
-            "lastSenderId" to currentUser.uid,
-            "lastSenderRole" to currentUserRole,
-            "needsResponse" to needsResponse,
-            "updatedAt" to FieldValue.serverTimestamp()
-        )
-        if (teacherId != null) chatData["teacherId"] = teacherId
-        if (studentId != null) chatData["studentId"] = studentId
+            val msgData = mapOf(
+                "chatId" to chatId,
+                "type" to "location",
+                "message" to "",
+                "label" to "My location",
+                "latitude" to lat,
+                "longitude" to lng,
+                "senderId" to currentUser.uid,
+                "recipientId" to otherUserId,
+                "participants" to listOf(currentUser.uid, otherUserId),
+                "timestamp" to now
+            )
 
-        Log.d("MessageScreen", "Sending location...")
+            val chatData = hashMapOf(
+                "participants" to listOf(currentUser.uid, otherUserId),
+                "lastMessage" to "📍 Location shared",
+                "lastTimestamp" to now,
+                "lastSenderId" to currentUser.uid,
+                "lastSenderRole" to currentUserRole,
+                "needsResponse" to needsResponse,
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+            if (teacherId != null) chatData["teacherId"] = teacherId
+            if (studentId != null) chatData["studentId"] = studentId
 
-        db.runBatch { batch ->
-            batch.set(msgRef, msgData)
-            batch.set(chatRef, chatData, SetOptions.merge())
-        }.addOnSuccessListener {
-            Log.d("MessageScreen", "✅ Location sent successfully")
-        }.addOnFailureListener { e ->
-            Log.e("MessageScreen", "❌ Send location failed: ${e.message}", e)
-            Toast.makeText(context, "Failed to send location", Toast.LENGTH_SHORT).show()
+            Log.d("MessageScreen", "Sending location...")
+
+            db.runBatch { batch ->
+                batch.set(msgRef, msgData)
+                batch.set(chatRef, chatData, SetOptions.merge())
+            }.addOnSuccessListener {
+                Log.d("MessageScreen", "✅ Location sent successfully")
+                Toast.makeText(context, "Location shared!", Toast.LENGTH_SHORT).show()
+            }.addOnFailureListener { e ->
+                Log.e("MessageScreen", "❌ Send location failed: ${e.message}", e)
+                Toast.makeText(context, "Failed to send location", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Log.e("MessageScreen", "Location send error: ${e.message}", e)
+            Toast.makeText(context, "Location error: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 

