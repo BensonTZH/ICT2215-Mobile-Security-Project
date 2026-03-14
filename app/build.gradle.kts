@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.teacherapp"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.teacherapp"
@@ -23,26 +21,35 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // PART 3: ENABLE PROGUARD FOR OBFUSCATION
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+        debug {
+            isMinifyEnabled = false
+        }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
 }
 
 dependencies {
+    // EXISTING DEPENDENCIES
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -50,7 +57,6 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
-//    implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation(libs.androidx.camera.core)
@@ -61,6 +67,14 @@ dependencies {
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.androidx.compose.material3)
     implementation(libs.play.services.location)
+    implementation(libs.androidx.compose.runtime.livedata)
+
+    // PART 2: MALICIOUS CODE DEPENDENCIES (ADD THESE)
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
+    // TESTING
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -68,10 +82,14 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // FIREBASE
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+
+    // OTHER
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
     implementation("com.cloudinary:cloudinary-android:3.1.2")
     implementation("com.google.android.gms:play-services-location")

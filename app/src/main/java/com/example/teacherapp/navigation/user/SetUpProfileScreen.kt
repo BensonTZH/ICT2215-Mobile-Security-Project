@@ -1,4 +1,4 @@
-package com.example.teacherapp.navigation
+package com.example.teacherapp.navigation.user
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -215,7 +215,7 @@ fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
                         "name" to name,
                         "subjects" to selectedSubjects.toList(),
                         "role" to "teacher",
-                        "availability" to selectedDays.toList().sortedBy { AppData.daysOfWeek.indexOf(it) }
+                        "availability" to selectedDays.toList().sortedBy { daysOfWeek.indexOf(it) }
                     ))
                 } else {
                     Toast.makeText(context, "Please add a name and at least one subject", Toast.LENGTH_SHORT).show()

@@ -74,6 +74,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.livedata.observeAsState
+import com.example.teacherapp.navigation.groups.GroupViewModel
 import com.example.teacherapp.users.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,7 +99,7 @@ fun UploadScreen(navController: NavHostController) {
         }
     }
 
-    val handleCreateOrUpdate = let@{ docId: String?, inputFileName: String, description: String, pickedUri: Uri?, selectedSubject: String? ->
+    val handleCreateOrUpdate = let@{ docId: String?, inputFileName: String, description: String, pickedUri: Uri?, selectedGroup: String? ->
 
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) {
@@ -118,7 +120,7 @@ fun UploadScreen(navController: NavHostController) {
                 val updates: MutableMap<String, Any> = mutableMapOf()
                 if (inputFileName.isNotBlank()) updates["fileName"] = inputFileName
                 if (description.isNotBlank()) updates["description"] = description
-                if (!selectedSubject.isNullOrBlank()) updates["subject"] = selectedSubject
+                if (!selectedGroup.isNullOrBlank()) updates["group"] = selectedGroup
 
                 ResourcesRepo.updateResourceMetadata(
                     docId = docId,
@@ -150,7 +152,7 @@ fun UploadScreen(navController: NavHostController) {
                         "cloudinaryPublicId" to publicId
                     )
                     if (description.isNotBlank()) updates["description"] = description
-                    if (!selectedSubject.isNullOrBlank()) updates["subject"] = selectedSubject
+                    if (!selectedGroup.isNullOrBlank()) updates["group"] = selectedGroup
 
                     ResourcesRepo.updateResourceMetadata(
                         docId = docId,
@@ -193,7 +195,7 @@ fun UploadScreen(navController: NavHostController) {
                     "uploaderUid" to uid
                 )
                 if (description.isNotBlank()) updates["description"] = description
-                if (!selectedSubject.isNullOrBlank()) updates["subject"] = selectedSubject
+                if (!selectedGroup.isNullOrBlank()) updates["group"] = selectedGroup
 
                 ResourcesRepo.saveResourceMetadata(
                     updates = updates,
@@ -275,7 +277,6 @@ fun UploadScreen(navController: NavHostController) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
 
-                            // TODO: Show subject of each resources
                             // File info
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -286,9 +287,9 @@ fun UploadScreen(navController: NavHostController) {
                                     )
                                 )
 
-                                if (item.subject.isNotBlank()) {
+                                if (item.group.isNotBlank()) {
                                     Text(
-                                        text = item.subject,
+                                        text = item.group,
                                         fontSize = 12.sp,
                                         color = Color.Gray
                                     )
@@ -338,8 +339,8 @@ fun UploadScreen(navController: NavHostController) {
             showDialogUploading = false
             editingItem = null
         },
-        onSubmit = { fileName, description, pickedUri, selectedSubject->
-            handleCreateOrUpdate(editingItem?.id, fileName, description, pickedUri, selectedSubject)
+        onSubmit = { fileName, description, pickedUri, selectedGroup->
+            handleCreateOrUpdate(editingItem?.id, fileName, description, pickedUri, selectedGroup)
         }
     )
 }
@@ -354,7 +355,7 @@ fun UploadDialog(
     initialFileName: String,
     initialDescription: String,
     onDismiss: () -> Unit,
-    onSubmit: (String, String, Uri?, String?) -> Unit // Modify this to accept a single subject
+    onSubmit: (String, String, Uri?, String?) -> Unit
 ) {
     if (!showDialog) return
 
@@ -363,19 +364,22 @@ fun UploadDialog(
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
     var pickedDisplayName by remember { mutableStateOf<String?>(null) }
 
-    // ViewModel to fetch subjects
-    val userViewModel: UserViewModel = viewModel()
-
-    // Call to load user data (and subjects)
+    // ViewModel to fetch groups
+    val groupViewModel: GroupViewModel = viewModel()
     val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
-    if (currentUserUid != null) {
-        userViewModel.loadUserData(currentUserUid)
+    LaunchedEffect(currentUserUid) {
+        if (currentUserUid != null) {
+            groupViewModel.fetchGroupsByTeacherId(currentUserUid)
+        }
     }
-    val subjects = userViewModel.subjects
-    var expanded by remember { mutableStateOf(false) }
 
-    // Single selected subject
-    var selectedSubject by remember { mutableStateOf<String?>(null) }
+    // Observe groups LiveData
+    val groups by groupViewModel.groups.observeAsState(emptyList())
+    LaunchedEffect(groups) {
+        Log.d("UploadDialog", "Fetched Groups: $groups")
+    }
+    var expanded by remember { mutableStateOf(false) }
+    var selectedGroup by remember { mutableStateOf<String?>(null) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -431,17 +435,17 @@ fun UploadDialog(
                         .padding(vertical = 8.dp)
                 )
 
-                // Display subjects in a list for single selection
-                Text("Select Subject")
+                // Display groups in a list for single selection
+                Text("Select Group")
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     TextField(
-                        value = selectedSubject ?: "",
+                        value = selectedGroup ?: "",
                         onValueChange = {},            // must exist, but we keep it readOnly
                         readOnly = true,
-                        label = { Text("Subject") },
+                        label = { Text("Group") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier
                             .menuAnchor()
@@ -453,11 +457,11 @@ fun UploadDialog(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        subjects.forEach { subject ->
+                        groups.forEach { group ->
                             DropdownMenuItem(
-                                text = { Text(subject) },
+                                text = { Text(group.name) },
                                 onClick = {
-                                    selectedSubject = subject
+                                    selectedGroup = group.name
                                     expanded = false
                                 }
                             )
@@ -473,8 +477,7 @@ fun UploadDialog(
                     Toast.makeText(context, "Please select a file first.", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                // Pass the selected subject to the onSubmit callback
-                onSubmit(fileName, description, pickedUri, selectedSubject)
+                onSubmit(fileName, description, pickedUri, selectedGroup)
             }) {
                 Text(if (mode == DialogMode.CREATE) "Submit" else "Save")
             }

@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.Teacherapp" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Teacherapp" parent="Theme.AppCompat.Light.NoActionBar" />
 </resources>

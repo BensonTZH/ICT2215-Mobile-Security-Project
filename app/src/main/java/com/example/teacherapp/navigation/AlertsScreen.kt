@@ -21,6 +21,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import java.util.concurrent.TimeUnit
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.background
+import androidx.compose.material3.HorizontalDivider
 
 data class Announcement(
     val id: String = "",
@@ -152,7 +155,7 @@ fun AlertsScreen(navController: NavController) {
         },
         bottomBar = {
             Column {
-                Divider()
+                HorizontalDivider()
                 CustomBottomNavigation(navController)
             }
         }
@@ -294,6 +297,7 @@ private fun AnnouncementCard(
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
