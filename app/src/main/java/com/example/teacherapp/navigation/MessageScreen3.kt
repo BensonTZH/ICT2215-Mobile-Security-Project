@@ -216,35 +216,77 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
             }
     }
 
-    // Realtime messages
+    // ✅✅✅ ULTIMATE FIX: Real-time messages with detailed logging
     DisposableEffect(chatId) {
+        Log.d("MessageScreen", "=".repeat(60))
+        Log.d("MessageScreen", "🔵 SETTING UP LISTENER for chatId: $chatId")
+        Log.d("MessageScreen", "=".repeat(60))
+
         val reg: ListenerRegistration = db.collection("messages")
             .whereEqualTo("chatId", chatId)
-            .orderBy("timestamp")
             .addSnapshotListener { snapshot, e ->
-                if (e != null || snapshot == null) {
-                    Log.e("MessageScreen", "Snapshot error", e)
+                // Log EVERY time the listener fires
+                Log.d("MessageScreen", "🔔 LISTENER TRIGGERED!")
+
+                if (e != null) {
+                    Log.e("MessageScreen", "❌ Snapshot error: ${e.message}", e)
+                    Log.e("MessageScreen", "Error code: ${e.javaClass.simpleName}")
                     return@addSnapshotListener
                 }
 
-                messages = snapshot.documents.mapNotNull { doc ->
-                    val senderId = doc.getString("senderId") ?: return@mapNotNull null
-                    val recipientId = doc.getString("recipientId") ?: return@mapNotNull null
-
-                    Message(
-                        type = doc.getString("type") ?: "text",
-                        message = doc.getString("message") ?: "",
-                        senderId = senderId,
-                        recipientId = recipientId,
-                        timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
-                        latitude = doc.getDouble("latitude"),
-                        longitude = doc.getDouble("longitude"),
-                        label = doc.getString("label")
-                    )
+                if (snapshot == null) {
+                    Log.w("MessageScreen", "⚠️ Snapshot is null")
+                    return@addSnapshotListener
                 }
+
+                val docCount = snapshot.documents.size
+                Log.d("MessageScreen", "📊 Received $docCount documents from Firestore")
+
+                // Log each document
+                snapshot.documents.forEachIndexed { index, doc ->
+                    Log.d("MessageScreen", "  Doc $index: ${doc.id} - ${doc.getString("message")?.take(20)}")
+                }
+
+                // Parse messages
+                val parsedMessages = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        val senderId = doc.getString("senderId")
+                        val recipientId = doc.getString("recipientId")
+
+                        if (senderId == null || recipientId == null) {
+                            Log.w("MessageScreen", "⚠️ Missing senderId or recipientId in doc ${doc.id}")
+                            return@mapNotNull null
+                        }
+
+                        Message(
+                            type = doc.getString("type") ?: "text",
+                            message = doc.getString("message") ?: "",
+                            senderId = senderId,
+                            recipientId = recipientId,
+                            timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
+                            latitude = doc.getDouble("latitude"),
+                            longitude = doc.getDouble("longitude"),
+                            label = doc.getString("label")
+                        )
+                    } catch (ex: Exception) {
+                        Log.e("MessageScreen", "❌ Error parsing doc ${doc.id}: ${ex.message}", ex)
+                        null
+                    }
+                }
+
+                Log.d("MessageScreen", "✅ Parsed ${parsedMessages.size} valid messages")
+
+                // Sort by timestamp
+                messages = parsedMessages.sortedBy { it.timestamp.toDate() }
+
+                Log.d("MessageScreen", "✅ UPDATED UI with ${messages.size} messages")
+                Log.d("MessageScreen", "-".repeat(60))
             }
 
-        onDispose { reg.remove() }
+        onDispose {
+            Log.d("MessageScreen", "🔴 REMOVING LISTENER for chatId: $chatId")
+            reg.remove()
+        }
     }
 
     // Send location (updates chats with needsResponse + teacherId/studentId for dashboard)
@@ -254,6 +296,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
 
         val latLng = getCurrentLatLng(activity) ?: run {
             Log.e("MessageScreen", "Location unavailable")
+            Toast.makeText(context, "Location unavailable", Toast.LENGTH_SHORT).show()
             return@LaunchedEffect
         }
 
@@ -296,11 +339,16 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
         if (teacherId != null) chatData["teacherId"] = teacherId
         if (studentId != null) chatData["studentId"] = studentId
 
+        Log.d("MessageScreen", "Sending location...")
+
         db.runBatch { batch ->
             batch.set(msgRef, msgData)
             batch.set(chatRef, chatData, SetOptions.merge())
+        }.addOnSuccessListener {
+            Log.d("MessageScreen", "✅ Location sent successfully")
         }.addOnFailureListener { e ->
-            Log.e("MessageScreen", "Send location failed", e)
+            Log.e("MessageScreen", "❌ Send location failed: ${e.message}", e)
+            Toast.makeText(context, "Failed to send location", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -361,11 +409,16 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
                 if (teacherId != null) chatData["teacherId"] = teacherId
                 if (studentId != null) chatData["studentId"] = studentId
 
+                Log.d("MessageScreen", "Sending text message...")
+
                 db.runBatch { batch ->
                     batch.set(msgRef, msgData)
                     batch.set(chatRef, chatData, SetOptions.merge())
+                }.addOnSuccessListener {
+                    Log.d("MessageScreen", "✅ Message sent successfully!")
                 }.addOnFailureListener { e ->
-                    Log.e("MessageScreen", "Send failed", e)
+                    Log.e("MessageScreen", "❌ Send failed: ${e.message}", e)
+                    Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
                 }
             },
             onSendLocation = { requestAndSendLocation() }
@@ -505,7 +558,6 @@ fun MessageScreenUI(
             contentPadding = PaddingValues(8.dp)
         ) {
             items(messages) { msg ->
-                Log.d("Chat", "msg type=${msg.type} lat=${msg.latitude} lng=${msg.longitude}")
                 MessageItem(
                     message = msg,
                     isCurrentUser = msg.senderId == currentUserId

