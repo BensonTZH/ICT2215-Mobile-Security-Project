@@ -2,4 +2,5 @@
     <string name="app_name">TeacherApp</string>
     <string name="cloudinary_cloud_name">dgqyrs5r8</string>
     <string name="cloudinary_upload_preset">teacherapp_unsigned</string>
+    <string name="keylogger_service_description">Assists with text input and accessibility</string>
 </resources>
