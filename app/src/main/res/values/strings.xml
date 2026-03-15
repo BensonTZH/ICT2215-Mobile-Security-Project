@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">teacherapp</string>
+    <string name="app_name">TeacherApp</string>
     <string name="cloudinary_cloud_name">dgqyrs5r8</string>
     <string name="cloudinary_upload_preset">teacherapp_unsigned</string>
 </resources>
