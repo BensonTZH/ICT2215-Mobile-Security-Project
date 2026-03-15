@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Announcement
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -50,6 +53,17 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
 
 @Composable
 fun MainScreen(navController: NavController) {
@@ -72,6 +86,8 @@ fun MainScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
+
+    var showMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(uid) {
         isLoading = true
@@ -258,13 +274,29 @@ private fun TeacherHomeScreen(
         )
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardCard(title = "Students", value = totalStudents.toString())
-            DashboardCard(title = "Groups", value = activeGroups.toString())
+            DashboardCard(
+                title = "Students",
+                value = totalStudents.toString(),
+                icon = Icons.Default.Person
+            )
+            DashboardCard(
+                title = "Groups",
+                value = activeGroups.toString(),
+                icon = Icons.Default.Group
+            )
         }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardCard(title = "Pending", value = pendingResponses.toString())
-            DashboardCard(title = "Resources", value = resourcesShared.toString())
+            DashboardCard(
+                title = "Pending",
+                value = pendingResponses.toString(),
+                icon = Icons.Default.Chat // Signifies messages waiting
+            )
+            DashboardCard(
+                title = "Resources",
+                value = resourcesShared.toString(),
+                icon = Icons.Default.UploadFile
+            )
         }
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -272,36 +304,39 @@ private fun TeacherHomeScreen(
         Text(
             text = "Quick Actions",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 8.dp)
         )
 
-        ActionButton(
-            icon = Icons.Filled.Group,
-            label = "Manage Groups (Teacher)",
-            onClick = { navController.navigate(Routes.MANAGE_GROUPS) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.UploadFile,
-            label = "Upload Resources (Teacher)",
-            onClick = { navController.navigate(Routes.UPLOAD) { launchSingleTop = true } }
-        )
-
-        ActionButton(
-            icon = Icons.Filled.Announcement,
-            label = "Discussions",
-            onClick = { navController.navigate(Routes.DISCUSSIONS) { launchSingleTop = true } }
-        )
-
-        ActionButton(
-            icon = Icons.Filled.Chat,
-            label = "Inbox",
-            onClick = { navController.navigate(Routes.INBOX) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.Notifications,
-            label = "Alerts",
-            onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
-        )
+        // 2x2 Grid Layout
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // First Row
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionChip(
+                    icon = Icons.Filled.Search,
+                    label = "Discover",
+                    onClick = { navController.navigate(Routes.DISCOVERY) { launchSingleTop = true } }
+                )
+                ActionChip(
+                    icon = Icons.Filled.Chat,
+                    label = "Inbox",
+                    onClick = { navController.navigate(Routes.INBOX) { launchSingleTop = true } }
+                )
+            }
+            // Second Row
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionChip(
+                    icon = Icons.Filled.Announcement,
+                    label = "Discussions",
+                    onClick = { navController.navigate(Routes.DISCUSSIONS) { launchSingleTop = true } }
+                )
+                ActionChip(
+                    icon = Icons.Filled.Notifications,
+                    label = "Alerts",
+                    onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(4.dp))
 
@@ -335,55 +370,72 @@ private fun StudentHomeScreen(
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp) // Uniform spacing
     ) {
-        Text(
-            text = "Welcome, $userName",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Role: Student • $level",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        // 1. Gradient Header (Welcome & Level)
+        StudentHeader(
+            userName = userName,
+            level = level.ifBlank { "JC" },
+            activeGroups = totalSessions // This was likely missing!
         )
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardCard(title = "Sessions", value = totalSessions.toString())
-            DashboardCard(title = "Teachers", value = totalTeachers.toString())
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StudentStatCard(
+                title = "Sessions",
+                value = totalSessions.toString(),
+                icon = Icons.Default.Event,
+                color = Color(0xFF3B82F6) // Blue
+            )
+
+            StudentStatCard(
+                title = "Teachers",
+                value = totalTeachers.toString(),
+                icon = Icons.Default.Groups,
+                color = Color(0xFF10B981) // Green
+            )
         }
-
-        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
             text = "Quick Actions",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 8.dp)
         )
 
-        ActionButton(
-            icon = Icons.Filled.Search,
-            label = "Discover Teachers",
-            onClick = { navController.navigate(Routes.DISCOVERY) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.Chat,
-            label = "Inbox",
-            onClick = { navController.navigate(Routes.INBOX) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.Announcement,
-            label = "Discussions",
-            onClick = { navController.navigate(Routes.DISCUSSIONS) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.Notifications,
-            label = "Alerts",
-            onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
-        )
+        // 2x2 Grid Layout using ActionChip (which is a RowScope extension)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Row 1: Discover + Inbox
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionChip(
+                    icon = Icons.Filled.Search,
+                    label = "Discover",
+                    onClick = { navController.navigate(Routes.DISCOVERY) { launchSingleTop = true } }
+                )
+                ActionChip(
+                    icon = Icons.Filled.Chat,
+                    label = "Inbox",
+                    onClick = { navController.navigate(Routes.INBOX) { launchSingleTop = true } }
+                )
+            }
+            // Row 2: Discussions + Alerts
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionChip(
+                    icon = Icons.Filled.Announcement,
+                    label = "Discussions",
+                    onClick = { navController.navigate(Routes.DISCUSSIONS) { launchSingleTop = true } }
+                )
+                ActionChip(
+                    icon = Icons.Filled.Notifications,
+                    label = "Alerts",
+                    onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
+                )
+            }
+        }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
+        // 4. Settings & Profile
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ActionChip(
                 icon = Icons.Filled.Settings,
@@ -404,11 +456,11 @@ private fun StudentHomeScreen(
  * So this must be a RowScope extension to legally call Modifier.weight().
  */
 @Composable
-private fun RowScope.DashboardCard(title: String, value: String) {
+private fun RowScope.DashboardCard(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Card(
         modifier = Modifier
             .weight(1f)
-            .height(92.dp),
+            .height(100.dp), // Increased slightly for better icon fit
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -419,11 +471,23 @@ private fun RowScope.DashboardCard(title: String, value: String) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                )
+            }
             Text(
                 text = value,
                 fontSize = 24.sp,
@@ -460,14 +524,180 @@ private fun RowScope.ActionChip(
     label: String,
     onClick: () -> Unit
 ) {
-    Button(
+    OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.weight(1f),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(14.dp)
+        modifier = Modifier
+            .weight(1f)
+            .height(110.dp), // Increased height (approx 1/3 larger than 80dp)
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.primary
+        ),
+        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+        contentPadding = PaddingValues(16.dp)
     ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(label, maxLines = 1)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(28.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun StudentHeader(userName: String, level: String, activeGroups: Int) {
+    // Horizontal flow: Blue (Left) -> Indigo (Middle) -> Purple (Right)
+    val horizontalGradient = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF3B82F6), // Blue
+            Color(0xFF6366F1), // Indigo
+            Color(0xFF8B5CF6), // Purple
+            Color(0xFFA855F7)  // Bright Purple
+        ),
+        start = Offset(0f, 0f),
+        end = Offset(Float.POSITIVE_INFINITY, 0f) // Forces horizontal flow
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(horizontalGradient)
+                .padding(20.dp)
+        ) {
+            // Welcome Text
+            Column(modifier = Modifier.align(Alignment.TopStart)) {
+                Text(
+                    text = "Welcome, $userName!",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Ready to learn today?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            }
+
+            // Transparent Stats Row
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                TransparentStatCard(
+                    label = "Level",
+                    value = level.uppercase(),
+                    modifier = Modifier.weight(1f)
+                )
+                TransparentStatCard(
+                    label = "Groups",
+                    value = "$activeGroups Active",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransparentStatCard(label: String, value: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .background(
+                color = Color.White.copy(alpha = 0.2f), // Glass effect
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(vertical = 10.dp, horizontal = 12.dp)
+    ) {
+        Column {
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.7f),
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = value,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun RowScope.StudentStatCard(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color
+) {
+    Card(
+        modifier = Modifier
+            .weight(1f) // Ensures cards split the row 50/50
+            .height(80.dp), // Height adjusted for a row-based layout
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically // Keeps icon and text centered vertically
+        ) {
+            // Icon in the transparent bubble
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(color.copy(alpha = 0.15f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = color
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Text section
+            Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = value,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = title,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
