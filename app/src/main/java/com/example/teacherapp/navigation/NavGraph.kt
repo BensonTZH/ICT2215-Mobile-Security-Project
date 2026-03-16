@@ -22,6 +22,7 @@ import com.example.teacherapp.navigation.admin.AdminTicketDetailScreen
 import com.example.teacherapp.navigation.admin.AdminTicketsInboxScreen
 import com.example.teacherapp.navigation.admin.AdminUserFormScreen
 import com.example.teacherapp.navigation.admin.AdminUsersScreen
+import com.example.teacherapp.navigation.groups.GroupDetailsScreen
 import com.example.teacherapp.navigation.groups.ManageGroupsScreen
 import com.example.teacherapp.navigation.support.MyTicketsScreen
 import com.example.teacherapp.navigation.support.SubmitTicketScreen

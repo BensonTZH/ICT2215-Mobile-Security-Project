@@ -203,6 +203,8 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
     val chatId = chatIdFor(currentUser.uid, otherUserId)
     var currentRole by remember { mutableStateOf("") }
     var roleLoaded by remember { mutableStateOf(false) }
+    var currentUserRole by remember { mutableStateOf("student") }
+    var otherUserRole by remember { mutableStateOf("student") }
 
     LaunchedEffect(currentUser.uid) {
         db.collection("users").document(currentUser.uid).get()
