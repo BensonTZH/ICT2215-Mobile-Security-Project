@@ -304,7 +304,7 @@ private fun TeacherHomeScreen(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ActionChip(Icons.Filled.Announcement, "Discussions", { navController.navigate(Routes.DISCUSSIONS) })
-                ActionChip(Icons.Filled.UploadFile, "Resources", { navController.navigate(Routes.RESOURCES) })
+                ActionChip(Icons.Filled.UploadFile, "Upload", { navController.navigate(Routes.UPLOAD) })
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ActionChip(Icons.Filled.Settings, "Settings", { navController.navigate(Routes.SETTINGS) })
@@ -436,10 +436,15 @@ private fun StudentHomeScreen(
 
         // Quick Actions Section
         Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ActionChip(icon = Icons.Filled.Settings, label = "Settings", onClick = { navController.navigate(Routes.SETTINGS) })
-            ActionChip(icon = Icons.Filled.Announcement, label = "Discussions", onClick = { navController.navigate(Routes.DISCUSSIONS) })
-            ActionChip(icon = Icons.Filled.LibraryBooks, label = "Resources", onClick = { navController.navigate(Routes.RESOURCES) })
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionChip(Icons.Filled.Announcement, "Discussions", { navController.navigate(Routes.DISCUSSIONS) })
+                ActionChip(Icons.Filled.LibraryBooks, "Resources", { navController.navigate(Routes.RESOURCES) })
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionChip(Icons.Filled.Settings, "Settings", { navController.navigate(Routes.SETTINGS) })
+                Spacer(modifier = Modifier.weight(1f)) // Balanced dimension fix
+            }
         }
     }
 
