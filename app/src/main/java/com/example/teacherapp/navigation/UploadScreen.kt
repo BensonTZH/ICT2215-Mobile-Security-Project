@@ -233,7 +233,8 @@ fun UploadScreen(navController: NavHostController) {
         bottomBar = {
             Column {
                 Divider()
-                CustomBottomNavigation(navController)
+                // Only teacher can access this screen
+                CustomBottomNavigation(navController, userRole = "teacher")
             }
         }
     ) { innerPadding ->

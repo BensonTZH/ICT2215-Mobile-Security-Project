@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,9 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.teacherapp.models.Group
+import com.example.teacherapp.navigation.CustomBottomNavigation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
@@ -83,46 +86,71 @@ fun DiscussionScreen(navController: NavController) {
             }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Discussions",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-
-            // Only students join groups
-            if (userRole == "student") {
-                TextButton(onClick = { showJoinDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Join Group")
-                }
+    Scaffold(
+        topBar = {
+            Column {
+                TopAppBar(
+                    title = { Text("Discussion") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+                Divider()
+            }
+        },
+        bottomBar = {
+            Column {
+                Divider()
+                // Only teacher can access this screen
+                CustomBottomNavigation(navController, userRole=userRole)
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        when {
-            isLoading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF505D8A))
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Top
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Only students join groups
+                if (userRole == "student") {
+                    TextButton(onClick = { showJoinDialog = true }) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Join Group")
+                    }
                 }
             }
-            groups.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No groups available.", color = Color.Gray)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when {
+                isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFF505D8A))
+                    }
                 }
-            }
-            else -> {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(groups) { group ->
-                        GroupCard(group = group) {
-                            navController.navigate("group_threads/${group.id}/${group.name}")
+
+                groups.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No groups available.", color = Color.Gray)
+                    }
+                }
+
+                else -> {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(groups) { group ->
+                            GroupCard(group = group) {
+                                navController.navigate("group_threads/${group.id}/${group.name}")
+                            }
                         }
                     }
                 }

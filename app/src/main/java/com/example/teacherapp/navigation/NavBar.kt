@@ -59,15 +59,19 @@ fun CustomBottomNavigation(
                 }
             }
         )
-        BottomNavItem(
-            label = "Discover",
-            icon = Icons.Filled.Search,
-            onClick = {
-                navController.navigate(Routes.DISCOVERY) {
-                    launchSingleTop = true
+
+        // Student-only
+        if (userRole == "student") {
+            BottomNavItem(
+                label = "Discover",
+                icon = Icons.Filled.Search,
+                onClick = {
+                    navController.navigate(Routes.DISCOVERY) {
+                        launchSingleTop = true
+                    }
                 }
-            }
-        )
+            )
+        }
 
         // Teacher-only: admin/group management
         if (userRole == "teacher") {

@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import com.example.teacherapp.navigation.BotNavBar
 import com.example.teacherapp.models.Group
 import com.example.teacherapp.models.StudentUser
+import com.example.teacherapp.navigation.CustomBottomNavigation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -44,10 +45,28 @@ fun ManageGroupsScreen(navController: NavController) {
         }
     }
 
-    BotNavBar(
-        navController = navController,
-        showBottomBar = true
-    ) { innerPadding ->
+    Scaffold(
+        topBar = {
+            Column {
+                TopAppBar(
+                    title = { Text("Manage Groups") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+                Divider()
+            }
+        },
+        bottomBar = {
+            Column {
+                Divider()
+                // Only teacher can access this screen
+                CustomBottomNavigation(navController, userRole = "teacher")
+            }
+        }
+    ){ innerPadding ->
         Scaffold(
             modifier = Modifier.padding(innerPadding),
             floatingActionButton = {
@@ -69,14 +88,6 @@ fun ManageGroupsScreen(navController: NavController) {
                     .padding(horizontal = 20.dp)
                     .fillMaxSize()
             ) {
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(
-                    text = "Manage Groups",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
                 if (groups.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No groups created yet. Tap + to start.", color = Color.Gray)
