@@ -1,5 +1,6 @@
 package com.example.teacherapp.navigation
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -158,10 +160,10 @@ private fun fetchTeacherStats(
     db: FirebaseFirestore,
     onComplete: (students: Int, groups: Int, pending: Int, resources: Int) -> Unit
 ) {
-    var totalStudents = 0
     var activeGroups = 0
     var pendingResponses = 0
     var resourcesShared = 0
+    val uniqueStudents = mutableSetOf<String>()
 
     db.collection("groups")
         .whereEqualTo("teacherId", teacherId)
@@ -169,9 +171,10 @@ private fun fetchTeacherStats(
         .addOnSuccessListener { groupDocs ->
             activeGroups = groupDocs.size()
             groupDocs.documents.forEach { group ->
-                val members = group.get("members") as? List<*>
-                totalStudents += members?.size ?: 0
+                val members = group.get("members") as? List<String> ?: emptyList()
+                uniqueStudents.addAll(members) // Handle Unique students from different groups
             }
+            val totalStudents = uniqueStudents.size
 
             db.collection("chats")
                 .whereEqualTo("teacherId", teacherId)
@@ -181,7 +184,7 @@ private fun fetchTeacherStats(
                     pendingResponses = chatDocs.size()
 
                     db.collection("resources")
-                        .whereEqualTo("uploaderId", teacherId)
+                        .whereEqualTo("uploaderUid", teacherId)
                         .get()
                         .addOnSuccessListener { resourceDocs ->
                             resourcesShared = resourceDocs.size()
@@ -436,6 +439,7 @@ private fun StudentHomeScreen(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ActionChip(icon = Icons.Filled.Settings, label = "Settings", onClick = { navController.navigate(Routes.SETTINGS) })
             ActionChip(icon = Icons.Filled.Announcement, label = "Discussions", onClick = { navController.navigate(Routes.DISCUSSIONS) })
+            ActionChip(icon = Icons.Filled.LibraryBooks, label = "Resources", onClick = { navController.navigate(Routes.RESOURCES) })
         }
     }
 
