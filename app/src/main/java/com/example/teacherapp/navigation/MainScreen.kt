@@ -1,8 +1,6 @@
 package com.example.teacherapp.navigation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Announcement
 import androidx.compose.material.icons.filled.Chat
@@ -33,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,11 +44,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.teacherapp.navigation.admin.AdminHomeScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -59,13 +61,11 @@ fun MainScreen(navController: NavController) {
     var userLevel by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Teacher stats
     var totalStudents by remember { mutableIntStateOf(0) }
     var activeGroups by remember { mutableIntStateOf(0) }
     var pendingResponses by remember { mutableIntStateOf(0) }
     var resourcesShared by remember { mutableIntStateOf(0) }
 
-    // Student stats
     var totalSessions by remember { mutableIntStateOf(0) }
     var totalTeachers by remember { mutableIntStateOf(0) }
 
@@ -87,12 +87,9 @@ fun MainScreen(navController: NavController) {
 
                 val subjects = doc.get("subjects") as? List<*>
                 userSpecialty = subjects?.firstOrNull()?.toString() ?: ""
-
                 userLevel = doc.getString("grade") ?: "Student"
 
-                val isPrivileged = (userRole == "teacher" || userRole == "administrator")
-
-                if (isPrivileged) {
+                if (userRole == "teacher" || userRole == "administrator") {
                     fetchTeacherStats(uid, db) { students, groups, pending, resources ->
                         totalStudents = students
                         activeGroups = groups
@@ -115,9 +112,11 @@ fun MainScreen(navController: NavController) {
 
     Scaffold(
         bottomBar = {
-            Column {
-                HorizontalDivider()
-                CustomBottomNavigation(navController = navController, userRole = userRole)
+            if (!isLoading && userRole.isNotBlank() && userRole != "administrator") {
+                Column {
+                    HorizontalDivider()
+                    CustomBottomNavigation(navController)
+                }
             }
         }
     ) { paddingValues ->
@@ -127,29 +126,37 @@ fun MainScreen(navController: NavController) {
                 .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when {
+                isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else {
-                val isPrivileged = (userRole == "teacher" || userRole == "administrator")
-                if (isPrivileged) {
+                userRole == "administrator" -> {
+                    AdminHomeScreen(navController = navController)
+                }
+                userRole == "teacher" -> {
                     TeacherHomeScreen(
                         userName = userName,
-                        specialty = userSpecialty.ifBlank { "Teaching" },
+                        specialty = userSpecialty,
                         totalStudents = totalStudents,
                         activeGroups = activeGroups,
                         pendingResponses = pendingResponses,
                         resourcesShared = resourcesShared,
-                        navController = navController
+                        navController = navController,
+                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) },
+                        onMyTickets = { navController.navigate(Routes.MY_TICKETS) }
                     )
-                } else {
+                }
+                else -> {
                     StudentHomeScreen(
                         userName = userName,
-                        level = userLevel.ifBlank { "Student" },
+                        level = userLevel,
                         totalSessions = totalSessions,
                         totalTeachers = totalTeachers,
-                        navController = navController
+                        navController = navController,
+                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) },
+                        onMyTickets = { navController.navigate(Routes.MY_TICKETS) }
                     )
                 }
             }
@@ -225,8 +232,6 @@ private fun fetchStudentStats(
         }
 }
 
-/* ----------------------------- UI Composables ----------------------------- */
-
 @Composable
 private fun TeacherHomeScreen(
     userName: String,
@@ -235,7 +240,9 @@ private fun TeacherHomeScreen(
     activeGroups: Int,
     pendingResponses: Int,
     resourcesShared: Int,
-    navController: NavController
+    navController: NavController,
+    onSubmitTicket: () -> Unit,
+    onMyTickets: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 
@@ -246,13 +253,9 @@ private fun TeacherHomeScreen(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        Text("Welcome, $userName", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(
-            text = "Welcome, $userName",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Role: Teacher • $specialty",
+            text = "Role: Teacher${if (specialty.isNotBlank()) " • $specialty" else ""}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -261,19 +264,12 @@ private fun TeacherHomeScreen(
             DashboardCard(title = "Students", value = totalStudents.toString())
             DashboardCard(title = "Groups", value = activeGroups.toString())
         }
-
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             DashboardCard(title = "Pending", value = pendingResponses.toString())
             DashboardCard(title = "Resources", value = resourcesShared.toString())
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "Quick Actions",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
+        Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
         ActionButton(
             icon = Icons.Filled.Group,
@@ -286,36 +282,11 @@ private fun TeacherHomeScreen(
             onClick = { navController.navigate(Routes.UPLOAD) { launchSingleTop = true } }
         )
 
-        ActionButton(
-            icon = Icons.Filled.Announcement,
-            label = "Discussions",
-            onClick = { navController.navigate(Routes.DISCUSSIONS) { launchSingleTop = true } }
-        )
-
-        ActionButton(
-            icon = Icons.Filled.Chat,
-            label = "Inbox",
-            onClick = { navController.navigate(Routes.INBOX) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.Notifications,
-            label = "Alerts",
-            onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ActionChip(
-                icon = Icons.Filled.Settings,
-                label = "Settings",
-                onClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } }
-            )
-            ActionChip(
-                icon = Icons.Filled.Person,
-                label = "Profile",
-                onClick = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } }
-            )
+        Button(onClick = onSubmitTicket, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+            Text("Submit Ticket to Support")
+        }
+        OutlinedButton(onClick = onMyTickets, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+            Text("My Support Tickets")
         }
     }
 }
@@ -326,7 +297,9 @@ private fun StudentHomeScreen(
     level: String,
     totalSessions: Int,
     totalTeachers: Int,
-    navController: NavController
+    navController: NavController,
+    onSubmitTicket: () -> Unit,
+    onMyTickets: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 
@@ -337,11 +310,7 @@ private fun StudentHomeScreen(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text(
-            text = "Welcome, $userName",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Text("Welcome, $userName", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(
             text = "Role: Student • $level",
             style = MaterialTheme.typography.bodyMedium,
@@ -353,13 +322,7 @@ private fun StudentHomeScreen(
             DashboardCard(title = "Teachers", value = totalTeachers.toString())
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "Quick Actions",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
+        Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
         ActionButton(
             icon = Icons.Filled.Search,
@@ -382,8 +345,6 @@ private fun StudentHomeScreen(
             onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
-
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ActionChip(
                 icon = Icons.Filled.Settings,
@@ -396,13 +357,16 @@ private fun StudentHomeScreen(
                 onClick = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } }
             )
         }
+
+        Button(onClick = onSubmitTicket, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+            Text("Submit Ticket to Support")
+        }
+        OutlinedButton(onClick = onMyTickets, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+            Text("My Support Tickets")
+        }
     }
 }
 
-/**
- * FIX: weight() only exists in RowScope/ColumnScope.
- * So this must be a RowScope extension to legally call Modifier.weight().
- */
 @Composable
 private fun RowScope.DashboardCard(title: String, value: String) {
     Card(
@@ -419,26 +383,14 @@ private fun RowScope.DashboardCard(title: String, value: String) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = value,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-private fun ActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
+private fun ActionButton(icon: ImageVector, label: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -451,15 +403,8 @@ private fun ActionButton(
     }
 }
 
-/**
- * FIX: This uses weight() too, so it must be a RowScope extension.
- */
 @Composable
-private fun RowScope.ActionChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
+private fun RowScope.ActionChip(icon: ImageVector, label: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier.weight(1f),

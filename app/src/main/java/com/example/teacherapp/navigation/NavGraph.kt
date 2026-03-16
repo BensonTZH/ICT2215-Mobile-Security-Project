@@ -17,8 +17,16 @@ import com.example.teacherapp.navigation.auth.RegisterScreen
 import com.example.teacherapp.navigation.discussions.DiscussionScreen
 import com.example.teacherapp.navigation.discussions.GroupThreadsScreen
 import com.example.teacherapp.navigation.discussions.ThreadDetailScreen
+import com.example.teacherapp.navigation.admin.AdminHomeScreen
+import com.example.teacherapp.navigation.admin.AdminTicketDetailScreen
+import com.example.teacherapp.navigation.admin.AdminTicketsInboxScreen
+import com.example.teacherapp.navigation.admin.AdminUserFormScreen
+import com.example.teacherapp.navigation.admin.AdminUsersScreen
 import com.example.teacherapp.navigation.groups.GroupDetailsScreen
 import com.example.teacherapp.navigation.groups.ManageGroupsScreen
+import com.example.teacherapp.navigation.support.MyTicketsScreen
+import com.example.teacherapp.navigation.support.SubmitTicketScreen
+import com.example.teacherapp.navigation.support.TicketDetailScreen
 import com.example.teacherapp.navigation.user.ProfileScreen
 import com.example.teacherapp.navigation.user.PublicProfileScreen
 import com.example.teacherapp.navigation.user.SetupProfileScreen
@@ -57,6 +65,15 @@ object Routes {
     const val DISCUSSIONS = "discussions_screen"
 
     const val THREAD_DETAILS = "thread_details/{threadId}"
+    const val ADMIN_HOME = "admin_home"
+    const val ADMIN_USERS = "admin_users"
+    const val ADMIN_USER_EDIT = "admin_user_edit/{uidArg}"
+    const val ADMIN_TICKETS_INBOX = "admin_tickets_inbox"
+    const val SUBMIT_TICKET = "submit_support_ticket"
+    const val MY_TICKETS = "my_support_tickets"
+    const val TICKET_DETAIL = "ticket_detail/{ticketId}"
+    const val ADMIN_TICKET_DETAIL = "admin_ticket_detail/{ticketId}"
+
 }
 
 @Composable
@@ -106,6 +123,42 @@ fun NavGraph(navController: NavHostController) {
 
         composable(Routes.MAIN) {
             MainScreen(navController = navController)
+        }
+        composable(Routes.ADMIN_HOME) {
+            AdminHomeScreen(navController = navController)
+        }
+        composable(Routes.ADMIN_USERS) {
+            AdminUsersScreen(navController = navController)
+        }
+        composable(Routes.ADMIN_TICKETS_INBOX) {
+            AdminTicketsInboxScreen(navController = navController)
+        }
+        composable(
+            route = Routes.ADMIN_USER_EDIT,
+            arguments = listOf(navArgument("uidArg") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val uidArg = backStackEntry.arguments?.getString("uidArg") ?: "new"
+            AdminUserFormScreen(navController = navController, uidArg = uidArg)
+        }
+        composable(Routes.SUBMIT_TICKET) {
+            SubmitTicketScreen(navController = navController)
+        }
+        composable(Routes.MY_TICKETS) {
+            MyTicketsScreen(navController = navController)
+        }
+        composable(
+            route = Routes.TICKET_DETAIL,
+            arguments = listOf(navArgument("ticketId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val ticketId = backStackEntry.arguments?.getString("ticketId") ?: ""
+            TicketDetailScreen(navController = navController, ticketId = ticketId)
+        }
+        composable(
+            route = Routes.ADMIN_TICKET_DETAIL,
+            arguments = listOf(navArgument("ticketId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val ticketId = backStackEntry.arguments?.getString("ticketId") ?: ""
+            AdminTicketDetailScreen(navController = navController, ticketId = ticketId)
         }
 
         composable(Routes.PROFILE) {

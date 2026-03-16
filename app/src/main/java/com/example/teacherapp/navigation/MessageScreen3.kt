@@ -201,12 +201,49 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
     var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
     var otherUserName by remember { mutableStateOf("Unknown") }
     val chatId = chatIdFor(currentUser.uid, otherUserId)
-
-    // Roles for Part-1 "quick response" + teacher dashboard stats
+    var currentRole by remember { mutableStateOf("") }
+    var roleLoaded by remember { mutableStateOf(false) }
     var currentUserRole by remember { mutableStateOf("student") }
     var otherUserRole by remember { mutableStateOf("student") }
 
-    // Location setup
+    LaunchedEffect(currentUser.uid) {
+        db.collection("users").document(currentUser.uid).get()
+            .addOnSuccessListener { doc ->
+                currentRole = doc.getString("role") ?: ""
+                roleLoaded = true
+            }
+            .addOnFailureListener {
+                roleLoaded = true
+            }
+    }
+
+    if (roleLoaded && currentRole == "administrator") {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Direct Chat Disabled") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Administrators should communicate through support tickets.")
+            }
+        }
+        return
+    }
+
+    // Location Setup
     val context = LocalContext.current
     val activity = LocalActivity.current
     var pendingSendLocation by remember { mutableStateOf(false) }

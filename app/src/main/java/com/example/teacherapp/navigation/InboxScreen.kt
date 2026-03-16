@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.teacherapp.navigation.admin.AdminTicketsInboxScreen
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -42,15 +43,34 @@ private fun formatTime(ts: Timestamp): String {
 fun InboxScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser ?: return
+    val currentUser = auth.currentUser
 
+    var userRole by remember { mutableStateOf("student") }
+    var authReady by remember { mutableStateOf(false) }
     var chats by remember { mutableStateOf<List<ChatSummary>>(emptyList()) }
     val nameCache = remember { mutableStateMapOf<String, String>() }
 
     var searchQuery by remember { mutableStateOf("") }
 
+    LaunchedEffect(currentUser?.uid) {
+        if (currentUser == null) {
+            authReady = true
+            return@LaunchedEffect
+        }
+        db.collection("users").document(currentUser.uid).get()
+            .addOnSuccessListener { doc ->
+                userRole = doc.getString("role") ?: "student"
+                authReady = true
+            }
+            .addOnFailureListener {
+                authReady = true
+            }
+    }
+
     // Listen for chats involving the current user
-    LaunchedEffect(currentUser.uid) {
+    LaunchedEffect(currentUser?.uid, userRole) {
+        if (currentUser == null) return@LaunchedEffect
+        if (userRole == "administrator") return@LaunchedEffect
         db.collection("chats")
             .whereArrayContains("participants", currentUser.uid)
             .orderBy("lastTimestamp")
@@ -80,13 +100,16 @@ fun InboxScreen(navController: NavController) {
 
     // Filtered chats based on the search query
     val filteredChats = chats.filter { chat ->
+        if (currentUser == null) return@filter false
         chat.participants.any { participant ->
             nameCache[participant]?.contains(searchQuery, ignoreCase = true) ?: false
         }
     }
 
     // Fetch names for the other users
-    LaunchedEffect(chats) {
+    LaunchedEffect(chats, userRole) {
+        if (currentUser == null) return@LaunchedEffect
+        if (userRole == "administrator") return@LaunchedEffect
         chats.forEach { chat ->
             val otherUid = chat.participants.firstOrNull { it != currentUser.uid } ?: return@forEach
             if (otherUid.isBlank()) return@forEach
@@ -118,12 +141,49 @@ fun InboxScreen(navController: NavController) {
             }
         },
         bottomBar = {
-            Column {
-                Divider()
-                CustomBottomNavigation(navController)
+            if (authReady && userRole != "administrator") {
+                Column {
+                    Divider()
+                    CustomBottomNavigation(navController)
+                }
             }
         }
     ) { padding ->
+        if (!authReady) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Loading...")
+            }
+            return@Scaffold
+        }
+        if (currentUser == null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Session unavailable. Please log in again.")
+            }
+            return@Scaffold
+        }
+        if (userRole == "administrator") {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                AdminTicketsInboxScreen(navController = navController)
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
