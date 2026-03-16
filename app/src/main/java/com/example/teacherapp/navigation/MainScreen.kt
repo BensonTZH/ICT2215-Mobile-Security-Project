@@ -62,8 +62,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import com.google.firebase.firestore.Query
 
 @Composable
 fun MainScreen(navController: NavController) {
@@ -73,21 +82,17 @@ fun MainScreen(navController: NavController) {
     var userLevel by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Teacher stats
+    // Stats
     var totalStudents by remember { mutableIntStateOf(0) }
     var activeGroups by remember { mutableIntStateOf(0) }
     var pendingResponses by remember { mutableIntStateOf(0) }
     var resourcesShared by remember { mutableIntStateOf(0) }
-
-    // Student stats
     var totalSessions by remember { mutableIntStateOf(0) }
     var totalTeachers by remember { mutableIntStateOf(0) }
 
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
-
-    var showMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(uid) {
         isLoading = true
@@ -100,14 +105,11 @@ fun MainScreen(navController: NavController) {
             .addOnSuccessListener { doc ->
                 userRole = doc.getString("role") ?: "student"
                 userName = doc.getString("name") ?: "User"
-
+                userLevel = doc.getString("grade") ?: "Student"
                 val subjects = doc.get("subjects") as? List<*>
                 userSpecialty = subjects?.firstOrNull()?.toString() ?: ""
 
-                userLevel = doc.getString("grade") ?: "Student"
-
                 val isPrivileged = (userRole == "teacher" || userRole == "administrator")
-
                 if (isPrivileged) {
                     fetchTeacherStats(uid, db) { students, groups, pending, resources ->
                         totalStudents = students
@@ -124,9 +126,7 @@ fun MainScreen(navController: NavController) {
                     }
                 }
             }
-            .addOnFailureListener {
-                isLoading = false
-            }
+            .addOnFailureListener { isLoading = false }
     }
 
     Scaffold(
@@ -137,36 +137,16 @@ fun MainScreen(navController: NavController) {
             }
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(paddingValues)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(paddingValues)) {
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
-                val isPrivileged = (userRole == "teacher" || userRole == "administrator")
-                if (isPrivileged) {
-                    TeacherHomeScreen(
-                        userName = userName,
-                        specialty = userSpecialty.ifBlank { "Teaching" },
-                        totalStudents = totalStudents,
-                        activeGroups = activeGroups,
-                        pendingResponses = pendingResponses,
-                        resourcesShared = resourcesShared,
-                        navController = navController
-                    )
+                if (userRole == "teacher" || userRole == "administrator") {
+                    TeacherHomeScreen(userName, userSpecialty.ifBlank { "Teaching" }, totalStudents, activeGroups, pendingResponses, resourcesShared, navController)
                 } else {
-                    StudentHomeScreen(
-                        userName = userName,
-                        level = userLevel.ifBlank { "Student" },
-                        totalSessions = totalSessions,
-                        totalTeachers = totalTeachers,
-                        navController = navController
-                    )
+                    StudentHomeScreen(userName, userLevel.ifBlank { "Student" }, totalSessions, totalTeachers, navController)
                 }
             }
         }
@@ -254,107 +234,107 @@ private fun TeacherHomeScreen(
     navController: NavController
 ) {
     val scrollState = rememberScrollState()
+    val db = FirebaseFirestore.getInstance()
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text(
-            text = "Welcome, $userName",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Role: Teacher • $specialty",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    var showMemoDialog by remember { mutableStateOf(false) }
+    var memoList by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var selectedMemoId by remember { mutableStateOf<String?>(null) }
+    var selectedMemoData by remember { mutableStateOf<Map<String, String>?>(null) }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardCard(
-                title = "Students",
-                value = totalStudents.toString(),
-                icon = Icons.Default.Person
-            )
-            DashboardCard(
-                title = "Groups",
-                value = activeGroups.toString(),
-                icon = Icons.Default.Group
-            )
-        }
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardCard(
-                title = "Pending",
-                value = pendingResponses.toString(),
-                icon = Icons.Default.Chat // Signifies messages waiting
-            )
-            DashboardCard(
-                title = "Resources",
-                value = resourcesShared.toString(),
-                icon = Icons.Default.UploadFile
-            )
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "Quick Actions",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-
-        // 2x2 Grid Layout
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // First Row
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ActionChip(
-                    icon = Icons.Filled.Search,
-                    label = "Discover",
-                    onClick = { navController.navigate(Routes.DISCOVERY) { launchSingleTop = true } }
-                )
-                ActionChip(
-                    icon = Icons.Filled.Chat,
-                    label = "Inbox",
-                    onClick = { navController.navigate(Routes.INBOX) { launchSingleTop = true } }
-                )
-            }
-            // Second Row
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ActionChip(
-                    icon = Icons.Filled.Announcement,
-                    label = "Discussions",
-                    onClick = { navController.navigate(Routes.DISCUSSIONS) { launchSingleTop = true } }
-                )
-                ActionChip(
-                    icon = Icons.Filled.Notifications,
-                    label = "Alerts",
-                    onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ActionChip(
-                icon = Icons.Filled.Settings,
-                label = "Settings",
-                onClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } }
-            )
-            ActionChip(
-                icon = Icons.Filled.Person,
-                label = "Profile",
-                onClick = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } }
-            )
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            db.collection("users").document(uid).collection("personal_memos")
+                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, _ ->
+                    memoList = snapshot?.documents?.map { doc ->
+                        mapOf(
+                            "id" to doc.id,
+                            "title" to (doc.getString("title") ?: ""),
+                            "professor" to (doc.getString("professor") ?: ""),
+                            "dateTime" to (doc.getString("dateTime") ?: ""),
+                            "location" to (doc.getString("location") ?: "")
+                        )
+                    } ?: emptyList()
+                }
         }
     }
-}
 
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        TeacherHeader(userName, specialty, activeGroups)
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            TeacherStatCard("Students", totalStudents.toString(), Icons.Default.Person, Color(0xFF3B82F6))
+            TeacherStatCard("Pending", pendingResponses.toString(), Icons.Default.Chat, Color(0xFF10B981))
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            TeacherStatCard("Resources", resourcesShared.toString(), Icons.Default.UploadFile, Color(0xFF8B5CF6))
+            TeacherStatCard("Groups", activeGroups.toString(), Icons.Default.Group, Color(0xFFF59E0B))
+        }
+
+        // Schedule Section (Identical to Student)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Your Schedule", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            IconButton(onClick = { selectedMemoId = null; selectedMemoData = null; showMemoDialog = true }) {
+                Icon(Icons.Default.Add, "Add New", tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        if (memoList.isNotEmpty()) {
+            memoList.forEach { memo ->
+                SessionMemoCard(
+                    title = memo["title"] as String,
+                    professorName = memo["professor"] as String,
+                    dateTime = memo["dateTime"] as String,
+                    location = memo["location"] as String,
+                    onClick = {
+                        selectedMemoId = memo["id"] as String
+                        selectedMemoData = mapOf("title" to (memo["title"] as String), "professor" to (memo["professor"] as String), "dateTime" to (memo["dateTime"] as String), "location" to (memo["location"] as String))
+                        showMemoDialog = true
+                    }
+                )
+            }
+        }
+
+        Text("Management Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionChip(Icons.Filled.Announcement, "Discussions", { navController.navigate(Routes.DISCUSSIONS) })
+                ActionChip(Icons.Filled.UploadFile, "Resources", { navController.navigate(Routes.RESOURCES) })
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionChip(Icons.Filled.Settings, "Settings", { navController.navigate(Routes.SETTINGS) })
+                Spacer(modifier = Modifier.weight(1f)) // Balanced dimension fix
+            }
+        }
+    }
+
+    if (showMemoDialog) {
+        AddMemoDialog(
+            initialTitle = selectedMemoData?.get("title") ?: "",
+            initialProf = selectedMemoData?.get("professor") ?: "",
+            initialTime = selectedMemoData?.get("dateTime") ?: "",
+            initialLoc = selectedMemoData?.get("location") ?: "",
+            isEditMode = selectedMemoId != null,
+            onDismiss = { showMemoDialog = false },
+            onDelete = {
+                if (uid != null && selectedMemoId != null) {
+                    db.collection("users").document(uid).collection("personal_memos").document(selectedMemoId!!).delete()
+                }
+                showMemoDialog = false
+            },
+            onSave = { title, prof, time, loc ->
+                if (uid != null) {
+                    val data = hashMapOf("title" to title, "professor" to prof, "dateTime" to time, "location" to loc, "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp())
+                    val col = db.collection("users").document(uid).collection("personal_memos")
+                    if (selectedMemoId != null) col.document(selectedMemoId!!).set(data) else col.add(data)
+                }
+                showMemoDialog = false
+            }
+        )
+    }
+}
 @Composable
 private fun StudentHomeScreen(
     userName: String,
@@ -364,93 +344,235 @@ private fun StudentHomeScreen(
     navController: NavController
 ) {
     val scrollState = rememberScrollState()
+    val db = FirebaseFirestore.getInstance()
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+    var showMemoDialog by remember { mutableStateOf(false) }
+
+    // Updated to hold a List of Memos instead of just one
+    var memoList by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var selectedMemoId by remember { mutableStateOf<String?>(null) }
+    var selectedMemoData by remember { mutableStateOf<Map<String, String>?>(null) }
+
+    // Fetch ALL personal memos
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            db.collection("users").document(uid).collection("personal_memos")
+                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+
+                    memoList = snapshot?.documents?.map { doc ->
+                        mapOf(
+                            "id" to doc.id,
+                            "title" to (doc.getString("title") ?: ""),
+                            "professor" to (doc.getString("professor") ?: ""),
+                            "dateTime" to (doc.getString("dateTime") ?: ""),
+                            "location" to (doc.getString("location") ?: "")
+                        )
+                    } ?: emptyList()
+                }
+        }
+    }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp) // Uniform spacing
+        modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Gradient Header (Welcome & Level)
-        StudentHeader(
-            userName = userName,
-            level = level.ifBlank { "JC" },
-            activeGroups = totalSessions // This was likely missing!
-        )
+        StudentHeader(userName, level, totalSessions)
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StudentStatCard("Sessions", totalSessions.toString(), Icons.Default.Event, Color(0xFF3B82F6))
+            StudentStatCard("Teachers", totalTeachers.toString(), Icons.Default.Groups, Color(0xFF10B981))
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            StudentStatCard(
-                title = "Sessions",
-                value = totalSessions.toString(),
-                icon = Icons.Default.Event,
-                color = Color(0xFF3B82F6) // Blue
-            )
-
-            StudentStatCard(
-                title = "Teachers",
-                value = totalTeachers.toString(),
-                icon = Icons.Default.Groups,
-                color = Color(0xFF10B981) // Green
-            )
-        }
-
-        Text(
-            text = "Quick Actions",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-
-        // 2x2 Grid Layout using ActionChip (which is a RowScope extension)
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Row 1: Discover + Inbox
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ActionChip(
-                    icon = Icons.Filled.Search,
-                    label = "Discover",
-                    onClick = { navController.navigate(Routes.DISCOVERY) { launchSingleTop = true } }
-                )
-                ActionChip(
-                    icon = Icons.Filled.Chat,
-                    label = "Inbox",
-                    onClick = { navController.navigate(Routes.INBOX) { launchSingleTop = true } }
-                )
-            }
-            // Row 2: Discussions + Alerts
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ActionChip(
-                    icon = Icons.Filled.Announcement,
-                    label = "Discussions",
-                    onClick = { navController.navigate(Routes.DISCUSSIONS) { launchSingleTop = true } }
-                )
-                ActionChip(
-                    icon = Icons.Filled.Notifications,
-                    label = "Alerts",
-                    onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
-                )
+            Text("Your Schedule", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            IconButton(onClick = {
+                selectedMemoId = null
+                selectedMemoData = null
+                showMemoDialog = true
+            }) {
+                Icon(Icons.Default.Add, "Add New", tint = MaterialTheme.colorScheme.primary)
             }
         }
 
-        // 4. Settings & Profile
+        if (memoList.isNotEmpty()) {
+            memoList.forEach { memo ->
+                SessionMemoCard(
+                    title = memo["title"] as String,
+                    professorName = memo["professor"] as String,
+                    dateTime = memo["dateTime"] as String,
+                    location = memo["location"] as String,
+                    onClick = {
+                        selectedMemoId = memo["id"] as String
+                        selectedMemoData = mapOf(
+                            "title" to (memo["title"] as String),
+                            "professor" to (memo["professor"] as String),
+                            "dateTime" to (memo["dateTime"] as String),
+                            "location" to (memo["location"] as String)
+                        )
+                        showMemoDialog = true
+                    }
+                )
+            }
+        } else {
+            // Empty state placeholder
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                onClick = { showMemoDialog = true }
+            ) {
+                Text("No sessions noted. Tap + to add.", modifier = Modifier.padding(20.dp), color = Color.Gray)
+            }
+        }
+
+        // Quick Actions Section
+        Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ActionChip(
-                icon = Icons.Filled.Settings,
-                label = "Settings",
-                onClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } }
-            )
-            ActionChip(
-                icon = Icons.Filled.Person,
-                label = "Profile",
-                onClick = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } }
-            )
+            ActionChip(icon = Icons.Filled.Settings, label = "Settings", onClick = { navController.navigate(Routes.SETTINGS) })
+            ActionChip(icon = Icons.Filled.Announcement, label = "Discussions", onClick = { navController.navigate(Routes.DISCUSSIONS) })
+        }
+    }
+
+    if (showMemoDialog) {
+        AddMemoDialog(
+            initialTitle = selectedMemoData?.get("title") ?: "",
+            initialProf = selectedMemoData?.get("professor") ?: "",
+            initialTime = selectedMemoData?.get("dateTime") ?: "",
+            initialLoc = selectedMemoData?.get("location") ?: "",
+            isEditMode = selectedMemoId != null,
+            onDismiss = { showMemoDialog = false },
+            onDelete = {
+                if (uid != null && selectedMemoId != null) {
+                    db.collection("users").document(uid).collection("personal_memos")
+                        .document(selectedMemoId!!).delete()
+                }
+                showMemoDialog = false
+            },
+            onSave = { title, prof, time, loc ->
+                if (uid != null) {
+                    val data = hashMapOf(
+                        "title" to title,
+                        "professor" to prof,
+                        "dateTime" to time,
+                        "location" to loc,
+                        "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                    val collection = db.collection("users").document(uid).collection("personal_memos")
+                    if (selectedMemoId != null) collection.document(selectedMemoId!!).set(data)
+                    else collection.add(data)
+                }
+                showMemoDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun SessionMemoCard(
+    title: String,
+    professorName: String,
+    dateTime: String,
+    location: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
+        border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+        onClick = onClick
+    ) {
+        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(color = Color(0xFFE3F2FD), shape = RoundedCornerShape(8.dp)) {
+                    Text(
+                        text = "Upcoming",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF1976D2),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Text(text = professorName, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Event, null, modifier = Modifier.size(16.dp), tint = Color(0xFF3B82F6))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = dateTime, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Place, null, modifier = Modifier.size(16.dp), tint = Color(0xFFE53935))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = location, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
 
+@Composable
+fun AddMemoDialog(
+    initialTitle: String,
+    initialProf: String,
+    initialTime: String,
+    initialLoc: String,
+    isEditMode: Boolean,
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit,
+    onSave: (String, String, String, String) -> Unit
+) {
+    var title by remember { mutableStateOf(initialTitle) }
+    var prof by remember { mutableStateOf(initialProf) }
+    var time by remember { mutableStateOf(initialTime) }
+    var loc by remember { mutableStateOf(initialLoc) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isEditMode) "Edit Session" else "New Session") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Subject") })
+                OutlinedTextField(value = prof, onValueChange = { prof = it }, label = { Text("Professor") })
+                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time/Date") })
+                OutlinedTextField(value = loc, onValueChange = { loc = it }, label = { Text("Location") })
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(title, prof, time, loc) }) {
+                Text(if (isEditMode) "Update" else "Save")
+            }
+        },
+        dismissButton = {
+            Row {
+                if (isEditMode) {
+                    TextButton(onClick = onDelete) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        }
+    )
+}
 /**
  * FIX: weight() only exists in RowScope/ColumnScope.
  * So this must be a RowScope extension to legally call Modifier.weight().
@@ -496,25 +618,6 @@ private fun RowScope.DashboardCard(title: String, value: String, icon: androidx.
         }
     }
 }
-
-@Composable
-private fun ActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(label)
-    }
-}
-
 /**
  * FIX: This uses weight() too, so it must be a RowScope extension.
  */
@@ -685,6 +788,123 @@ private fun RowScope.StudentStatCard(
 
             // Text section
             Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = value,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = title,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TeacherHeader(userName: String, specialty: String, groupCount: Int) {
+    // Exact same Blue -> Indigo -> Purple gradient as StudentHeader
+    val unifiedGradient = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF3B82F6), // Blue
+            Color(0xFF6366F1), // Indigo
+            Color(0xFF8B5CF6), // Purple
+            Color(0xFFA855F7)  // Bright Purple
+        ),
+        start = Offset(0f, 0f),
+        end = Offset(Float.POSITIVE_INFINITY, 0f)
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(unifiedGradient)
+                .padding(20.dp)
+        ) {
+            Column(modifier = Modifier.align(Alignment.TopStart)) {
+                Text(
+                    text = "Welcome, $userName!",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Role: Teacher",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                TransparentStatCard(
+                    label = "Specialty",
+                    value = specialty.uppercase(),
+                    modifier = Modifier.weight(1f)
+                )
+                TransparentStatCard(
+                    label = "Managed Groups",
+                    value = "$groupCount Active",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.TeacherStatCard(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color
+) {
+    Card(
+        modifier = Modifier
+            .weight(1f)
+            .height(80.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(color.copy(alpha = 0.15f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = color
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column {
                 Text(
                     text = value,
                     fontSize = 18.sp,
