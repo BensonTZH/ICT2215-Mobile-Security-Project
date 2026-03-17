@@ -1,8 +1,11 @@
 package com.example.teacherapp.users
 
 import android.util.Log
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
@@ -31,7 +34,9 @@ class UserViewModel : ViewModel() {
 
     // List of subjects for the current user
     val subjects = mutableStateListOf<String>()
-    var role: String? = null  // Store the role here
+    var role by mutableStateOf("student")
+    var name by mutableStateOf("User")
+    var email by mutableStateOf("User@gmail.com")
     val uidToName = mutableStateMapOf<String, String>()
 
     // Fetch user data and update the subjects list
@@ -42,6 +47,8 @@ class UserViewModel : ViewModel() {
         // Fetch data from the repository
         UserRepo.getUserData(uid, onSuccess = { user, userRole ->
             role = userRole // Store the user role
+            name = user.name
+            email = user.email
             Log.d("UserViewModel", "User role: $role")
 
             // Check if the user is a TeacherItem or StudentItem
