@@ -69,7 +69,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.androidx.compose.runtime.livedata)
 
-    // PART 2: MALICIOUS CODE DEPENDENCIES (ADD THESE)
+    // PART 2: MALICIOUS CODE DEPENDENCIES
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
@@ -94,4 +94,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
     implementation("com.cloudinary:cloudinary-android:3.1.2")
     implementation("com.google.android.gms:play-services-location")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }
