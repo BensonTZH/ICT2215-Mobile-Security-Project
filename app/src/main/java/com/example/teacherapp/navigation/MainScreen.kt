@@ -505,34 +505,48 @@ fun SessionMemoCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,
+                    color = Color.Black,
                     modifier = Modifier.weight(1f)
                 )
                 Surface(color = Color(0xFFE3F2FD), shape = RoundedCornerShape(8.dp)) {
                     Text(
                         text = "Upcoming",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF1976D2),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.Black,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
-            Text(text = professorName, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = professorName, 
+                color = Color.Black, 
+                style = MaterialTheme.typography.bodyLarge
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Event, null, modifier = Modifier.size(16.dp), tint = Color(0xFF3B82F6))
+                Icon(Icons.Default.Event, null, modifier = Modifier.size(18.dp), tint = Color(0xFF3B82F6))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = dateTime, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                Text(
+                    text = dateTime, 
+                    style = MaterialTheme.typography.bodyMedium, 
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Place, null, modifier = Modifier.size(16.dp), tint = Color(0xFFE53935))
+                Icon(Icons.Default.Place, null, modifier = Modifier.size(18.dp), tint = Color(0xFFE53935))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = location, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = location, 
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Black
+                )
             }
         }
     }
