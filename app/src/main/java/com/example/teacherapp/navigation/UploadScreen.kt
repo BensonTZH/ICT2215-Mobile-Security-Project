@@ -75,6 +75,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.text.style.TextAlign
 import com.example.teacherapp.navigation.groups.GroupViewModel
 import com.example.teacherapp.users.UserViewModel
 
@@ -178,6 +179,14 @@ fun UploadScreen(navController: NavHostController) {
             Toast.makeText(navController.context, "Please select a file first.", Toast.LENGTH_SHORT).show()
             return@let
         }
+        if (description.isBlank()) {
+            Toast.makeText(navController.context, "Please enter a description.", Toast.LENGTH_SHORT).show()
+            return@let
+        }
+        if (selectedGroup.isNullOrBlank()) {
+            Toast.makeText(navController.context, "Please select a group.", Toast.LENGTH_SHORT).show()
+            return@let
+        }
 
         val uploadPreset = navController.context.getString(R.string.cloudinary_upload_preset)
 
@@ -251,6 +260,14 @@ fun UploadScreen(navController: NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Upload Resources")
+            }
+
+            if (resources.isEmpty()) {
+                Text(
+                    text = "No resources uploaded",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
             }
 
             // List of resources
