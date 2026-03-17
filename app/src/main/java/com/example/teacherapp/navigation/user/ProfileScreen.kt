@@ -5,13 +5,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -25,6 +29,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
+val ProfilePurple = Color(0xFF6200EE)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(navController: NavController) {
@@ -52,6 +57,8 @@ fun ProfileScreen(navController: NavController) {
 
     // UI
     var showEdit by remember { mutableStateOf(false) }
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
 
     // Fetch data from Firestore
     LaunchedEffect(Unit) {
@@ -87,20 +94,43 @@ fun ProfileScreen(navController: NavController) {
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("My Profile") },
+                title = {
+                    Text(
+                        "My Profile",
+                        fontSize = 20.sp, // Compact font size
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { showEdit = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit Profile",
+                            tint = Color.White
+                        )
                     }
-                }
+                },
+                // Removes status bar padding to shrink the height
+                windowInsets = WindowInsets(0.dp),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = ProfilePurple,
+                    scrolledContainerColor = ProfilePurple, // Keep it purple when scrolling
+                    titleContentColor = Color.White,
+                ),
+                scrollBehavior = scrollBehavior
             )
         },
         bottomBar = {
@@ -125,66 +155,86 @@ fun ProfileScreen(navController: NavController) {
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar
+            // Initial-based Avatar (Matches Discovery/Inbox style)
             Surface(
                 modifier = Modifier.size(100.dp),
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.primaryContainer
+                shape = CircleShape, // Changed to Circle for consistency
+                color = ProfilePurple.copy(alpha = 0.1f)
             ) {
-                Icon(
-                    Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.padding(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = name.take(1).uppercase(),
+                        fontWeight = FontWeight.Bold,
+                        color = ProfilePurple,
+                        fontSize = 40.sp
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(text = name, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(text = name, fontSize = 26.sp, fontWeight = FontWeight.Bold) // Increased size
             Text(
                 text = roleDisplay,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 18.sp, // Increased size
+                color = ProfilePurple, // Match theme
                 fontWeight = FontWeight.Medium
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Info rows
-            ProfileInfoRow(icon = Icons.Default.Email, label = "Email", value = email)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp), // Small padding to show the shadow
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp) // High elevation for 3D effect
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Email Row
+                    ProfileInfoRow(icon = Icons.Default.Email, label = "Email", value = email)
 
-            if (roleRaw == "student") {
-                if (grade.isNotBlank()) {
-                    ProfileInfoRow(icon = Icons.Default.School, label = "Grade", value = grade)
-                }
-                if (interests.isNotEmpty()) {
-                    ProfileInfoRow(
-                        icon = Icons.Default.Star,
-                        label = "Interests",
-                        value = interests.joinToString(", ")
-                    )
+                    if (roleRaw == "student") {
+                        if (grade.isNotBlank()) {
+                            Divider(modifier = Modifier.padding(horizontal = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
+                            ProfileInfoRow(icon = Icons.Default.School, label = "Grade", value = grade)
+                        }
+                        if (interests.isNotEmpty()) {
+                            Divider(modifier = Modifier.padding(horizontal = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
+                            ProfileInfoRow(
+                                icon = Icons.Default.Star,
+                                label = "Interests",
+                                value = interests.joinToString(", ")
+                            )
+                        }
+                    }
+
+                    if (roleRaw == "teacher") {
+                        if (subjects.isNotEmpty()) {
+                            Divider(modifier = Modifier.padding(horizontal = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
+                            ProfileInfoRow(
+                                icon = Icons.Default.Book,
+                                label = "Subjects",
+                                value = subjects.joinToString(", ")
+                            )
+                        }
+                        if (availability.isNotEmpty()) {
+                            Divider(modifier = Modifier.padding(horizontal = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
+                            ProfileInfoRow(
+                                icon = Icons.Default.CalendarToday,
+                                label = "Availability",
+                                value = availability.joinToString(", ")
+                            )
+                        }
+                    }
                 }
             }
 
-            if (roleRaw == "teacher") {
-                if (subjects.isNotEmpty()) {
-                    ProfileInfoRow(
-                        icon = Icons.Default.Book,
-                        label = "Subjects",
-                        value = subjects.joinToString(", ")
-                    )
-                }
-                if (availability.isNotEmpty()) {
-                    ProfileInfoRow(
-                        icon = Icons.Default.CalendarToday,
-                        label = "Availability",
-                        value = availability.joinToString(", ")
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Change password (send reset email) — with feedback
             OutlinedButton(
@@ -486,13 +536,38 @@ fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = 12.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        // Rounded icon background
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = CircleShape,
+            color = ProfilePurple.copy(alpha = 0.1f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = ProfilePurple,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
         Column(modifier = Modifier.padding(start = 16.dp)) {
-            Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
-            Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                color = Color.Gray,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = value,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black
+            )
         }
     }
 }
