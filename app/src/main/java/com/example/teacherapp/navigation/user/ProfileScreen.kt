@@ -224,14 +224,14 @@ fun ProfileScreen(navController: NavController) {
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
 
-                        // ✅ BOTH STUDENT + TEACHER CAN EDIT NAME
+                        // both student annd teacher can edit name
                         OutlinedTextField(
                             value = newName,
                             onValueChange = { newName = it },
                             label = { Text("Name") }
                         )
 
-                        // ✅ ONLY TEACHER SEES THESE
+                        // only teacher see these fields
                         if (roleRaw == "teacher") {
 
                             Text("Subjects", fontWeight = FontWeight.Bold)
@@ -281,7 +281,7 @@ fun ProfileScreen(navController: NavController) {
                             "name" to newName
                         )
 
-                        // ✅ ONLY TEACHER DATA UPDATED
+                        // only teacher update fields
                         if (roleRaw == "teacher") {
                             updateMap["subjects"] = selectedSubjects.toList()
                             updateMap["availability"] = selectedDays.toList()
