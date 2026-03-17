@@ -86,7 +86,7 @@ fun DiscoveryScreen(navController: NavController) {
                 title = {
                     Text(
                         text = "Discover Teachers",
-                        fontSize = 28.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -95,9 +95,10 @@ fun DiscoveryScreen(navController: NavController) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
+                windowInsets = WindowInsets(0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = EducationBlue,
-                    scrolledContainerColor = Color.Transparent,
+                    scrolledContainerColor = EducationBlue, // Changed from Transparent to Blue
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
