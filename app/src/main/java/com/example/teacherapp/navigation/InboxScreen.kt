@@ -162,7 +162,7 @@ fun InboxScreen(navController: NavController) {
             if (authReady && userRole != "administrator") {
                 Column {
                     Divider()
-                    CustomBottomNavigation(navController)
+                    CustomBottomNavigation(navController, userRole = userRole)
                 }
             }
         }

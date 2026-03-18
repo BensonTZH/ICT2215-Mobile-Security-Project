@@ -135,7 +135,7 @@ fun ProfileScreen(navController: NavController) {
         bottomBar = {
             Column {
                 Divider()
-                CustomBottomNavigation(navController)
+                CustomBottomNavigation(navController, userRole = roleRaw)
             }
         }
     ) { padding ->

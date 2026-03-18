@@ -121,7 +121,7 @@ fun MainScreen(navController: NavController) {
             if (!isLoading && userRole.isNotBlank() && userRole != "administrator") {
                 Column {
                     HorizontalDivider()
-                    CustomBottomNavigation(navController)
+                    CustomBottomNavigation(navController, userRole = userRole)
                 }
             }
         }
