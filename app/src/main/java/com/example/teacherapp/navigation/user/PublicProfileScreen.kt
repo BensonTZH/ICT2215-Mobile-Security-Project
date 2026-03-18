@@ -26,6 +26,7 @@ fun PublicProfileScreen(navController: NavController, teacherId: String?) {
     var isLoading by remember { mutableStateOf(true) }
     var currentRole by remember { mutableStateOf("student") }
     val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+    val indigo = Color(0xFF6366F1)
 
     // Fetch Teacher Details
     LaunchedEffect(teacherId) {
@@ -48,12 +49,25 @@ fun PublicProfileScreen(navController: NavController, teacherId: String?) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Teacher Profile") },
+                title = {
+                    Text(
+                        text = "My Profile",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                windowInsets = WindowInsets(0.dp),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = indigo,
+                    scrolledContainerColor = indigo,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
             )
         },
         floatingActionButton = {

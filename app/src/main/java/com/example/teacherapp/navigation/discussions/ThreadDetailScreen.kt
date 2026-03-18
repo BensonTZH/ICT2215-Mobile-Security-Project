@@ -1,4 +1,5 @@
 package com.example.teacherapp.navigation.discussions
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,6 +27,8 @@ fun ThreadDetailScreen(navController: NavController, threadId: String) {
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
 
+    val indigo = Color(0xFF6366F1)
+
     var thread by remember { mutableStateOf<DiscussionThread?>(null) }
     var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
     var currentUserName by remember { mutableStateOf("User") }
@@ -51,22 +54,70 @@ fun ThreadDetailScreen(navController: NavController, threadId: String) {
     }
 
     Scaffold(
+        topBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            ) {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = "Discussion",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Filled.ArrowBack, "Back", tint = Color.White)
+                        }
+                    },
+                    windowInsets = WindowInsets(0.dp),
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = indigo
+                    )
+                )
+            }
+        },
         bottomBar = {
             CommentInputBar(onCommentSend = { text ->
                 saveComment(threadId, text, currentUserName)
             })
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
             item {
-                // The "Reddit Post" Header
                 PostHeader(thread)
+                // Thicker visual break between post and comments
                 HorizontalDivider(thickness = 8.dp, color = Color(0xFFF0F2F8))
+            }
+
+            if (comments.isEmpty()) {
+                item {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No comments yet. Be the first to reply!", color = Color.Gray)
+                    }
+                }
             }
 
             items(comments) { comment ->
                 CommentRow(comment)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    thickness = 0.5.dp,
+                    color = Color(0xFFEEEEEE)
+                )
             }
         }
     }
@@ -77,16 +128,16 @@ fun PostHeader(thread: DiscussionThread?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.AccountCircle,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = Color.Gray
+                tint = Color(0xFF6366F1)
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "u/${thread?.creatorName ?: "Anonymous"}",
                 style = MaterialTheme.typography.labelMedium,
@@ -105,7 +156,7 @@ fun PostHeader(thread: DiscussionThread?) {
         Text(
             text = thread?.title ?: "",
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = Color(0xFF2D3243)
         )
 
@@ -133,19 +184,20 @@ fun CommentRow(comment: Comment) {
                 text = comment.creatorName,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
-                color = Color(0xFF505D8A)
+                color = Color(0xFF6366F1)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "1h ago",
-                fontSize = 11.sp,
+                text = "• Just now",
+                fontSize = 12.sp,
                 color = Color.LightGray
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = comment.text,
             style = MaterialTheme.typography.bodyMedium,
+            fontSize = 15.sp,
             color = Color.Black
         )
     }
@@ -153,15 +205,17 @@ fun CommentRow(comment: Comment) {
 @Composable
 fun CommentInputBar(onCommentSend: (String) -> Unit) {
     var textState by remember { mutableStateOf("") }
+    val indigo = Color(0xFF6366F1)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp
+        tonalElevation = 0.dp,
+        shadowElevation = 16.dp,
+        color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
-                .padding(12.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
                 .navigationBarsPadding()
                 .imePadding(),
             verticalAlignment = Alignment.CenterVertically
@@ -169,14 +223,29 @@ fun CommentInputBar(onCommentSend: (String) -> Unit) {
             OutlinedTextField(
                 value = textState,
                 onValueChange = { textState = it },
-                placeholder = { Text("Add a comment...", fontSize = 14.sp) },
+                placeholder = {
+                    Text(
+                        "Add a comment...",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(28.dp),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF505D8A),
-                    unfocusedBorderColor = Color.LightGray
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    disabledContainerColor = Color.White,
+
+                    unfocusedBorderColor = Color(0xFFF0F0F0),
+                    focusedBorderColor = indigo,
+
+                    cursorColor = indigo
                 )
             )
+
+            Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
                 onClick = {
@@ -185,12 +254,17 @@ fun CommentInputBar(onCommentSend: (String) -> Unit) {
                         textState = ""
                     }
                 },
-                enabled = textState.isNotBlank()
+                enabled = textState.isNotBlank(),
+                modifier = Modifier.background(
+                    color = if (textState.isNotBlank()) indigo else Color(0xFFF1F3F4),
+                    shape = RoundedCornerShape(50)
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Send,
                     contentDescription = "Send",
-                    tint = if (textState.isNotBlank()) Color(0xFF505D8A) else Color.Gray
+                    tint = if (textState.isNotBlank()) Color.White else Color.Gray,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -201,7 +275,7 @@ fun saveComment(threadId: String, commentText: String, creatorName: String) {
     val db = FirebaseFirestore.getInstance()
 
     val newComment = hashMapOf(
-        "creatorName" to creatorName, // Use the passed name instead of hardcoded fallback
+        "creatorName" to creatorName,
         "text" to commentText,
         "timestamp" to System.currentTimeMillis()
     )

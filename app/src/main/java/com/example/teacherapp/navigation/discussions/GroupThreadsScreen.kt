@@ -1,31 +1,41 @@
 package com.example.teacherapp.navigation.discussions
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddComment
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,6 +66,8 @@ fun GroupThreadsScreen(
     val auth = FirebaseAuth.getInstance()
     val teacherId = auth.currentUser?.uid
 
+    val indigo = Color(0xFF6366F1)
+
     var threads by remember { mutableStateOf<List<DiscussionThread>>(emptyList()) }
     var showCreateThreadDialog by remember { mutableStateOf(false) }
     var currentUserName by remember { mutableStateOf("User") }
@@ -78,33 +90,75 @@ fun GroupThreadsScreen(
     }
 
     Scaffold(
+        topBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Topics",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Filled.ArrowBack, "Back", tint = Color.White)
+                        }
+                    },
+                    windowInsets = WindowInsets(0.dp),
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = indigo
+                    )
+                )
+            }
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showCreateThreadDialog = true },
-                containerColor = Color(0xFF505D8A),
+                containerColor = indigo, // Themed to match top bar
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.AddComment, null) },
-                text = { Text("New Topic") }
+                text = { Text("New Topic", fontWeight = FontWeight.Bold) }
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).padding(20.dp)) {
-            // Display the actual Group Name passed from the previous screen
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .padding(20.dp)
+        ) {
+            // Group Name Header
             Text(
                 text = groupName,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Discussion Board",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             if (threads.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No discussions yet for this group.", color = Color.Gray)
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+                ) {
                     items(threads) { thread ->
-                        // Renamed helper function call
                         DiscussionThreadCard(thread) {
                             navController.navigate("thread_detail_screen/${thread.id}")
                         }
@@ -179,13 +233,44 @@ fun DiscussionThreadCard(thread: DiscussionThread, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
+        border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(thread.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(thread.content, maxLines = 2, overflow = TextOverflow.Ellipsis, color = Color.Gray)
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = thread.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = thread.content,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Started by ",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.Gray
+                )
+                Text(
+                    text = thread.creatorName,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF6366F1) // Indigo accent for names
+                )
+            }
         }
     }
 }

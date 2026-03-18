@@ -27,6 +27,7 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
     var memberNames by remember { mutableStateOf<List<String>>(emptyList()) }
     var showAddMemberSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+    val indigo = Color(0xFF6366F1)
 
     // 1. Fetch Group Details
     LaunchedEffect(groupId) {
@@ -50,12 +51,25 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(group?.name ?: "Loading...") },
+                title = {
+                    Text(
+                        group?.name ?: "Loading...",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null)
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                windowInsets = WindowInsets(0.dp),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = indigo,
+                    scrolledContainerColor = indigo,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
             )
         }
     ) { padding ->

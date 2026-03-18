@@ -18,11 +18,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Announcement
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.UploadFile
@@ -35,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,8 +50,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.teacherapp.navigation.admin.AdminHomeScreen
 import com.google.firebase.auth.FirebaseAuth
@@ -246,27 +252,98 @@ private fun TeacherHomeScreen(
 ) {
     val scrollState = rememberScrollState()
 
+// Teacher Theme Gradient: Forest -> Emerald -> Teal
+    val teacherGradient = androidx.compose.ui.graphics.Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF3B82F6), // Blue
+            Color(0xFF6366F1), // Indigo
+            Color(0xFFA855F7)  // Purple
+        )
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Text("Welcome, $userName", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(
-            text = "Role: Teacher${if (specialty.isNotBlank()) " • $specialty" else ""}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // 1. Management Gradient Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(teacherGradient)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // Welcome Text inside the Card
+                Column {
+                    Text(
+                        text = "Welcome, $userName",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Teacher${if (specialty.isNotBlank()) " • $specialty" else ""}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardCard(title = "Students", value = totalStudents.toString())
-            DashboardCard(title = "Groups", value = activeGroups.toString())
+                // Transparent Inner Cards for Teacher Stats
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Students Count (Transparent)
+                    Surface(
+                        color = Color.White.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Students", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                            Text("$totalStudents Total", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        }
+                    }
+
+                    // Active Groups (Transparent)
+                    Surface(
+                        color = Color.White.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Groups", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                            Text("$activeGroups Active", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        }
+                    }
+                }
+            }
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardCard(title = "Pending", value = pendingResponses.toString())
-            DashboardCard(title = "Resources", value = resourcesShared.toString())
+
+        // 2. Secondary Stat Row (Pending & Resources)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CompactStatCard(
+                icon = Icons.Default.Chat,
+                label = "Pending",
+                value = pendingResponses.toString(),
+                modifier = Modifier.weight(1f)
+            )
+            CompactStatCard(
+                icon = Icons.Default.UploadFile,
+                label = "Resources",
+                value = resourcesShared.toString(),
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -302,24 +379,99 @@ private fun StudentHomeScreen(
     onMyTickets: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+// Updated Gradient: Blue -> Indigo -> Purple
+    val mainGradient = androidx.compose.ui.graphics.Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF3B82F6), // Blue
+            Color(0xFF6366F1), // Indigo
+            Color(0xFFA855F7)  // Purple
+        )
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Text("Welcome, $userName", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(
-            text = "Role: Student • $level",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardCard(title = "Sessions", value = totalSessions.toString())
-            DashboardCard(title = "Teachers", value = totalTeachers.toString())
+        // 1. Main Gradient Card (Contains Welcome & Stats)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(mainGradient)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // Welcome Text inside the Card
+                Column {
+                    Text(
+                        text = "Welcome, $userName",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Ready to learn today?",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+
+                // Transparent Inner Cards
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Level (Transparent)
+                    Surface(
+                        color = Color.White.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Level", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                            Text(level, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        }
+                    }
+
+                    // Active Groups (Transparent)
+                    Surface(
+                        color = Color.White.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Groups", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                            Text("Active", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Stat Chips (Icon + Text closer together)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CompactStatCard(
+                icon = Icons.Default.MenuBook,
+                label = "Sessions",
+                value = totalSessions.toString(),
+                modifier = Modifier.weight(1f)
+            )
+            CompactStatCard(
+                icon = Icons.Default.School,
+                label = "Teachers",
+                value = totalTeachers.toString(),
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -414,5 +566,54 @@ private fun RowScope.ActionChip(icon: ImageVector, label: String, onClick: () ->
         Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
         Text(label, maxLines = 1)
+    }
+}
+
+@Composable
+private fun CompactStatCard(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Surface(
+                color = Color(0xFF6366F1).copy(alpha = 0.1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color(0xFF6366F1),
+                    modifier = Modifier.padding(8.dp).size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF2D3243)
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.Gray
+                )
+            }
+        }
     }
 }

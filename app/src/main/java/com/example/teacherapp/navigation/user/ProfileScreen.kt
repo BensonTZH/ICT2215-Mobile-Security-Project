@@ -30,6 +30,7 @@ import coil.compose.AsyncImage
 import com.example.teacherapp.R
 import com.example.teacherapp.models.AppData
 import com.example.teacherapp.navigation.CustomBottomNavigation
+import com.example.teacherapp.navigation.EducationBlue
 import com.example.teacherapp.upload.CloudinaryUploader
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -43,6 +44,7 @@ fun ProfileScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
+    val indigo = Color(0xFF6366F1)
 
     var profileImageUrl by remember { mutableStateOf("") }
 
@@ -104,10 +106,16 @@ fun ProfileScreen(navController: NavController) {
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("My Profile", color = Color.White) },
+                title = {
+                    Text(
+                        text = "My Profile",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -115,8 +123,13 @@ fun ProfileScreen(navController: NavController) {
                         Icon(Icons.Default.Edit, null, tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = ProfilePurple),
-                scrollBehavior = scrollBehavior
+                windowInsets = WindowInsets(0.dp),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = indigo,
+                    scrolledContainerColor = indigo,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
             )
         },
         bottomBar = {

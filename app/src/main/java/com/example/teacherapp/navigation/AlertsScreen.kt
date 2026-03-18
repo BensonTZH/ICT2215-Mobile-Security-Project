@@ -1,5 +1,6 @@
 package com.example.teacherapp.navigation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +25,7 @@ import java.util.concurrent.TimeUnit
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.unit.sp
 
 data class Announcement(
     val id: String = "",
@@ -44,6 +46,7 @@ private enum class AlertsTab(val label: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertsScreen(navController: NavController) {
+    val indigo = Color(0xFF6366F1)
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val userId = auth.currentUser?.uid
@@ -130,19 +133,24 @@ fun AlertsScreen(navController: NavController) {
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("Announcements", fontWeight = FontWeight.Bold)
-                        Text(
-                            text = "Stay updated with important notices",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    Text(
+                        text = "Alerts",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                windowInsets = WindowInsets(0.dp),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = indigo,
+                    scrolledContainerColor = indigo,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
             )
         },
         floatingActionButton = {
@@ -296,85 +304,77 @@ private fun AnnouncementCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(20.dp), // Consistent rounding
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
+        border = BorderStroke(1.dp, if(isUnread) Color(0xFF6366F1).copy(alpha = 0.5f) else Color(0xFFE0E0E0)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.Notifications,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(Modifier.width(10.dp))
+                // Circular Icon Background
+                Surface(
+                    color = if(announcement.pinned) Color(0xFFFF9800).copy(alpha = 0.1f) else Color(0xFF6366F1).copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        if(announcement.pinned) Icons.Filled.PushPin else Icons.Filled.Notifications,
+                        contentDescription = null,
+                        modifier = Modifier.padding(8.dp).size(20.dp),
+                        tint = if(announcement.pinned) Color(0xFFFF9800) else Color(0xFF6366F1)
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = announcement.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold, // Consistent with your Memos/Threads
+                        color = Color(0xFF2D3243)
                     )
                     Text(
-                        text = announcement.authorName.ifBlank { "Unknown" },
-                        style = MaterialTheme.typography.bodySmall
+                        text = "by ${announcement.authorName.ifBlank { "System" }} • ${timeAgo(announcement.createdAt)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Gray
                     )
                 }
 
                 if (isUnread) {
-                    AssistChip(
-                        onClick = { /* purely visual */ },
-                        label = { Text("New") }
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(Color(0xFF6366F1), RoundedCornerShape(50))
                     )
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             Text(
                 text = announcement.body,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
+                style = MaterialTheme.typography.bodyLarge,
+                lineHeight = 22.sp,
+                color = Color.DarkGray,
+                maxLines = 4,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (announcement.pinned) {
-                        Icon(Icons.Filled.PushPin, contentDescription = "Pinned", modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Pinned", style = MaterialTheme.typography.bodySmall)
-                    } else {
-                        Text(" ", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-
-                Text(
-                    text = timeAgo(announcement.createdAt),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            // Teacher actions
             if (canEdit) {
-                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    IconButton(onClick = onTogglePin) {
-                        Icon(Icons.Filled.PushPin, contentDescription = "Toggle pin")
+                    TextButton(onClick = onTogglePin) {
+                        Icon(Icons.Filled.PushPin, "Pin", modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if(announcement.pinned) "Unpin" else "Pin")
                     }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                    TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)) {
+                        Icon(Icons.Filled.Delete, "Delete", modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Delete")
                     }
                 }
             }

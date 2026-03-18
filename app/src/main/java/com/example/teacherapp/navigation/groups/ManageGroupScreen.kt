@@ -21,6 +21,7 @@ import com.example.teacherapp.navigation.BotNavBar
 import com.example.teacherapp.models.Group
 import com.example.teacherapp.models.StudentUser
 import com.example.teacherapp.navigation.CustomBottomNavigation
+import com.example.teacherapp.navigation.EducationBlue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -31,6 +32,7 @@ fun ManageGroupsScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
     val teacherId = auth.currentUser?.uid
+    val indigo = Color(0xFF6366F1)
 
     var groups by remember { mutableStateOf<List<Group>>(emptyList()) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -49,12 +51,25 @@ fun ManageGroupsScreen(navController: NavController) {
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Manage Groups") },
+                    title = {
+                        Text(
+                            text = "Manage Groups",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                         }
-                    }
+                    },
+                    windowInsets = WindowInsets(0.dp),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = indigo,
+                        scrolledContainerColor = indigo,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    ),
                 )
                 Divider()
             }
@@ -95,7 +110,7 @@ fun ManageGroupsScreen(navController: NavController) {
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(groups) { group ->
-                            ManageGroupCard(group) {
+                            ManageGroupCard(group, themeColor = indigo) {
                                 if (group.id.isNotEmpty()) {
                                     navController.navigate("group_details/${group.id}")
                                 }
@@ -243,35 +258,55 @@ fun CreateGroupDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManageGroupCard(group: Group, onClick: () -> Unit) {
+fun ManageGroupCard(group: Group, themeColor: Color, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp), // Tiny horizontal padding helps shadow rendering
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Groups,
-                contentDescription = "Group",
-                tint = Color(0xFF505D8A),
-                modifier = Modifier.size(36.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(group.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("Invite: ${group.inviteCode}", color = Color.Gray, fontSize = 13.sp)
+            // Icon Container - Using the Dark Green themeColor
+            Surface(
+                color = themeColor.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Groups,
+                    contentDescription = null,
+                    tint = themeColor,
+                    modifier = Modifier.padding(10.dp).size(28.dp)
+                )
             }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = group.name,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 22.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Invite: ${group.inviteCode}",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+            }
+
             Icon(
                 imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Go",
-                tint = Color.Gray
+                contentDescription = null,
+                tint = Color.LightGray,
+                modifier = Modifier.size(24.dp)
             )
         }
     }

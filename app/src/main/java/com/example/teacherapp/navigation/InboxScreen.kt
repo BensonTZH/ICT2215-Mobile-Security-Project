@@ -28,7 +28,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-val InboxRed = Color(0xFFD32F2F)
+val indigo = Color(0xFF6366F1)
 
 data class ChatSummary(
     val chatId: String,
@@ -150,8 +150,8 @@ fun InboxScreen(navController: NavController) {
                 },
                 windowInsets = WindowInsets(0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = InboxRed,
-                    scrolledContainerColor = InboxRed, // Keeps it red when scrolling
+                    containerColor = indigo,
+                    scrolledContainerColor = indigo, // Keeps it red when scrolling
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -207,7 +207,6 @@ fun InboxScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 3D Search Bar (Same style as Discovery)
             SearchBarSection(searchQuery) { searchQuery = it }
 
             LazyColumn(
@@ -215,7 +214,6 @@ fun InboxScreen(navController: NavController) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // We use chats.filter here directly to ensure names are loaded
                 val displayChats = chats.filter { chat ->
                     val otherUid = chat.participants.firstOrNull { it != currentUser.uid } ?: ""
                     val name = nameCache[otherUid] ?: ""
@@ -266,13 +264,13 @@ fun InboxChatCard(
             Surface(
                 modifier = Modifier.size(52.dp),
                 shape = CircleShape,
-                color = InboxRed.copy(alpha = 0.1f) // Fixed line
+                color = indigo.copy(alpha = 0.1f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = name.take(1).uppercase(),
                         fontWeight = FontWeight.Bold,
-                        color = InboxRed,
+                        color = indigo,
                         fontSize = 18.sp
                     )
                 }

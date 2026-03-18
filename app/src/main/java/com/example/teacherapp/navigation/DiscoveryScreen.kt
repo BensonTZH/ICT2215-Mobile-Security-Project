@@ -142,7 +142,7 @@ fun DiscoveryScreen(navController: NavController) {
                             selected = isSelected,
                             // Pass a custom icon based on the subject name
                             iconResId = when(subject.lowercase().trim()) {
-                                "maths" -> R.drawable.mathematic // Or your custom drawable
+                                "mathematics" -> R.drawable.mathematic
                                 "computer science" -> R.drawable.data_science
                                 "biology" -> R.drawable.dna
                                 "chemistry" -> R.drawable.chemistry
@@ -150,6 +150,8 @@ fun DiscoveryScreen(navController: NavController) {
                                 "physics" -> R.drawable.physics_book
                                 "history" -> R.drawable.history_book
                                 "music" -> R.drawable.musical_note
+                                "art" -> R.drawable.palette
+                                "economics" -> R.drawable.data_analysis
                                 else -> {R.drawable.chemistry}
                             },
                             onClick = {

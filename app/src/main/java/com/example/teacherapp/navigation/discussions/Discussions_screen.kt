@@ -1,6 +1,8 @@
 package com.example.teacherapp.navigation.discussions
 
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,8 +30,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 @Composable
 fun DiscussionScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
+    val indigo = Color(0xFF6366F1)
 
-    // --- FIX: reactive UID (works after login / app restart) ---
     var userId by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid) }
     DisposableEffect(Unit) {
         val auth = FirebaseAuth.getInstance()
@@ -88,23 +90,45 @@ fun DiscussionScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text("Discussion") },
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            ) {
+               TopAppBar(
+                    title = {
+                        Text(
+                            text = "Discussions",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Filled.ArrowBack, "Back", tint = Color.White)
                         }
-                    }
+                    },
+                    actions = {
+                        if (userRole == "student") {
+                            IconButton(onClick = { showJoinDialog = true }) {
+                                Icon(Icons.Default.Add, "Join", tint = Color.White)
+                            }
+                        }
+                    },
+                   windowInsets = WindowInsets(0.dp),
+                   colors = TopAppBarDefaults.topAppBarColors(
+                       containerColor = indigo,
+                       scrolledContainerColor = indigo,
+                       titleContentColor = Color.White,
+                       navigationIconContentColor = Color.White
+                   ),
                 )
-                Divider()
             }
         },
         bottomBar = {
             Column {
-                Divider()
-                // Only teacher can access this screen
-                CustomBottomNavigation(navController, userRole=userRole)
+                HorizontalDivider()
+                CustomBottomNavigation(navController, userRole = userRole)
             }
         }
     ) { innerPadding ->
@@ -112,52 +136,38 @@ fun DiscussionScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Top
+                .padding(20.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Only students join groups
-                if (userRole == "student") {
-                    TextButton(onClick = { showJoinDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.width(4.dp))
-                        Text("Join Group")
-                    }
+            Text(
+                text = "Your Groups",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = indigo)
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            when {
-                isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFF505D8A))
-                    }
+            } else if (groups.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No groups joined yet.", color = Color.Gray)
                 }
-
-                groups.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No groups available.", color = Color.Gray)
-                    }
-                }
-
-                else -> {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(groups) { group ->
-                            GroupCard(group = group) {
-                                navController.navigate("group_threads/${group.id}/${group.name}")
-                            }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp) // Adds extra space at the very bottom
+                ) {
+                    items(groups) { group ->
+                        GroupCard(group = group) {
+                            navController.navigate("group_threads/${group.id}/${group.name}")
                         }
                     }
                 }
             }
         }
     }
-
     if (showJoinDialog) {
         JoinGroupDialog(
             onDismiss = { showJoinDialog = false },
@@ -172,20 +182,45 @@ fun DiscussionScreen(navController: NavController) {
 private fun GroupCard(group: Group, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp), // Tiny horizontal padding helps shadow rendering
+        shape = RoundedCornerShape(20.dp), // Matching your other screen's style
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
+        border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Lower elevation prevents "clipping"
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Groups, contentDescription = null, tint = Color(0xFF505D8A))
+            // Icon Container
+            Surface(
+                color = Color(0xFF6366F1).copy(alpha = 0.1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.Groups,
+                    contentDescription = null,
+                    tint = Color(0xFF6366F1),
+                    modifier = Modifier.padding(10.dp).size(28.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.width(16.dp))
+
             Column {
-                Text(text = group.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(text = "Click to view discussions", fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    text = group.name,
+                    fontWeight = FontWeight.ExtraBold, // More weight
+                    fontSize = 22.sp, // Larger size
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Click to view discussions",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
             }
         }
     }

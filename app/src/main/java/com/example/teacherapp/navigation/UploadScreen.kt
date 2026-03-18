@@ -67,6 +67,7 @@ import android.content.Context
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Divider
@@ -229,12 +230,25 @@ fun UploadScreen(navController: NavHostController) {
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Upload") },
+                    title = {
+                        Text(
+                            text = "Upload",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
-                    }
+                    },
+                    windowInsets = WindowInsets(0.dp),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = EducationBlue,
+                        scrolledContainerColor = EducationBlue,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    )
                 )
                 Divider()
             }
