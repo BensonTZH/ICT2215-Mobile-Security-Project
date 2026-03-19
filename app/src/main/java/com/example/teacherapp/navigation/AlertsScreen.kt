@@ -164,7 +164,7 @@ fun AlertsScreen(navController: NavController) {
         bottomBar = {
             Column {
                 HorizontalDivider()
-                CustomBottomNavigation(navController)
+                CustomBottomNavigation(navController, userRole = userRole)
             }
         }
     ) { innerPadding ->

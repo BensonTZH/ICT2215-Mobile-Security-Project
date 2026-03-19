@@ -115,7 +115,7 @@ fun DiscoveryScreen(navController: NavController) {
                 scrollBehavior = scrollBehavior
             )
         },
-        bottomBar = { CustomBottomNavigation(navController) }
+        bottomBar = { CustomBottomNavigation(navController, userRole = "student") }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
