@@ -18,9 +18,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Announcement
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
@@ -28,8 +30,10 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -150,8 +154,6 @@ fun MainScreen(navController: NavController) {
                         pendingResponses = pendingResponses,
                         resourcesShared = resourcesShared,
                         navController = navController,
-                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) },
-                        onMyTickets = { navController.navigate(Routes.MY_TICKETS) }
                     )
                 }
                 else -> {
@@ -162,8 +164,6 @@ fun MainScreen(navController: NavController) {
                         activeGroups = totalSessions,
                         totalTeachers = totalTeachers,
                         navController = navController,
-                        onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) },
-                        onMyTickets = { navController.navigate(Routes.MY_TICKETS) }
                     )
                 }
             }
@@ -248,12 +248,9 @@ private fun TeacherHomeScreen(
     pendingResponses: Int,
     resourcesShared: Int,
     navController: NavController,
-    onSubmitTicket: () -> Unit,
-    onMyTickets: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 
-// Teacher Theme Gradient: Forest -> Emerald -> Teal
     val teacherGradient = androidx.compose.ui.graphics.Brush.linearGradient(
         colors = listOf(
             Color(0xFF3B82F6), // Blue
@@ -347,24 +344,45 @@ private fun TeacherHomeScreen(
             )
         }
 
-        Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-
-        ActionButton(
-            icon = Icons.Filled.Group,
-            label = "Manage Groups (Teacher)",
-            onClick = { navController.navigate(Routes.MANAGE_GROUPS) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.UploadFile,
-            label = "Upload Resources (Teacher)",
-            onClick = { navController.navigate(Routes.UPLOAD) { launchSingleTop = true } }
+        Text(
+            "Quick Actions",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 8.dp)
         )
 
-        Button(onClick = onSubmitTicket, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-            Text("Submit Ticket to Support")
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                GridActionButton(Icons.Default.Group, "Manage Groups", Modifier.weight(1f)) {
+                    navController.navigate(Routes.MANAGE_GROUPS)
+                }
+                GridActionButton(Icons.Filled.UploadFile, "Upload Resources", Modifier.weight(1f)) {
+                    navController.navigate(Routes.UPLOAD)
+                }
+            }
         }
-        OutlinedButton(onClick = onMyTickets, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-            Text("My Support Tickets")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GridActionButton(Icons.Default.SupportAgent, "Get Support", Modifier.weight(1f)) {
+                navController.navigate(Routes.SUBMIT_TICKET)
+            }
+            GridActionButton(
+                Icons.Default.ConfirmationNumber,
+                "My Support Tickets",
+                Modifier.weight(1f)
+            ) {
+                navController.navigate(Routes.MY_TICKETS)
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GridActionButton(Icons.Default.Settings, "Settings", Modifier.weight(1f)) {
+                navController.navigate(Routes.SETTINGS)
+            }
+            GridActionButton(Icons.Default.Person, "Profile", Modifier.weight(1f)) {
+                navController.navigate(Routes.PROFILE)
+            }
         }
     }
 }
@@ -377,8 +395,6 @@ private fun StudentHomeScreen(
     totalTeachers: Int,
     activeGroups: Int,
     navController: NavController,
-    onSubmitTicket: () -> Unit,
-    onMyTickets: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 // Updated Gradient: Blue -> Indigo -> Purple
@@ -475,69 +491,50 @@ private fun StudentHomeScreen(
             )
         }
 
-        Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-
-        ActionButton(
-            icon = Icons.Filled.Search,
-            label = "Discover Teachers",
-            onClick = { navController.navigate(Routes.DISCOVERY) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.Chat,
-            label = "Inbox",
-            onClick = { navController.navigate(Routes.INBOX) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.Announcement,
-            label = "Discussions",
-            onClick = { navController.navigate(Routes.DISCUSSIONS) { launchSingleTop = true } }
-        )
-        ActionButton(
-            icon = Icons.Filled.Notifications,
-            label = "Alerts",
-            onClick = { navController.navigate(Routes.ALERTS) { launchSingleTop = true } }
+        Text(
+            "Quick Actions",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 8.dp)
         )
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ActionChip(
-                icon = Icons.Filled.Settings,
-                label = "Settings",
-                onClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } }
-            )
-            ActionChip(
-                icon = Icons.Filled.Person,
-                label = "Profile",
-                onClick = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } }
-            )
-        }
-
-        Button(onClick = onSubmitTicket, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-            Text("Submit Ticket to Support")
-        }
-        OutlinedButton(onClick = onMyTickets, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-            Text("My Support Tickets")
-        }
-    }
-}
-
-@Composable
-private fun RowScope.DashboardCard(title: String, value: String) {
-    Card(
-        modifier = Modifier
-            .weight(1f)
-            .height(92.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GridActionButton(Icons.Default.Search, "Discover", Modifier.weight(1f)) {
+                    navController.navigate(Routes.DISCOVERY)
+                }
+                GridActionButton(Icons.Default.Chat, "Inbox", Modifier.weight(1f)) {
+                    navController.navigate(Routes.INBOX)
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GridActionButton(Icons.Default.Announcement, "Discuss", Modifier.weight(1f)) {
+                    navController.navigate(Routes.DISCUSSIONS)
+                }
+                GridActionButton(Icons.Default.Notifications, "Alerts", Modifier.weight(1f)) {
+                    navController.navigate(Routes.ALERTS)
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GridActionButton(Icons.Default.SupportAgent, "Get Support", Modifier.weight(1f)) {
+                    navController.navigate(Routes.SUBMIT_TICKET)
+                }
+                GridActionButton(
+                    Icons.Default.ConfirmationNumber,
+                    "My Support Tickets",
+                    Modifier.weight(1f)
+                ) {
+                    navController.navigate(Routes.MY_TICKETS)
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GridActionButton(Icons.Default.Settings, "Settings", Modifier.weight(1f)) {
+                    navController.navigate(Routes.SETTINGS)
+                }
+                GridActionButton(Icons.Default.Person, "Profile", Modifier.weight(1f)) {
+                    navController.navigate(Routes.PROFILE)
+                }
+            }
         }
     }
 }
@@ -553,20 +550,6 @@ private fun ActionButton(icon: ImageVector, label: String, onClick: () -> Unit) 
         Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(10.dp))
         Text(label)
-    }
-}
-
-@Composable
-private fun RowScope.ActionChip(icon: ImageVector, label: String, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.weight(1f),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(label, maxLines = 1)
     }
 }
 
@@ -615,6 +598,32 @@ private fun CompactStatCard(
                     color = Color.Gray
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun GridActionButton(
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.height(90.dp), // Fixed height makes the grid look uniform
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, null, tint = Color(0xFF6366F1), modifier = Modifier.size(26.dp))
+            Spacer(Modifier.height(6.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
 }
