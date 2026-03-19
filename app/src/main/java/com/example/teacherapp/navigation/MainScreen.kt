@@ -159,6 +159,7 @@ fun MainScreen(navController: NavController) {
                         userName = userName,
                         level = userLevel,
                         totalSessions = totalSessions,
+                        activeGroups = totalSessions,
                         totalTeachers = totalTeachers,
                         navController = navController,
                         onSubmitTicket = { navController.navigate(Routes.SUBMIT_TICKET) },
@@ -374,6 +375,7 @@ private fun StudentHomeScreen(
     level: String,
     totalSessions: Int,
     totalTeachers: Int,
+    activeGroups: Int,
     navController: NavController,
     onSubmitTicket: () -> Unit,
     onMyTickets: () -> Unit
@@ -448,14 +450,13 @@ private fun StudentHomeScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text("Groups", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-                            Text("Active", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text("$activeGroups Active", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         }
                     }
                 }
             }
         }
 
-        // 2. Stat Chips (Icon + Text closer together)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
