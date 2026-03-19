@@ -70,6 +70,20 @@ fun AdminHomeScreen(navController: NavController) {
             ) {
                 Text("Support Tickets Inbox")
             }
+
+            Button(
+                onClick = { navController.navigate(Routes.ADMIN_DISCUSSION) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Manage Discussions")
+            }
+
+            Button(
+                onClick = { navController.navigate(Routes.ADMIN_ANNOUNCEMENT) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Manage Announcements")
+            }
         }
     }
 }

@@ -12,6 +12,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.teacherapp.navigation.admin.AdminAnnouncementScreen
+import com.example.teacherapp.navigation.admin.AdminDiscussionScreen
 import com.example.teacherapp.navigation.auth.LoginScreen
 import com.example.teacherapp.navigation.auth.RegisterScreen
 import com.example.teacherapp.navigation.discussions.DiscussionScreen
@@ -73,7 +75,8 @@ object Routes {
     const val MY_TICKETS = "my_support_tickets"
     const val TICKET_DETAIL = "ticket_detail/{ticketId}"
     const val ADMIN_TICKET_DETAIL = "admin_ticket_detail/{ticketId}"
-
+    const val ADMIN_DISCUSSION = "admin_discussion"
+    const val ADMIN_ANNOUNCEMENT = "admin_announcement"
 }
 
 @Composable
@@ -159,6 +162,14 @@ fun NavGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val ticketId = backStackEntry.arguments?.getString("ticketId") ?: ""
             AdminTicketDetailScreen(navController = navController, ticketId = ticketId)
+        }
+
+        composable(Routes.ADMIN_DISCUSSION) {
+            AdminDiscussionScreen(navController = navController)
+        }
+
+        composable(Routes.ADMIN_ANNOUNCEMENT) {
+            AdminAnnouncementScreen(navController = navController)
         }
 
         composable(Routes.PROFILE) {
