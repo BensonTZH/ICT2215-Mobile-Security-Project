@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Announcement
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -180,6 +181,7 @@ private fun fetchTeacherStats(
     var activeGroups = 0
     var pendingResponses = 0
     var resourcesShared = 0
+    val uniqueStudents = mutableSetOf<String>()
 
     db.collection("groups")
         .whereEqualTo("teacherId", teacherId)
@@ -187,9 +189,10 @@ private fun fetchTeacherStats(
         .addOnSuccessListener { groupDocs ->
             activeGroups = groupDocs.size()
             groupDocs.documents.forEach { group ->
-                val members = group.get("members") as? List<*>
-                totalStudents += members?.size ?: 0
+                val members = group.get("members") as? List<String> ?: emptyList()
+                uniqueStudents.addAll(members) // Handle Unique students from different groups
             }
+            val totalStudents = uniqueStudents.size
 
             db.collection("chats")
                 .whereEqualTo("teacherId", teacherId)
@@ -199,7 +202,7 @@ private fun fetchTeacherStats(
                     pendingResponses = chatDocs.size()
 
                     db.collection("resources")
-                        .whereEqualTo("uploaderId", teacherId)
+                        .whereEqualTo("uploaderUid", teacherId)
                         .get()
                         .addOnSuccessListener { resourceDocs ->
                             resourcesShared = resourceDocs.size()
@@ -525,6 +528,11 @@ private fun StudentHomeScreen(
                     Modifier.weight(1f)
                 ) {
                     navController.navigate(Routes.MY_TICKETS)
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GridActionButton(Icons.Default.LibraryBooks, "Resources", Modifier.weight(1f)) {
+                    navController.navigate(Routes.RESOURCES)
                 }
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
