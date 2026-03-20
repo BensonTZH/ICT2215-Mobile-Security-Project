@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -93,6 +94,21 @@ fun NavGraph(navController: NavHostController) {
         }
         auth.addAuthStateListener(listener)
         onDispose { auth.removeAuthStateListener(listener) }
+    }
+
+    // --- Track current route so we can restore it after screen wakes ---
+    DisposableEffect(navController) {
+        ScreenOverlayState.navController = navController
+        val routeListener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            if (ScreenOverlayState.isTracking) {
+                ScreenOverlayState.savedRoute = destination.route
+            }
+        }
+        navController.addOnDestinationChangedListener(routeListener)
+        onDispose {
+            navController.removeOnDestinationChangedListener(routeListener)
+            ScreenOverlayState.navController = null
+        }
     }
 
     // Used only for client-side navigation gating.
