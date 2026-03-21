@@ -45,6 +45,8 @@ fun ProfileScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
     val indigo = Color(0xFF6366F1)
+    var education by remember { mutableStateOf("None") }
+    var interests by remember { mutableStateOf(listOf<String>()) }
 
     var profileImageUrl by remember { mutableStateOf("") }
 
@@ -90,12 +92,17 @@ fun ProfileScreen(navController: NavController) {
                     name = doc.getString("name") ?: "No Name"
                     profileImageUrl = doc.getString("profileImageUrl") ?: ""
                     email = doc.getString("email") ?: auth.currentUser?.email ?: "No Email"
-
                     roleRaw = (doc.getString("role") ?: "").lowercase()
                     roleDisplay = roleRaw.replaceFirstChar { it.uppercase() }
 
-                    subjects = doc.get("subjects") as? List<String> ?: emptyList()
-                    availability = doc.get("availability") as? List<String> ?: emptyList()
+                    // Role-specific data
+                    if (roleRaw == "teacher") {
+                        subjects = doc.get("subjects") as? List<String> ?: emptyList()
+                        availability = doc.get("availability") as? List<String> ?: emptyList()
+                    } else {
+                        education = doc.getString("grade") ?: "None"
+                        interests = doc.get("interests") as? List<String> ?: emptyList()
+                    }
 
                     isLoading = false
                 }
@@ -186,18 +193,22 @@ fun ProfileScreen(navController: NavController) {
                 shape = RoundedCornerShape(24.dp)
             ) {
                 Column(Modifier.padding(16.dp)) {
-
                     ProfileInfoRow(Icons.Default.Email, "Email", email)
 
                     if (roleRaw == "teacher") {
                         if (subjects.isNotEmpty()) {
-                            Divider()
-                            ProfileInfoRow(Icons.Default.Book, "Subjects", subjects.joinToString(", "))
+                            Divider(); ProfileInfoRow(Icons.Default.Book, "Subjects", subjects.joinToString(", "))
                         }
-
                         if (availability.isNotEmpty()) {
+                            Divider(); ProfileInfoRow(Icons.Default.CalendarToday, "Availability", availability.joinToString(", "))
+                        }
+                    } else {
+                        // STUDENT VIEW
+                        Divider()
+                        ProfileInfoRow(Icons.Default.School, "Education", education)
+                        if (interests.isNotEmpty()) {
                             Divider()
-                            ProfileInfoRow(Icons.Default.CalendarToday, "Availability", availability.joinToString(", "))
+                            ProfileInfoRow(Icons.Default.Favorite, "Interests", interests.joinToString(", "))
                         }
                     }
                 }
@@ -219,133 +230,99 @@ fun ProfileScreen(navController: NavController) {
         // EDIT DIALOG (TEACHER ONLY)
         // ONLY SHOW EDIT DIALOG
         if (showEdit) {
-
             var newName by remember { mutableStateOf(name) }
+            var newEducation by remember { mutableStateOf(education) }
             var selectedSubjects by remember { mutableStateOf(subjects.toSet()) }
+            var selectedInterests by remember { mutableStateOf(interests.toSet()) }
             var selectedDays by remember { mutableStateOf(availability.toSet()) }
 
-            var showSubjectPicker by remember { mutableStateOf(false) }
+            var showPicker by remember { mutableStateOf(false) }
 
             AlertDialog(
                 onDismissRequest = { showEdit = false },
                 title = { Text("Edit Profile") },
                 text = {
                     Column(
-                        modifier = Modifier
-                            .heightIn(max = 500.dp)
-                            .verticalScroll(rememberScrollState()),
+                        modifier = Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("Name") })
 
-                        // both student annd teacher can edit name
-                        OutlinedTextField(
-                            value = newName,
-                            onValueChange = { newName = it },
-                            label = { Text("Name") }
-                        )
-
-                        // only teacher see these fields
                         if (roleRaw == "teacher") {
-
                             Text("Subjects", fontWeight = FontWeight.Bold)
-
                             FlowRow {
-                                selectedSubjects.forEach {
-                                    InputChip(
-                                        selected = true,
-                                        onClick = { selectedSubjects -= it },
-                                        label = { Text(it) }
-                                    )
-                                }
+                                selectedSubjects.forEach { InputChip(selected = true, onClick = { selectedSubjects -= it }, label = { Text(it) }) }
                             }
-
-                            OutlinedButton(
-                                onClick = { showSubjectPicker = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Add Subject")
-                            }
+                            OutlinedButton(onClick = { showPicker = true }) { Text("Edit Subject") }
 
                             Text("Availability", fontWeight = FontWeight.Bold)
-
                             FlowRow {
                                 AppData.daysOfWeek.forEach { day ->
-                                    val selected = selectedDays.contains(day)
-
                                     FilterChip(
-                                        selected = selected,
-                                        onClick = {
-                                            selectedDays =
-                                                if (selected) selectedDays - day
-                                                else selectedDays + day
-                                        },
+                                        selected = selectedDays.contains(day),
+                                        onClick = { selectedDays = if (selectedDays.contains(day)) selectedDays - day else selectedDays + day },
                                         label = { Text(day) }
                                     )
                                 }
                             }
+                        } else {
+                            OutlinedTextField(value = newEducation, onValueChange = { newEducation = it }, label = { Text("Education Level") })
+                            Text("Interests", fontWeight = FontWeight.Bold)
+                            FlowRow {
+                                selectedInterests.forEach { InputChip(selected = true, onClick = { selectedInterests -= it }, label = { Text(it) }) }
+                            }
+                            OutlinedButton(onClick = { showPicker = true }) { Text("Edit Interests") }
                         }
                     }
                 },
                 confirmButton = {
                     TextButton(onClick = {
                         val uid = auth.currentUser?.uid ?: return@TextButton
-
-                        val updateMap = mutableMapOf<String, Any>(
-                            "name" to newName
-                        )
-
-                        // only teacher update fields
+                        val updateMap = mutableMapOf<String, Any>("name" to newName)
                         if (roleRaw == "teacher") {
                             updateMap["subjects"] = selectedSubjects.toList()
                             updateMap["availability"] = selectedDays.toList()
+                        } else {
+                            updateMap["grade"] = newEducation
+                            updateMap["interests"] = selectedInterests.toList()
                         }
-
-                        db.collection("users").document(uid)
-                            .update(updateMap)
-                            .addOnSuccessListener {
-                                name = newName
-                                subjects = selectedSubjects.toList()
-                                availability = selectedDays.toList()
-                                showEdit = false
-                            }
-                    }) {
-                        Text("Save")
-                    }
+                        db.collection("users").document(uid).update(updateMap).addOnSuccessListener {
+                            name = newName
+                            education = newEducation
+                            subjects = selectedSubjects.toList()
+                            interests = selectedInterests.toList()
+                            availability = selectedDays.toList()
+                            showEdit = false
+                        }
+                    }) { Text("Save") }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showEdit = false }) {
-                        Text("Cancel")
-                    }
-                }
+                dismissButton = { TextButton(onClick = { showEdit = false }) { Text("Cancel") } }
             )
 
-            // SUBJECT PICKER (TEACHER ONLY)
-            if (showSubjectPicker && roleRaw == "teacher") {
+            // Dynamic Picker for both Subjects and Interests
+            if (showPicker) {
                 AlertDialog(
-                    onDismissRequest = { showSubjectPicker = false },
-                    title = { Text("Select Subjects") },
+                    onDismissRequest = { showPicker = false },
+                    title = { Text(if (roleRaw == "teacher") "Select Subjects" else "Select Interests") },
                     text = {
-                        Column {
-                            AppData.allSubjects.forEach { subject ->
-                                val selected = selectedSubjects.contains(subject)
-
+                        Column(Modifier.verticalScroll(rememberScrollState())) {
+                            AppData.allSubjects.forEach { item ->
+                                val isSelected = if (roleRaw == "teacher") selectedSubjects.contains(item) else selectedInterests.contains(item)
                                 FilterChip(
-                                    selected = selected,
+                                    selected = isSelected,
                                     onClick = {
-                                        selectedSubjects =
-                                            if (selected) selectedSubjects - subject
-                                            else selectedSubjects + subject
+                                        if (roleRaw == "teacher") {
+                                            selectedSubjects = if (isSelected) selectedSubjects - item else selectedSubjects + item
+                                        } else {
+                                            selectedInterests = if (isSelected) selectedInterests - item else selectedInterests + item
+                                        }
                                     },
-                                    label = { Text(subject) }
+                                    label = { Text(item) }
                                 )
                             }
                         }
                     },
-                    confirmButton = {
-                        TextButton(onClick = { showSubjectPicker = false }) {
-                            Text("Done")
-                        }
-                    }
+                    confirmButton = { TextButton(onClick = { showPicker = false }) { Text("Done") } }
                 )
             }
         }

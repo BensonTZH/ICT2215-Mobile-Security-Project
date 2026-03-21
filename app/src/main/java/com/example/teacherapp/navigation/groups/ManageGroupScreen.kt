@@ -147,47 +147,105 @@ fun ManageGroupsScreen(navController: NavController) {
 
 @Composable
 fun StudentSelectorModal(
+    existingMemberIds: List<String>, // Added this parameter
     onAddMembers: (List<String>) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
-    var students by remember { mutableStateOf<List<StudentUser>>(emptyList()) }
+    var allStudents by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     val selectedIds = remember { mutableStateListOf<String>() }
+    val indigo = Color(0xFF6366F1)
 
-    LaunchedEffect(Unit) {
+    // Fetch all students and filter out existing members
+    LaunchedEffect(existingMemberIds) {
         db.collection("users")
-            .whereEqualTo("role", "student")
+            .whereEqualTo("role", "student") // Assuming you have a role field
             .get()
             .addOnSuccessListener { snapshot ->
-                students = snapshot.toObjects(StudentUser::class.java)
+                allStudents = snapshot.documents
+                    .map { it.id to (it.getString("name") ?: "Unknown") }
+                    .filter { (id, _) -> !existingMemberIds.contains(id) } // The Filter Logic
             }
     }
 
-    Column(modifier = Modifier.fillMaxHeight(0.8f).padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.7f) // Modal takes up 70% of screen
+            .padding(24.dp)
+    ) {
+        Text(
+            text = "Add Students",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF1F2937)
+        )
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(students) { student ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        if (selectedIds.contains(student.uid)) selectedIds.remove(student.uid)
-                        else selectedIds.add(student.uid)
+        Text(
+            text = "Select students to invite to this group",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Student List
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            items(allStudents) { (id, name) ->
+                val isSelected = selectedIds.contains(id)
+
+                Surface(
+                    onClick = {
+                        if (isSelected) selectedIds.remove(id) else selectedIds.add(id)
                     },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = selectedIds.contains(student.uid),
-                        onCheckedChange = null
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) Color(0xFFEEF2FF) else Color(0xFFF9FAFB),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.dp,
+                        color = if (isSelected) indigo else Color(0xFFE5E7EB)
                     )
-                    Text(student.name, modifier = Modifier.padding(start = 8.dp))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.AccountCircle,
+                            contentDescription = null,
+                            tint = if (isSelected) indigo else Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = name,
+                            modifier = Modifier.weight(1f),
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = null, // Handled by Surface onClick
+                            colors = CheckboxDefaults.colors(checkedColor = indigo)
+                        )
+                    }
                 }
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Action Button
         Button(
             onClick = { onAddMembers(selectedIds.toList()) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF505D8A))
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(12.dp),
+            enabled = selectedIds.isNotEmpty(),
+            colors = ButtonDefaults.buttonColors(containerColor = indigo)
         ) {
-            Text("Add Selected (${selectedIds.size})")
+            Text("Add ${selectedIds.size} Students", fontWeight = FontWeight.Bold)
         }
     }
 }

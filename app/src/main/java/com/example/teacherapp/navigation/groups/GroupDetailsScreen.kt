@@ -24,7 +24,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun GroupDetailsScreen(navController: NavController, groupId: String) {
     val db = FirebaseFirestore.getInstance()
     var group by remember { mutableStateOf<Group?>(null) }
-    var memberNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var membersData by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var showAddMemberSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val indigo = Color(0xFF6366F1)
@@ -41,10 +41,12 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
         if (ids.isNotEmpty()) {
             db.collection("users").whereIn("uid", ids).get()
                 .addOnSuccessListener { snapshot ->
-                    memberNames = snapshot.documents.map { it.getString("name") ?: "Unknown" }
+                    membersData = snapshot.documents.map {
+                        it.id to (it.getString("name") ?: "Unknown")
+                    }
                 }
         } else {
-            memberNames = emptyList()
+            membersData = emptyList()
         }
     }
 
@@ -74,25 +76,29 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(20.dp)) {
-            // Group Info Header
+            // Group Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F2F8))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Invite Code: ${group?.inviteCode}", fontWeight = FontWeight.Bold)
+                    Text("Invite Code: ${group?.inviteCode}",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF374151))
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Section Header
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Members", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.weight(1f))
                 Button(
                     onClick = { showAddMemberSheet = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF505D8A))
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = indigo)
                 ) {
                     Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -102,13 +108,25 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Member List
+            // Member List with Navigation
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(memberNames) { name ->
-                    ListItem(
-                        headlineContent = { Text(name) },
-                        leadingContent = { Icon(Icons.Default.AccountCircle, contentDescription = null) }
-                    )
+                items(membersData) { (id, name) ->
+                    Card(
+                        onClick = { navController.navigate("public_profile_screen/$id") },
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        ListItem(
+                            headlineContent = { Text(name, fontWeight = FontWeight.Medium) },
+                            leadingContent = {
+                                Icon(Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = indigo,
+                                    modifier = Modifier.size(40.dp))
+                            },
+                            trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) }
+                        )
+                    }
                 }
             }
         }
@@ -117,11 +135,13 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
     if (showAddMemberSheet) {
         ModalBottomSheet(
             onDismissRequest = { showAddMemberSheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = indigo) }
         ) {
             StudentSelectorModal(
+                existingMemberIds = group?.members ?: emptyList(),
                 onAddMembers = { selectedIds ->
-                    // Update Firestore using arrayUnion so we don't overwrite existing members
                     db.collection("groups").document(groupId)
                         .update("members", FieldValue.arrayUnion(*selectedIds.toTypedArray()))
                         .addOnSuccessListener {

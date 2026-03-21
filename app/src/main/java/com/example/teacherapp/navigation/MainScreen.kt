@@ -380,6 +380,11 @@ private fun TeacherHomeScreen(
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GridActionButton(Icons.Default.Announcement, "Discuss", Modifier.weight(1f)) {
+                navController.navigate(Routes.DISCUSSIONS)
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GridActionButton(Icons.Default.Settings, "Settings", Modifier.weight(1f)) {
                 navController.navigate(Routes.SETTINGS)
             }
