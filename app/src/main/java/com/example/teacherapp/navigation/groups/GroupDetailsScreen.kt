@@ -26,8 +26,12 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
     var group by remember { mutableStateOf<Group?>(null) }
     var membersData by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var showAddMemberSheet by remember { mutableStateOf(false) }
+    var showRemoveMemberSheet by remember { mutableStateOf(false) }
+
+
     val sheetState = rememberModalBottomSheetState()
     val indigo = Color(0xFF6366F1)
+    val softRed = Color(0xFFEF4444)
 
     // 1. Fetch Group Details
     LaunchedEffect(groupId) {
@@ -104,6 +108,18 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Add")
                 }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Button(
+                    onClick = { showRemoveMemberSheet = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = softRed),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text("Remove")
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -149,6 +165,75 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
                         }
                 }
             )
+        }
+    }
+    if (showRemoveMemberSheet) {
+        ModalBottomSheet(onDismissRequest = { showRemoveMemberSheet = false }) {
+            StudentRemovalModal(
+                currentMembers = membersData,
+                onRemoveMembers = { selectedIds ->
+                    db.collection("groups").document(groupId)
+                        .update("members", FieldValue.arrayRemove(*selectedIds.toTypedArray()))
+                        .addOnSuccessListener { showRemoveMemberSheet = false }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun StudentRemovalModal(
+    currentMembers: List<Pair<String, String>>, // List of ID to Name
+    onRemoveMembers: (List<String>) -> Unit
+) {
+    val selectedIds = remember { mutableStateListOf<String>() }
+    val softRed = Color(0xFFEF4444)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.6f)
+            .padding(24.dp)
+    ) {
+        Text("Remove Members", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Select the students you wish to remove from this group.", color = Color.Gray)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(currentMembers) { (id, name) ->
+                val isSelected = selectedIds.contains(id)
+                Surface(
+                    onClick = { if (isSelected) selectedIds.remove(id) else selectedIds.add(id) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) Color(0xFFFEF2F2) else Color(0xFFF9FAFB),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) softRed else Color.LightGray)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = if (isSelected) softRed else Color.Gray)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(name, modifier = Modifier.weight(1f))
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = null,
+                            colors = CheckboxDefaults.colors(checkedColor = softRed)
+                        )
+                    }
+                }
+            }
+        }
+
+        Button(
+            onClick = { onRemoveMembers(selectedIds.toList()) },
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = softRed),
+            enabled = selectedIds.isNotEmpty(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Remove Selected (${selectedIds.size})", fontWeight = FontWeight.Bold)
         }
     }
 }
