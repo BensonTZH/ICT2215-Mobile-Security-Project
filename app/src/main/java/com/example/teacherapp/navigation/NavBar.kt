@@ -1,137 +1,79 @@
 package com.example.teacherapp.navigation
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
 
-@Composable
-fun BotNavBar(
-    navController: NavController,
-    userRole: String? = null,
-    showBottomBar: Boolean = true,
-    content: @Composable (PaddingValues) -> Unit
-) {
-    Scaffold(
-        bottomBar = {
-            if (showBottomBar) {
-                Column {
-                    HorizontalDivider()
-                    CustomBottomNavigation(navController = navController, userRole = userRole)
-                }
-            }
-        }
-    ) { paddingValues ->
-        content(paddingValues)
-    }
+sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
+    object Home : BottomNavItem(Routes.MAIN, Icons.Default.School, "Home")
+    object Discover : BottomNavItem(Routes.DISCOVERY, Icons.Default.Search, "Discover")
+    object Inbox : BottomNavItem(Routes.INBOX, Icons.Default.Chat, "Inbox")
+    object Profile : BottomNavItem(Routes.PROFILE, Icons.Default.Person, "Profile")
+    object Groups : BottomNavItem(Routes.MANAGE_GROUPS, Icons.Default.Group, "Groups")
+    object Tickets : BottomNavItem(Routes.MY_TICKETS, Icons.Default.ConfirmationNumber, "Tickets")
+    object Alerts : BottomNavItem(Routes.ALERTS, Icons.Default.Notifications, "Alerts")
 }
 
 @Composable
-fun CustomBottomNavigation(
-    navController: NavController,
-    userRole: String? = null
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp, horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        BottomNavItem(
-            label = "Home",
-            icon = Icons.Filled.Home,
-            onClick = {
-                navController.navigate(Routes.MAIN) {
-                    launchSingleTop = true
-                }
-            }
+fun CustomBottomNavigation(navController: NavController, userRole: String? = "student") {
+    val role = userRole ?: "student"
+    val items = if (role == "teacher") {
+        listOf(
+            BottomNavItem.Home,
+            BottomNavItem.Groups,
+            BottomNavItem.Inbox,
+            BottomNavItem.Tickets,
+            BottomNavItem.Profile
         )
+    } else {
+        listOf(
+            BottomNavItem.Home,
+            BottomNavItem.Discover,
+            BottomNavItem.Inbox,
+            BottomNavItem.Alerts,
+            BottomNavItem.Profile
+        )
+    }
 
-        // Student-only
-        if (userRole == "student") {
-            BottomNavItem(
-                label = "Discover",
-                icon = Icons.Filled.Search,
+    NavigationBar {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
+        items.forEach { item ->
+            NavigationBarItem(
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+                selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
                 onClick = {
-                    navController.navigate(Routes.DISCOVERY) {
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
                         launchSingleTop = true
+                        restoreState = true
                     }
                 }
             )
         }
-
-        // Teacher-only: admin/group management
-        if (userRole == "teacher") {
-            BottomNavItem(
-                label = "Groups",
-                icon = Icons.Filled.Group,
-                onClick = {
-                    navController.navigate(Routes.MANAGE_GROUPS) {
-                        launchSingleTop = true
-                    }
-                }
-            )
-        }
-        BottomNavItem(
-            label = "Inbox",
-            icon = Icons.Filled.QuestionAnswer,
-            onClick = {
-                navController.navigate(Routes.INBOX) {
-                    launchSingleTop = true
-                }
-            }
-        )
-        BottomNavItem(
-            label = "Alerts",
-            icon = Icons.Filled.Notifications,
-            onClick = {
-                navController.navigate(Routes.ALERTS) {
-                    launchSingleTop = true
-                }
-            }
-        )
-        BottomNavItem(
-            label = "Profile",
-            icon = Icons.Filled.Person,
-            onClick = {
-                navController.navigate(Routes.PROFILE) {
-                    launchSingleTop = true
-                }
-            }
-        )
     }
 }
 
 @Composable
-fun BottomNavItem(
-    label: String,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp, horizontal = 10.dp)
-    ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp))
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
+fun BotNavBar(navController: NavController, userRole: String? = "student") {
+    CustomBottomNavigation(navController, userRole)
 }
