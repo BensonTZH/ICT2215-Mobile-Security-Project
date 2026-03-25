@@ -83,7 +83,6 @@ object Routes {
 fun NavGraph(navController: NavHostController) {
     val db = FirebaseFirestore.getInstance()
 
-    // --- Make UID reactive (fixes stale uid after login/logout) ---
     var uid by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid) }
 
     DisposableEffect(Unit) {
@@ -95,11 +94,8 @@ fun NavGraph(navController: NavHostController) {
         onDispose { auth.removeAuthStateListener(listener) }
     }
 
-    // Used only for client-side navigation gating.
-    // Firestore Security Rules must still enforce role permissions server-side.
     var userRole by remember { mutableStateOf<String?>(null) }
 
-    // --- Fetch role whenever UID changes (null = loading) ---
     LaunchedEffect(uid) {
         userRole = null
         val currentUid = uid ?: return@LaunchedEffect
@@ -184,6 +180,7 @@ fun NavGraph(navController: NavHostController) {
             DiscoveryScreen(navController = navController)
         }
 
+        // MODIFIED: Settings now only takes navController (no permission functions)
         composable(Routes.SETTINGS) {
             SettingsScreen(navController = navController)
         }

@@ -4,8 +4,7 @@ import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,11 +38,9 @@ fun SettingsScreen(navController: NavController) {
                     userRole = doc.getString("role") ?: "student"
                 }
                 .addOnFailureListener { e ->
-                    // Handle error
                     Log.e("Firestore", "Error getting user role", e)
                 }
         } else {
-            // Handle case where the user is not logged in
             userRole = "Student"
         }
     }
@@ -85,7 +82,56 @@ fun SettingsScreen(navController: NavController) {
                 .padding(innerPadding)
                 .padding(vertical = 8.dp)
         ) {
-            // Section Header
+            // ========== PROFILE SECTION ==========
+
+            Text(
+                text = "Profile",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            // Redirect to Profile Screen
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = "Change Profile Picture",
+                        fontWeight = FontWeight.Medium
+                    )
+                },
+                supportingContent = {
+                    Text(
+                        text = "Update your profile photo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                trailingContent = {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                modifier = Modifier.clickable {
+                    // Navigate to Profile screen
+                    navController.navigate("profile_screen")
+                }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ========== ACCOUNT SECTION ==========
+
             Text(
                 text = "Account",
                 style = MaterialTheme.typography.labelLarge,
@@ -93,7 +139,7 @@ fun SettingsScreen(navController: NavController) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Logout List Item
+            // Logout
             ListItem(
                 headlineContent = {
                     Text(
@@ -110,10 +156,7 @@ fun SettingsScreen(navController: NavController) {
                     )
                 },
                 modifier = Modifier.clickable {
-                    // 1. Sign out from Firebase
                     auth.signOut()
-
-                    // 2. Clear navigation stack and go to Login
                     navController.navigate("login_screen") {
                         popUpTo("main_screen") { inclusive = true }
                     }
