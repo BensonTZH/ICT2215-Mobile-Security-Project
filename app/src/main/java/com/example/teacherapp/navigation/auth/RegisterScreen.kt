@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -37,6 +38,7 @@ import androidx.navigation.NavController
 import com.example.teacherapp.models.AppData
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.auth.EmailAuthProvider
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -48,6 +50,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
     var selectedRole by remember { mutableStateOf("Student") }
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var educationLevel by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -210,6 +213,29 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
                         leadingIcon = {
                             Icon(Icons.Default.Email, "Email", tint = Color(0xFF6B7280))
                         },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF6366F1),
+                            unfocusedBorderColor = Color(0xFFE5E7EB)
+                        ),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Phone Number
+                    OutlinedTextField(
+                        value = phoneNumber,
+                        onValueChange = { phoneNumber = it.filter { ch -> ch.isDigit() } },
+                        label = { Text("Phone Number (SG)") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Phone, "Phone", tint = Color(0xFF6B7280))
+                        },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
+                            imeAction = ImeAction.Next
+                        ),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -467,8 +493,14 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
                     Button(
                         onClick = {
                             // Validation
-                            if (fullName.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+                            if (fullName.isBlank() || email.isBlank() || phoneNumber.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
                                 Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+
+                            val cleanedPhone = phoneNumber.trim().replace(" ", "")
+                            if (!cleanedPhone.matches(Regex("^[89]\\d{7}$"))) {
+                                Toast.makeText(context, "Enter a valid Singapore phone number", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
 
@@ -496,54 +528,121 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
                                 return@Button
                             }
 
-                            // Create account
-                            auth.createUserWithEmailAndPassword(email.trim(), password.trim())
-                                .addOnSuccessListener { result ->
-                                    val userId = result.user?.uid
-                                    if (userId != null) {
-                                        // Build profile based on role
-                                        val userProfile: Map<String, Any> = if (selectedRole == "Student") {
-                                            mapOf(
-                                                "email" to email.trim(),
-                                                "uid" to userId,
-                                                "name" to fullName.trim(),
-                                                "role" to "student",
-                                                "grade" to educationLevel.trim(),
-                                                "interests" to ArrayList(selectedSubjects),
-                                                "isSetupComplete" to true
-                                            )
-                                        } else {
-                                            mapOf(
-                                                "email" to email.trim(),
-                                                "uid" to userId,
-                                                "name" to fullName.trim(),
-                                                "role" to "teacher",
-                                                "subjects" to ArrayList(selectedSubjects),
-                                                "availability" to ArrayList(selectedDays.toList().sortedBy { AppData.daysOfWeek.indexOf(it) }),
-                                                "isSetupComplete" to true
-                                            )
-                                        }
+                            auth.signInAnonymously()
+                                .addOnSuccessListener {
+                                    db.collection("users")
+                                        .whereEqualTo("phoneNumber", cleanedPhone)
+                                        .get()
+                                        .addOnSuccessListener { documents ->
+                                            if (!documents.isEmpty) {
+                                                auth.currentUser?.delete()
+                                                Toast.makeText(
+                                                    context,
+                                                    "This phone number is already registered",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                return@addOnSuccessListener
+                                            }
 
-                                        db.collection("users").document(userId)
-                                            .set(userProfile)
-                                            .addOnSuccessListener {
-                                                Toast.makeText(context, "Account Created Successfully!", Toast.LENGTH_SHORT).show()
-                                                navController.navigate("main_screen") {
-                                                    popUpTo("register_screen") { inclusive = true }
+                                            // Create account
+                                            val credential = EmailAuthProvider.getCredential(
+                                                email.trim(),
+                                                password.trim()
+                                            )
+
+                                            auth.currentUser?.linkWithCredential(credential)
+                                                ?.addOnSuccessListener { result ->
+                                                    val userId = result.user?.uid
+                                                    if (userId != null) {
+                                                        // Build profile based on role
+                                                        val userProfile: Map<String, Any> =
+                                                            if (selectedRole == "Student") {
+                                                                mapOf(
+                                                                    "email" to email.trim(),
+                                                                    "uid" to userId,
+                                                                    "name" to fullName.trim(),
+                                                                    "phoneNumber" to cleanedPhone,
+                                                                    "role" to "student",
+                                                                    "grade" to educationLevel.trim(),
+                                                                    "interests" to ArrayList(
+                                                                        selectedSubjects
+                                                                    ),
+                                                                    "isSetupComplete" to true
+                                                                )
+                                                            } else {
+                                                                mapOf(
+                                                                    "email" to email.trim(),
+                                                                    "uid" to userId,
+                                                                    "name" to fullName.trim(),
+                                                                    "phoneNumber" to cleanedPhone,
+                                                                    "role" to "teacher",
+                                                                    "subjects" to ArrayList(
+                                                                        selectedSubjects
+                                                                    ),
+                                                                    "availability" to ArrayList(
+                                                                        selectedDays.toList()
+                                                                            .sortedBy {
+                                                                                AppData.daysOfWeek.indexOf(
+                                                                                    it
+                                                                                )
+                                                                            }),
+                                                                    "isSetupComplete" to true
+                                                                )
+                                                            }
+
+                                                        db.collection("users").document(userId)
+                                                            .set(userProfile)
+                                                            .addOnSuccessListener {
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    "Account Created Successfully!",
+                                                                    Toast.LENGTH_SHORT
+                                                                ).show()
+                                                                navController.navigate("main_screen") {
+                                                                    popUpTo("register_screen") {
+                                                                        inclusive = true
+                                                                    }
+                                                                }
+                                                            }
+                                                            .addOnFailureListener { e ->
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    "Error: ${e.message}",
+                                                                    Toast.LENGTH_LONG
+                                                                ).show()
+                                                            }
+                                                    }
                                                 }
-                                            }
-                                            .addOnFailureListener { e ->
-                                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                                            }
-                                    }
+                                                ?.addOnFailureListener { e ->
+                                                    auth.currentUser?.delete()
+                                                    val errorMessage = when {
+                                                        e.message?.contains("email address is already in use") == true -> "This email is already registered"
+                                                        e.message?.contains("email address is badly formatted") == true -> "Please enter a valid email"
+                                                        else -> "Registration failed: ${e.message}"
+                                                    }
+                                                    Toast.makeText(
+                                                        context,
+                                                        errorMessage,
+                                                        Toast.LENGTH_LONG
+                                                    )
+                                                        .show()
+                                                }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            auth.currentUser?.delete()
+                                            Toast.makeText(
+                                                context,
+                                                "Failed to verify phone number: ${e.message}",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
                                 }
                                 .addOnFailureListener { e ->
-                                    val errorMessage = when {
-                                        e.message?.contains("email address is already in use") == true -> "This email is already registered"
-                                        e.message?.contains("email address is badly formatted") == true -> "Please enter a valid email"
-                                        else -> "Registration failed: ${e.message}"
-                                    }
-                                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Unable to start registration: ${e.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                         },
                         modifier = Modifier.fillMaxWidth().height(50.dp),

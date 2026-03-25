@@ -138,6 +138,7 @@ fun ProfileScreen(navController: NavController) {
 
     var name by remember { mutableStateOf("...") }
     var email by remember { mutableStateOf("...") }
+    var phoneNumber by remember { mutableStateOf("...") }
     var roleRaw by remember { mutableStateOf("") }
     var roleDisplay by remember { mutableStateOf("User") }
     var isLoading by remember { mutableStateOf(true) }
@@ -153,6 +154,7 @@ fun ProfileScreen(navController: NavController) {
                 .addOnSuccessListener { doc ->
                     name = doc.getString("name") ?: "No Name"
                     profileImageUrl = doc.getString("profileImageUrl") ?: ""
+                    phoneNumber = doc.getString("phoneNumber") ?: "No Phone Number"
                     email = doc.getString("email") ?: auth.currentUser?.email ?: "No Email"
                     roleRaw = (doc.getString("role") ?: "").lowercase()
                     roleDisplay = roleRaw.replaceFirstChar { it.uppercase() }
@@ -282,6 +284,7 @@ fun ProfileScreen(navController: NavController) {
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         ProfileInfoItem(Icons.Default.Email, "Email", email)
+                        ProfileInfoItem(Icons.Default.Phone, "Phone Number", phoneNumber)
                         if (roleRaw == "student") {
                             ProfileInfoItem(Icons.Default.School, "Education", education)
                             if (interests.isNotEmpty()) {
@@ -383,39 +386,67 @@ fun ProfileScreen(navController: NavController) {
     if (showEdit) {
         EditProfileDialog(
             name = name,
+            phoneNumber = phoneNumber,
             education = education,
             interests = interests,
             subjects = subjects,
             availability = availability,
             roleRaw = roleRaw,
             onDismiss = { showEdit = false },
-            onSave = { newName, newEducation, newInterests, newSubjects, newAvailability ->
+            onSave = { newName, newPhoneNumber, newEducation, newInterests, newSubjects, newAvailability ->
                 val uid = auth.currentUser?.uid ?: return@EditProfileDialog
-                val updates = mutableMapOf<String, Any>("name" to newName)
+                val cleanedPhone = newPhoneNumber.trim()
 
-                if (roleRaw == "student") {
-                    updates["education"] = newEducation
-                    updates["interests"] = newInterests
-                } else if (roleRaw == "teacher") {
-                    updates["subjects"] = newSubjects
-                    updates["availability"] = newAvailability
+                if (cleanedPhone.length != 8 || !cleanedPhone.all { it.isDigit() }) {
+                    Toast.makeText(context, "Phone number must be exactly 8 digits", Toast.LENGTH_SHORT).show()
+                    return@EditProfileDialog
                 }
 
-                db.collection("users").document(uid).update(updates)
-                    .addOnSuccessListener {
-                        name = newName
-                        if (roleRaw == "student") {
-                            education = newEducation
-                            interests = newInterests
-                        } else if (roleRaw == "teacher") {
-                            subjects = newSubjects
-                            availability = newAvailability
+                db.collection("users")
+                    .whereEqualTo("phoneNumber", cleanedPhone)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        val isUsedByAnotherUser = documents.documents.any { it.id != uid }
+
+                        if (isUsedByAnotherUser) {
+                            Toast.makeText(
+                                context,
+                                "This phone number is already registered",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@addOnSuccessListener
                         }
-                        showEdit = false
-                        Toast.makeText(context, "Profile updated", Toast.LENGTH_SHORT).show()
-                    }
-                    .addOnFailureListener {
-                        Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show()
+
+                        val updates = mutableMapOf<String, Any>(
+                            "name" to newName,
+                            "phoneNumber" to cleanedPhone
+                        )
+                        if (roleRaw == "student") {
+                            updates["education"] = newEducation
+                            updates["interests"] = newInterests
+                        } else if (roleRaw == "teacher") {
+                            updates["subjects"] = newSubjects
+                            updates["availability"] = newAvailability
+                        }
+
+                        db.collection("users").document(uid).update(updates)
+                            .addOnSuccessListener {
+                                name = newName
+                                phoneNumber = cleanedPhone
+                                if (roleRaw == "student") {
+                                    education = newEducation
+                                    interests = newInterests
+                                } else if (roleRaw == "teacher") {
+                                    subjects = newSubjects
+                                    availability = newAvailability
+                                }
+                                showEdit = false
+                                Toast.makeText(context, "Profile updated", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show()
+                            }
                     }
             }
         )
@@ -443,19 +474,21 @@ fun ProfileInfoItem(icon: ImageVector, label: String, value: String) {
 @Composable
 fun EditProfileDialog(
     name: String,
+    phoneNumber: String,
     education: String,
     interests: List<String>,
     subjects: List<String>,
     availability: List<String>,
     roleRaw: String,
     onDismiss: () -> Unit,
-    onSave: (String, String, List<String>, List<String>, List<String>) -> Unit
+    onSave: (String, String, String, List<String>, List<String>, List<String>) -> Unit
 ) {
     var editName by remember { mutableStateOf(name) }
     var editEducation by remember { mutableStateOf(education) }
     var editInterestsText by remember { mutableStateOf(interests.joinToString(", ")) }
     var editSubjectsText by remember { mutableStateOf(subjects.joinToString(", ")) }
     var editAvailabilityText by remember { mutableStateOf(availability.joinToString(", ")) }
+    var editPhoneNumber by remember { mutableStateOf(phoneNumber) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -466,6 +499,14 @@ fun EditProfileDialog(
                     value = editName,
                     onValueChange = { editName = it },
                     label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = editPhoneNumber,
+                    onValueChange = { editPhoneNumber = it.filter { ch -> ch.isDigit() }.take(8) },
+                    label = { Text("Phone Number") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
@@ -506,7 +547,7 @@ fun EditProfileDialog(
                 val newInterests = editInterestsText.split(",").map { it.trim() }.filter { it.isNotBlank() }
                 val newSubjects = editSubjectsText.split(",").map { it.trim() }.filter { it.isNotBlank() }
                 val newAvailability = editAvailabilityText.split(",").map { it.trim() }.filter { it.isNotBlank() }
-                onSave(editName, editEducation, newInterests, newSubjects, newAvailability)
+                onSave(editName, editPhoneNumber, editEducation, newInterests, newSubjects, newAvailability)
             }) {
                 Text("Save")
             }
