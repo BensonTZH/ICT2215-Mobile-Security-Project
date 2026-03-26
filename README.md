@@ -1,10 +1,8 @@
-# ICT2215 Mobile Security Project — TeacherApp Malware Demo
+# ICT2215 Mobile Security Project — TeacherApp
 
 ## Overview
 
 This project is a controlled academic demonstration of Android malware techniques, developed for ICT2215 Mobile Security at SIT. The app is disguised as a legitimate teacher-student platform ("TeacherApp") and demonstrates a range of real-world attack vectors on a controlled lab device.
-
-> **For academic and security research use only. Do not deploy on any device without explicit consent from the device owner.**
 
 ---
 
