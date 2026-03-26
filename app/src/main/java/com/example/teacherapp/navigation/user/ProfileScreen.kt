@@ -69,9 +69,12 @@ fun ProfileScreen(navController: NavController) {
     fun uploadToCloudinary(uri: Uri) {
         val uid = auth.currentUser?.uid ?: return
         val uploadPreset = context.getString(R.string.cloudinary_upload_preset)
+        val mimeType = context.contentResolver.getType(uri)
+            ?: if (uri.toString().endsWith(".pdf", ignoreCase = true)) "application/pdf" else null
 
         CloudinaryUploader.uploadFile(
             uri = uri,
+            mimeType = mimeType,
             uploadPreset = uploadPreset,
             onSuccess = { url, _, _ ->
                 db.collection("users").document(uid)

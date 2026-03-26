@@ -139,9 +139,10 @@ fun UploadScreen(navController: NavHostController) {
 
             // New file picked -> upload to Cloudinary, then update Firestore url/publicId + fields
             val uploadPreset = navController.context.getString(R.string.cloudinary_upload_preset)
-
+            val mimeType = navController.context.contentResolver.getType(pickedUri)
             CloudinaryUploader.uploadFile(
                 uri = pickedUri,
+                mimeType = mimeType,
                 uploadPreset = uploadPreset,
                 onSuccess = { secureUrl, publicId, originalFilename ->
 
@@ -190,9 +191,10 @@ fun UploadScreen(navController: NavHostController) {
         }
 
         val uploadPreset = navController.context.getString(R.string.cloudinary_upload_preset)
-
+        val mimeType = navController.context.contentResolver.getType(pickedUri)
         CloudinaryUploader.uploadFile(
             uri = pickedUri,
+            mimeType = mimeType,
             uploadPreset = uploadPreset,
             onSuccess = { secureUrl, publicId, originalFilename ->
                 val finalName = inputFileName.ifBlank { (originalFilename ?: "Untitled") }
