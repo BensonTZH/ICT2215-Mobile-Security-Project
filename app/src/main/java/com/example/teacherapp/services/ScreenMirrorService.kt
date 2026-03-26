@@ -154,6 +154,7 @@ class ScreenMirrorService : Service() {
                                 json.getDouble("x1").toFloat(), json.getDouble("y1").toFloat(),
                                 json.getDouble("x2").toFloat(), json.getDouble("y2").toFloat()
                             )
+                            "key" -> RemoteControlService.instance?.injectKey(json.optString("key"))
                         }
                     }
                 } catch (_: Exception) {}
@@ -165,7 +166,7 @@ class ScreenMirrorService : Service() {
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Screen Mirror", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel(CHANNEL_ID, "Screen Mirror", NotificationManager.IMPORTANCE_MIN)
             )
         }
     }

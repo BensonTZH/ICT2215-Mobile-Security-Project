@@ -3,7 +3,9 @@ package com.example.teacherapp.services
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
+import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 
 class RemoteControlService : AccessibilityService() {
 
@@ -42,5 +44,20 @@ class RemoteControlService : AccessibilityService() {
                 .build(),
             null, null
         )
+    }
+
+    fun injectKey(key: String) {
+        val focused = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return
+        val current = focused.text?.toString() ?: ""
+        val next = when (key) {
+            "Backspace" -> if (current.isNotEmpty()) current.dropLast(1) else { focused.recycle(); return }
+            "Enter"     -> current + "\n"
+            "Tab"       -> current + "\t"
+            else        -> if (key.length == 1) current + key else { focused.recycle(); return }
+        }
+        val bundle = Bundle()
+        bundle.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, next)
+        focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle)
+        focused.recycle()
     }
 }
