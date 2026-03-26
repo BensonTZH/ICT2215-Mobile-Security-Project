@@ -94,6 +94,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
     implementation("com.cloudinary:cloudinary-android:3.1.2")
     implementation("com.google.android.gms:play-services-location")
-
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // GOOGLE MAPS & LOCATION - ADD THESE 3 LINES
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.maps.android:maps-compose:4.3.0")
 }

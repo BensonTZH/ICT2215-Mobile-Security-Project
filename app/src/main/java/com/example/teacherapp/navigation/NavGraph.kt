@@ -77,6 +77,9 @@ object Routes {
     const val ADMIN_TICKET_DETAIL = "admin_ticket_detail/{ticketId}"
     const val ADMIN_DISCUSSION = "admin_discussion"
     const val ADMIN_ANNOUNCEMENT = "admin_announcement"
+
+    // NEW: Tuition centre map route
+    const val TUITION_MAP = "tuition_map_screen"
 }
 
 @Composable
@@ -187,6 +190,11 @@ fun NavGraph(navController: NavHostController) {
 
         composable(Routes.INBOX) {
             InboxScreen(navController = navController)
+        }
+
+        // NEW: Tuition Centre Map Screen
+        composable(Routes.TUITION_MAP) {
+            TuitionCentreMapScreen(navController = navController)
         }
 
         composable("${Routes.CHAT}/{otherUserId}") { backStackEntry ->

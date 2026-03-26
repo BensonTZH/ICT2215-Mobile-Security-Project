@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -190,7 +191,7 @@ private fun fetchTeacherStats(
             activeGroups = groupDocs.size()
             groupDocs.documents.forEach { group ->
                 val members = group.get("members") as? List<String> ?: emptyList()
-                uniqueStudents.addAll(members) // Handle Unique students from different groups
+                uniqueStudents.addAll(members)
             }
             val totalStudents = uniqueStudents.size
 
@@ -256,9 +257,9 @@ private fun TeacherHomeScreen(
 
     val teacherGradient = androidx.compose.ui.graphics.Brush.linearGradient(
         colors = listOf(
-            Color(0xFF3B82F6), // Blue
-            Color(0xFF6366F1), // Indigo
-            Color(0xFFA855F7)  // Purple
+            Color(0xFF3B82F6),
+            Color(0xFF6366F1),
+            Color(0xFFA855F7)
         )
     )
 
@@ -269,7 +270,6 @@ private fun TeacherHomeScreen(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // 1. Management Gradient Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
@@ -281,7 +281,6 @@ private fun TeacherHomeScreen(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // Welcome Text inside the Card
                 Column {
                     Text(
                         text = "Welcome, $userName",
@@ -296,12 +295,10 @@ private fun TeacherHomeScreen(
                     )
                 }
 
-                // Transparent Inner Cards for Teacher Stats
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Students Count (Transparent)
                     Surface(
                         color = Color.White.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(16.dp),
@@ -313,7 +310,6 @@ private fun TeacherHomeScreen(
                         }
                     }
 
-                    // Active Groups (Transparent)
                     Surface(
                         color = Color.White.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(16.dp),
@@ -328,7 +324,6 @@ private fun TeacherHomeScreen(
             }
         }
 
-        // 2. Secondary Stat Row (Pending & Resources)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -388,8 +383,8 @@ private fun TeacherHomeScreen(
             GridActionButton(Icons.Default.Settings, "Settings", Modifier.weight(1f)) {
                 navController.navigate(Routes.SETTINGS)
             }
-            GridActionButton(Icons.Default.Person, "Profile", Modifier.weight(1f)) {
-                navController.navigate(Routes.PROFILE)
+            GridActionButton(Icons.Default.LocationOn, "Find Tuition Centres", Modifier.weight(1f)) {
+                navController.navigate(Routes.TUITION_MAP)
             }
         }
     }
@@ -405,12 +400,11 @@ private fun StudentHomeScreen(
     navController: NavController,
 ) {
     val scrollState = rememberScrollState()
-// Updated Gradient: Blue -> Indigo -> Purple
     val mainGradient = androidx.compose.ui.graphics.Brush.linearGradient(
         colors = listOf(
-            Color(0xFF3B82F6), // Blue
-            Color(0xFF6366F1), // Indigo
-            Color(0xFFA855F7)  // Purple
+            Color(0xFF3B82F6),
+            Color(0xFF6366F1),
+            Color(0xFFA855F7)
         )
     )
 
@@ -422,7 +416,6 @@ private fun StudentHomeScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
 
-        // 1. Main Gradient Card (Contains Welcome & Stats)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
@@ -434,7 +427,6 @@ private fun StudentHomeScreen(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // Welcome Text inside the Card
                 Column {
                     Text(
                         text = "Welcome, $userName",
@@ -449,12 +441,10 @@ private fun StudentHomeScreen(
                     )
                 }
 
-                // Transparent Inner Cards
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Level (Transparent)
                     Surface(
                         color = Color.White.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(16.dp),
@@ -466,7 +456,6 @@ private fun StudentHomeScreen(
                         }
                     }
 
-                    // Active Groups (Transparent)
                     Surface(
                         color = Color.White.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(16.dp),
@@ -544,8 +533,8 @@ private fun StudentHomeScreen(
                 GridActionButton(Icons.Default.Settings, "Settings", Modifier.weight(1f)) {
                     navController.navigate(Routes.SETTINGS)
                 }
-                GridActionButton(Icons.Default.Person, "Profile", Modifier.weight(1f)) {
-                    navController.navigate(Routes.PROFILE)
+                GridActionButton(Icons.Default.LocationOn, "Find Tuition Centres", Modifier.weight(1f)) {
+                    navController.navigate(Routes.TUITION_MAP)
                 }
             }
         }
@@ -624,7 +613,7 @@ private fun GridActionButton(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(90.dp), // Fixed height makes the grid look uniform
+        modifier = modifier.height(90.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
