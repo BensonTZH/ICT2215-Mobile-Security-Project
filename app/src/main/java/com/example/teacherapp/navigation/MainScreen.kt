@@ -402,6 +402,9 @@ private fun TeacherHomeScreen(
             GridActionButton(Icons.Default.Group, "Contacts", Modifier.weight(1f)) {
                 navController.navigate(Routes.CONTACTS)
             }
+            GridActionButton(Icons.Default.Group, "Discussion", Modifier.weight(1f)) {
+                navController.navigate(Routes.DISCUSSIONS)
+            }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GridActionButton(Icons.Default.Settings, "Settings", Modifier.weight(1f)) {
@@ -551,6 +554,9 @@ private fun StudentHomeScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 GridActionButton(Icons.Default.LibraryBooks, "Resources", Modifier.weight(1f)) {
                     navController.navigate(Routes.RESOURCES)
+                }
+                GridActionButton(Icons.Default.LibraryBooks, "Discussions", Modifier.weight(1f)) {
+                    navController.navigate(Routes.DISCUSSIONS)
                 }
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
