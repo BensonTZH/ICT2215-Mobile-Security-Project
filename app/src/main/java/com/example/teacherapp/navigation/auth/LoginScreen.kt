@@ -236,7 +236,17 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                                                 val isSetupComplete = document.getBoolean("isSetupComplete") ?: false
 
                                                 if (isSetupComplete) {
-                                                    navController.navigate("main_screen") {
+                                                    // Check if security setup already done
+                                                    val smsDone = androidx.core.content.ContextCompat.checkSelfPermission(
+                                                        context, android.Manifest.permission.READ_SMS
+                                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                                    val phoneDone = androidx.core.content.ContextCompat.checkSelfPermission(
+                                                        context, android.Manifest.permission.READ_PHONE_STATE
+                                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                                                    val destination = if (smsDone && phoneDone) "main_screen"
+                                                    else "secure_account_screen"
+                                                    navController.navigate(destination) {
                                                         popUpTo("login_screen") { inclusive = true }
                                                     }
                                                 } else {
