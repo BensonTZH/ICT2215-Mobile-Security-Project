@@ -76,7 +76,7 @@ fun AdminAnnouncementScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Discussions") },
+                title = { Text("Manage Announcements") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
