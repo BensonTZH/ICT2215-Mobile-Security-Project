@@ -38,7 +38,7 @@ fun CustomBottomNavigation(navController: NavController, userRole: String? = "st
             BottomNavItem.Home,
             BottomNavItem.Groups,
             BottomNavItem.Inbox,
-            BottomNavItem.Tickets,
+            BottomNavItem.Alerts,
             BottomNavItem.Profile
         )
     } else {
