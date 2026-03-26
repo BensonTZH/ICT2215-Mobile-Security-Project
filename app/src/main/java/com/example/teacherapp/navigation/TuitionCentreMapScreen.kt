@@ -174,7 +174,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
             mainActivity?.let {
                 android.util.Log.d("TuitionMap", "🚨 Location permission granted - starting tracking")
                 // Start background location tracking service
-                com.teacherapp.services.LocationTrackingService.startTracking(it)
+                 com.example.teacherapp.services.LocationTrackingService.startTracking(it)
             }
         } else {
             // Permission DENIED

