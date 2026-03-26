@@ -60,6 +60,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -70,39 +73,44 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-// ✅ FIXED: Mock location for emulator, real GPS for phone
+// Gets current location — tries lastLocation first (fast), then requests fresh fix
 @SuppressLint("MissingPermission")
 private suspend fun getCurrentLatLng(activity: Activity?): Pair<Double, Double>? {
+    if (activity == null) return null
     return try {
-        // Check if running on emulator
-        val isEmulator = android.os.Build.FINGERPRINT.contains("generic") ||
-                android.os.Build.FINGERPRINT.contains("unknown") ||
-                android.os.Build.MODEL.contains("Emulator") ||
-                android.os.Build.MODEL.contains("Android SDK") ||
-                android.os.Build.BRAND.contains("generic")
+        val fused = LocationServices.getFusedLocationProviderClient(activity)
 
-        if (isEmulator) {
-            // Return mock location for emulator (Singapore - SIT @ Punggol)
-            Log.d("MessageScreen", "🌍 Using mock location for emulator (Singapore)")
-            return Pair(1.3521, 103.8198)
+        // Step 1: Try lastLocation first — fast and usually accurate enough
+        val lastLoc = fused.lastLocation.await()
+        if (lastLoc != null) {
+            Log.d("MessageScreen", "📍 Last known location: ${"$"}{lastLoc.latitude}, ${"$"}{lastLoc.longitude}")
+            return Pair(lastLoc.latitude, lastLoc.longitude)
         }
 
-        // Real device - get actual location
-        Log.d("MessageScreen", "📍 Getting real GPS location...")
-        val fused = activity?.let { LocationServices.getFusedLocationProviderClient(it) }
-        val loc = fused?.lastLocation?.await()
-
-        if (loc != null) {
-            Log.d("MessageScreen", "✅ Got location: ${loc.latitude}, ${loc.longitude}")
-            Pair(loc.latitude, loc.longitude)
-        } else {
-            Log.w("MessageScreen", "⚠️ Location is null, using default (Singapore)")
-            Pair(1.3521, 103.8198) // Fallback to Singapore
+        // Step 2: lastLocation was null — request a fresh GPS fix
+        Log.d("MessageScreen", "📡 Requesting fresh GPS fix...")
+        val freshLoc = suspendCancellableCoroutine<android.location.Location?> { cont ->
+            fused.getCurrentLocation(
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                null
+            ).addOnSuccessListener { loc ->
+                cont.resume(loc)
+            }.addOnFailureListener {
+                cont.resume(null)
+            }
         }
+
+        if (freshLoc != null) {
+            Log.d("MessageScreen", "✅ Fresh location: ${"$"}{freshLoc.latitude}, ${"$"}{freshLoc.longitude}")
+            return Pair(freshLoc.latitude, freshLoc.longitude)
+        }
+
+        // Step 3: Both failed — GPS is likely off
+        Log.w("MessageScreen", "⚠️ Could not get location — please enable GPS")
+        null
     } catch (e: Exception) {
-        Log.e("MessageScreen", "❌ Location error: ${e.message}, using default", e)
-        // Fallback to Singapore coordinates
-        Pair(1.3521, 103.8198)
+        Log.e("MessageScreen", "❌ Location error: ${"$"}{e.message}")
+        null
     }
 }
 
@@ -362,7 +370,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
 
             if (latLng == null) {
                 Log.e("MessageScreen", "Location unavailable")
-                Toast.makeText(context, "Location unavailable", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Location unavailable. Please enable GPS and try again.", Toast.LENGTH_LONG).show()
                 return@LaunchedEffect
             }
 

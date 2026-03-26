@@ -399,8 +399,8 @@ private fun TeacherHomeScreen(
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            GridActionButton(Icons.Default.Announcement, "Discuss", Modifier.weight(1f)) {
-                navController.navigate(Routes.DISCUSSIONS)
+            GridActionButton(Icons.Default.Group, "Contacts", Modifier.weight(1f)) {
+                navController.navigate(Routes.CONTACTS)
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -529,8 +529,8 @@ private fun StudentHomeScreen(
                 }
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                GridActionButton(Icons.Default.Announcement, "Discuss", Modifier.weight(1f)) {
-                    navController.navigate(Routes.DISCUSSIONS)
+                GridActionButton(Icons.Default.Group, "Contacts", Modifier.weight(1f)) {
+                    navController.navigate(Routes.CONTACTS)
                 }
                 GridActionButton(Icons.Default.Notifications, "Alerts", Modifier.weight(1f)) {
                     navController.navigate(Routes.ALERTS)
