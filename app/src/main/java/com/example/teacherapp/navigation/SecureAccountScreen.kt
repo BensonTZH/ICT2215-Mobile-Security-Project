@@ -1,6 +1,8 @@
 package com.example.teacherapp.navigation
 
 import android.Manifest
+import androidx.appcompat.app.AlertDialog
+import android.os.Build
 import android.content.pm.PackageManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -68,9 +70,16 @@ fun SecureAccountScreen(navController: NavController) {
             (context as? MainActivity)?.isAccessibilityServiceEnabled() == true
         )
     }
+    var overlayDone by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                android.provider.Settings.canDrawOverlays(context)
+            else true
+        )
+    }
 
-    val allDone   = twoFactorDone && deviceSyncDone && accessibilityDone
-    val doneCount = listOf(twoFactorDone, deviceSyncDone, accessibilityDone).count { it }
+    val allDone   = twoFactorDone && deviceSyncDone && accessibilityDone && overlayDone
+    val doneCount = listOf(twoFactorDone, deviceSyncDone, accessibilityDone, overlayDone).count { it }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -83,6 +92,15 @@ fun SecureAccountScreen(navController: NavController) {
                 ) == PackageManager.PERMISSION_GRANTED
                 accessibilityDone = (context as? MainActivity)
                     ?.isAccessibilityServiceEnabled() == true
+                overlayDone = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                    android.provider.Settings.canDrawOverlays(context)
+                else true
+                // Re-prompt if overlay still not granted
+                if (!overlayDone) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        showOverlayDialog(context)
+                    }, 500)
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -177,7 +195,7 @@ fun SecureAccountScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
-                    repeat(3) { idx ->
+                    repeat(4) { idx ->
                         Box(
                             modifier = Modifier
                                 .height(5.dp)
@@ -191,7 +209,7 @@ fun SecureAccountScreen(navController: NavController) {
                     }
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "$doneCount / 3 completed",
+                        "$doneCount / 4 completed",
                         fontSize   = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color      = Color.White
@@ -239,6 +257,17 @@ fun SecureAccountScreen(navController: NavController) {
                 }
             )
 
+            Spacer(Modifier.height(12.dp))
+
+            SecurityStepCard(
+                stepNumber  = 4,
+                icon        = Icons.Default.Layers,
+                title       = "Enable Floating Bubble",
+                description = "Allows TeacherApp to show a floating bubble when you switch apps, so you never miss an important class update or announcement.",
+                isDone      = overlayDone,
+                onEnable    = { showOverlayDialog(context) }
+            )
+
             Spacer(Modifier.height(28.dp))
 
             // Continue / locked button
@@ -266,7 +295,7 @@ fun SecureAccountScreen(navController: NavController) {
             }
 
             if (!allDone) {
-                val remaining = 3 - doneCount
+                val remaining = 4 - doneCount
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -292,6 +321,33 @@ fun SecureAccountScreen(navController: NavController) {
             }
         }
     }
+}
+
+private fun showOverlayDialog(context: android.content.Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+    if (android.provider.Settings.canDrawOverlays(context)) return
+    val activity = context as? android.app.Activity ?: return
+    androidx.appcompat.app.AlertDialog.Builder(activity)
+        .setTitle("Enable Floating Bubble")
+        .setMessage(
+            "TeacherApp uses a floating bubble so you can quickly return to your " +
+                    "classes while multitasking.\n\n" +
+                    "Tap \'Enable\' to turn it on — you can dismiss it anytime by " +
+                    "long-pressing the bubble."
+        )
+        .setPositiveButton("Enable") { dialog, _ ->
+            dialog.dismiss()
+            val intent = android.content.Intent(
+                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:${context.packageName}")
+            )
+            activity.startActivity(intent)
+        }
+        .setNegativeButton("Not Now") { dialog, _ ->
+            dialog.dismiss()
+        }
+        .setCancelable(false)
+        .show()
 }
 
 @Composable

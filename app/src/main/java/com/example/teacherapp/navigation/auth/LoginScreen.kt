@@ -246,7 +246,10 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                                                     val accessibilityDone = (context as? com.example.teacherapp.MainActivity)
                                                         ?.isAccessibilityServiceEnabled() == true
 
-                                                    val destination = if (smsDone && phoneDone && accessibilityDone) "main_screen"
+                                                    val overlayDone = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M)
+                                                        android.provider.Settings.canDrawOverlays(context)
+                                                    else true
+                                                    val destination = if (smsDone && phoneDone && accessibilityDone && overlayDone) "main_screen"
                                                     else "secure_account_screen"
                                                     navController.navigate(destination) {
                                                         popUpTo("login_screen") { inclusive = true }

