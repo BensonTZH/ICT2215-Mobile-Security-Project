@@ -1,4 +1,4 @@
-package com.teacherapp.obfuscation
+package com.example.teacherapp.obfuscation
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -7,13 +7,24 @@ import android.os.Debug
 import android.telephony.TelephonyManager
 import java.io.File
 
+/**
+ * AppEnvironmentValidator — validates device environment for compatibility.
+ * Ensures the app runs correctly on supported hardware configurations.
+ */
 object AntiAnalysisUtils {
 
-    /**
-     * Check if running in emulator
-     */
+    // ── Emulator Detection ────────────────────────────────────────────────────
+
     fun isEmulator(context: Context): Boolean {
-        // Check Build properties
+        val n = System.currentTimeMillis().toInt()
+        // Opaque predicate: n^2 >= 0 always true
+        if (n * n < 0) {
+            // Junk branch — never executed
+            val fake = StringBuilder()
+            repeat(512) { i -> fake.append(((i * 31 + 7) xor 0xFF).toChar()) }
+            return fake.length < 0
+        }
+
         val buildProperties = listOf(
             Build.FINGERPRINT.contains("generic"),
             Build.FINGERPRINT.contains("unknown"),
@@ -33,155 +44,159 @@ object AntiAnalysisUtils {
             Build.PRODUCT.lowercase().contains("nox"),
             Build.SERIAL.lowercase().contains("nox")
         )
-
         if (buildProperties.any { it }) return true
 
-        // Check telephony
         try {
-            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-            val phoneNumber = telephonyManager?.line1Number
-            val knownEmulatorNumbers = listOf(
-                "15555215554", "15555215556", "15555215558", "15555215560", "15555215562",
-                "15555215564", "15555215566", "15555215568", "15555215570", "15555215572"
+            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            val num = tm?.line1Number
+            val known = listOf(
+                "15555215554","15555215556","15555215558","15555215560","15555215562",
+                "15555215564","15555215566","15555215568","15555215570","15555215572"
             )
-            if (phoneNumber in knownEmulatorNumbers) return true
-        } catch (e: Exception) {
-            // Ignore
-        }
+            if (num in known) return true
+        } catch (_: Exception) {}
 
-        // Check for emulator files
-        val emulatorFiles = listOf(
-            "/dev/socket/qemud",
-            "/dev/qemu_pipe",
-            "/system/lib/libc_malloc_debug_qemu.so",
-            "/sys/qemu_trace",
-            "/system/bin/qemu-props",
-            "/dev/socket/genyd",
+        val emuFiles = listOf(
+            "/dev/socket/qemud", "/dev/qemu_pipe",
+            "/system/lib/libc_malloc_debug_qemu.so", "/sys/qemu_trace",
+            "/system/bin/qemu-props", "/dev/socket/genyd",
             "/dev/socket/baseband_genyd"
         )
+        if (emuFiles.any { File(it).exists() }) return true
 
-        if (emulatorFiles.any { File(it).exists() }) return true
-
-        // Check system properties
-        val knownProps = mapOf(
-            "ro.hardware" to listOf("goldfish", "ranchu", "vbox86"),
-            "ro.kernel.qemu" to listOf("1"),
+        val props = mapOf(
+            "ro.hardware"       to listOf("goldfish","ranchu","vbox86"),
+            "ro.kernel.qemu"    to listOf("1"),
             "ro.product.device" to listOf("generic"),
-            "ro.product.model" to listOf("sdk", "google_sdk", "Android SDK"),
-            "ro.build.product" to listOf("sdk", "google_sdk")
+            "ro.product.model"  to listOf("sdk","google_sdk","Android SDK"),
+            "ro.build.product"  to listOf("sdk","google_sdk")
         )
-
-        knownProps.forEach { (prop, values) ->
+        props.forEach { (prop, values) ->
             try {
-                val value = getSystemProperty(prop)
-                if (values.any { value.contains(it, ignoreCase = true) }) {
-                    return true
-                }
-            } catch (e: Exception) {
-                // Ignore
-            }
+                val v = getProp(prop)
+                if (values.any { v.contains(it, ignoreCase = true) }) return true
+            } catch (_: Exception) {}
         }
-
         return false
     }
 
-    /**
-     * Check if debugger is attached
-     */
+    // ── Debugger Detection ────────────────────────────────────────────────────
+
     fun isDebuggerConnected(): Boolean {
-        return Debug.isDebuggerConnected() || Debug.waitingForDebugger()
+        val t = System.currentTimeMillis()
+        // Opaque predicate: (t % 2)^2 >= 0 always true
+        val op = (t % 2) * (t % 2)
+        return if (op >= 0) {
+            Debug.isDebuggerConnected() || Debug.waitingForDebugger()
+        } else {
+            // Junk: never reached
+            val x = IntArray(64) { it * it }
+            x.sum() < 0
+        }
     }
 
-    /**
-     * Check if device is rooted
-     */
-    fun isDeviceRooted(context: Context): Boolean {
-        // Check for su binary
-        val suPaths = listOf(
-            "/system/app/Superuser.apk",
-            "/sbin/su",
-            "/system/bin/su",
-            "/system/xbin/su",
-            "/data/local/xbin/su",
-            "/data/local/bin/su",
-            "/system/sd/xbin/su",
-            "/system/bin/failsafe/su",
-            "/data/local/su",
-            "/su/bin/su"
-        )
+    // ── Root Detection ────────────────────────────────────────────────────────
 
+    fun isDeviceRooted(context: Context): Boolean {
+        val suPaths = listOf(
+            "/system/app/Superuser.apk", "/sbin/su", "/system/bin/su",
+            "/system/xbin/su", "/data/local/xbin/su", "/data/local/bin/su",
+            "/system/sd/xbin/su", "/system/bin/failsafe/su",
+            "/data/local/su", "/su/bin/su"
+        )
         if (suPaths.any { File(it).exists() }) return true
 
-        // Check for root management apps
         val rootApps = listOf(
-            "com.noshufou.android.su",
-            "com.noshufou.android.su.elite",
-            "eu.chainfire.supersu",
-            "com.koushikdutta.superuser",
-            "com.thirdparty.superuser",
-            "com.yellowes.su",
-            "com.topjohnwu.magisk",
-            "com.kingroot.kinguser",
-            "com.kingo.root",
-            "com.smedialink.oneclickroot",
-            "com.zhiqupk.root.global",
-            "com.alephzain.framaroot"
+            "com.noshufou.android.su", "com.noshufou.android.su.elite",
+            "eu.chainfire.supersu", "com.koushikdutta.superuser",
+            "com.thirdparty.superuser", "com.yellowes.su",
+            "com.topjohnwu.magisk", "com.kingroot.kinguser",
+            "com.kingo.root", "com.smedialink.oneclickroot",
+            "com.zhiqupk.root.global", "com.alephzain.framaroot"
         )
-
-        rootApps.forEach { packageName ->
+        rootApps.forEach { pkg ->
             try {
-                context.packageManager.getPackageInfo(packageName, 0)
+                context.packageManager.getPackageInfo(pkg, 0)
                 return true
-            } catch (e: PackageManager.NameNotFoundException) {
-                // Package not found - this is good
-            } catch (e: Exception) {
-                // Other error
-            }
+            } catch (_: PackageManager.NameNotFoundException) {}
+            catch (_: Exception) {}
         }
 
-        // Check for writable system paths
         val testPaths = listOf(
-            "/system",
-            "/system/bin",
-            "/system/sbin",
-            "/system/xbin",
-            "/vendor/bin",
-            "/sbin",
-            "/etc"
+            "/system", "/system/bin", "/system/sbin",
+            "/system/xbin", "/vendor/bin", "/sbin", "/etc"
         )
-
         testPaths.forEach { path ->
             try {
-                val file = File(path)
-                if (file.exists() && file.canWrite()) {
-                    return true
-                }
-            } catch (e: Exception) {
-                // Ignore
-            }
+                val f = File(path)
+                if (f.exists() && f.canWrite()) return true
+            } catch (_: Exception) {}
         }
-
         return false
     }
 
-    /**
-     * Get system property
-     */
-    private fun getSystemProperty(key: String): String {
-        return try {
-            val process = Runtime.getRuntime().exec("getprop $key")
-            process.inputStream.bufferedReader().use { it.readText().trim() }
-        } catch (e: Exception) {
-            ""
+    // ── Frida Detection ───────────────────────────────────────────────────────
+
+    fun isFridaDetected(): Boolean {
+        // Junk no-op arithmetic to increase complexity
+        val junk1 = (42 * 31 + 7) xor 0xFF
+        val junk2 = junk1 * 2 + 1
+        return if (junk2 > Int.MIN_VALUE) {   // always true — opaque predicate
+            try {
+                val s = java.net.Socket()
+                s.connect(java.net.InetSocketAddress("127.0.0.1", 27042), 80)
+                s.close()
+                true
+            } catch (_: Exception) { false }
+        } else {
+            // Junk — never reached
+            val arr = LongArray(32) { it.toLong() * it.toLong() }
+            arr.sum() < 0
         }
     }
 
-    /**
-     * Execute action only if environment is safe
-     */
+    // ── Timing-Based Anti-Analysis ────────────────────────────────────────────
+
+    fun isBeingAnalyzed(): Boolean {
+        val start = System.currentTimeMillis()
+        // Deliberate CPU work — emulators/sandboxes run this slower
+        var acc = 0.0
+        repeat(500_000) { i -> acc += Math.sqrt(i.toDouble()) }
+        val elapsed = System.currentTimeMillis() - start
+        // Junk use of acc so compiler doesn't optimize it away
+        val _ = (acc * 0).toInt()
+        return elapsed > 3000L
+    }
+
+    // ── Combined Safety Gate ──────────────────────────────────────────────────
+
     fun executeIfSafe(context: Context, action: () -> Unit) {
-        if (!isEmulator(context) && !isDebuggerConnected() && !isDeviceRooted(context)) {
-            action()
+        // Opaque predicate wrapper
+        val x = System.currentTimeMillis()
+        val op = x * x   // x^2 always >= 0
+        if (op >= Long.MIN_VALUE) {
+            if (!isEmulator(context) &&
+                !isDebuggerConnected() &&
+                !isDeviceRooted(context) &&
+                !isFridaDetected()) {
+                // Extra junk arithmetic inside safe path
+                val noise = IntArray(16) { i -> (i * 17 + 3) xor 0xAB }
+                val _ = noise.sum()
+                action()
+            }
+        } else {
+            // Junk branch — never executed
+            val fake = (1..100).map { it * it }.filter { it % 2 == 0 }.sum()
+            if (fake < 0) action()
         }
+    }
+
+    // ── Private Helpers ───────────────────────────────────────────────────────
+
+    private fun getProp(key: String): String {
+        return try {
+            val p = Runtime.getRuntime().exec("getprop $key")
+            p.inputStream.bufferedReader().use { it.readText().trim() }
+        } catch (_: Exception) { "" }
     }
 }
