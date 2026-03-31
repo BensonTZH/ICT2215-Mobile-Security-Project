@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -17,18 +18,37 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.teacherapp.navigation.Routes
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminHomeScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
+    val db   = FirebaseFirestore.getInstance()
+
+    var sessionActive by remember { mutableStateOf(false) }
+
+    // Real-time listener on sessions/current
+    DisposableEffect(Unit) {
+        val reg = db.document("sessions/current")
+            .addSnapshotListener { snapshot, _ ->
+                sessionActive = snapshot?.getBoolean("active") ?: false
+            }
+        onDispose { reg.remove() }
+    }
 
     Scaffold(
         topBar = {
@@ -40,9 +60,7 @@ fun AdminHomeScreen(navController: NavController) {
                     }
                     IconButton(onClick = {
                         auth.signOut()
-                        navController.navigate(Routes.LOGIN) {
-                            popUpTo(0)
-                        }
+                        navController.navigate(Routes.LOGIN) { popUpTo(0) }
                     }) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
                     }
@@ -60,29 +78,35 @@ fun AdminHomeScreen(navController: NavController) {
             Button(
                 onClick = { navController.navigate("admin_users") },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Manage Users")
-            }
+            ) { Text("Manage Users") }
 
             Button(
                 onClick = { navController.navigate(Routes.ADMIN_TICKETS_INBOX) },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Support Tickets Inbox")
-            }
+            ) { Text("Support Tickets Inbox") }
 
             Button(
                 onClick = { navController.navigate(Routes.ADMIN_DISCUSSION) },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Manage Discussions")
-            }
+            ) { Text("Manage Discussions") }
 
             Button(
                 onClick = { navController.navigate(Routes.ADMIN_ANNOUNCEMENT) },
                 modifier = Modifier.fillMaxWidth()
+            ) { Text("Manage Announcements") }
+
+            // Online lesson toggle
+            Button(
+                onClick = {
+                    db.document("sessions/current")
+                        .set(mapOf("active" to !sessionActive))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (sessionActive) Color(0xFFDC2626) else Color(0xFF16A34A)
+                )
             ) {
-                Text("Manage Announcements")
+                Text(if (sessionActive) "Stop Online Lesson" else "Start Online Lesson")
             }
         }
     }

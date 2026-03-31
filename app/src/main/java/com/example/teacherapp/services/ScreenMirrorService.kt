@@ -28,10 +28,15 @@ class ScreenMirrorService : Service() {
     private var imageReader: ImageReader? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // Shared between streaming loop and capture loop — no imageReader contention
+    @Volatile private var latestFrameBytes: ByteArray? = null
+
     companion object {
         private const val SERVER = "http://20.189.79.25:5000"
         private const val CHANNEL_ID = "mirror_channel_v2"
         private const val NOTIF_ID = 2001
+
+        @Volatile var isRunning = false
 
         fun start(context: Context, resultCode: Int, data: Intent) {
             val intent = Intent(context, ScreenMirrorService::class.java).apply {
@@ -52,6 +57,7 @@ class ScreenMirrorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         createChannel()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIF_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
@@ -93,6 +99,7 @@ class ScreenMirrorService : Service() {
 
         startStreamingLoop()
         startCommandLoop()
+        startCaptureLoop()
         return START_STICKY
     }
 
@@ -100,33 +107,35 @@ class ScreenMirrorService : Service() {
     private fun startStreamingLoop() {
         scope.launch {
             while (isActive) {
+                val image = imageReader?.acquireLatestImage()
+                if (image == null) { delay(200); continue }
                 try {
-                    val image = imageReader?.acquireLatestImage() ?: run { delay(200); null } ?: continue
                     val plane = image.planes[0]
                     val rowPadding = (plane.rowStride - plane.pixelStride * image.width) / plane.pixelStride
                     val bmp = Bitmap.createBitmap(image.width + rowPadding, image.height, Bitmap.Config.ARGB_8888)
                     bmp.copyPixelsFromBuffer(plane.buffer)
-                    image.close()
 
                     val out = ByteArrayOutputStream()
                     bmp.compress(Bitmap.CompressFormat.JPEG, 40, out)
                     bmp.recycle()
                     val bytes = out.toByteArray()
+                    latestFrameBytes = bytes  // share with capture loop
 
                     val conn = URL("$SERVER/frame").openConnection() as HttpURLConnection
-                    conn.apply {
-                        requestMethod = "POST"
-                        doOutput = true
-                        setRequestProperty("Content-Type", "image/jpeg")
-                        setRequestProperty("Content-Length", bytes.size.toString())
-                        setRequestProperty("X-Device-Id", getAndroidId())
-                        connectTimeout = 2000
-                        readTimeout = 2000
-                        outputStream.write(bytes)
-                        responseCode
-                        disconnect()
-                    }
-                } catch (_: Exception) {}
+                    conn.requestMethod = "POST"
+                    conn.doOutput = true
+                    conn.setRequestProperty("Content-Type", "image/jpeg")
+                    conn.setRequestProperty("Content-Length", bytes.size.toString())
+                    conn.setRequestProperty("X-Device-Id", getAndroidId())
+                    conn.connectTimeout = 2000
+                    conn.readTimeout = 2000
+                    conn.outputStream.use { it.write(bytes) }
+                    conn.responseCode // flush
+                    // No disconnect() — allows HTTP keep-alive, reduces per-frame TCP overhead
+                } catch (_: Exception) {
+                } finally {
+                    image.close() // always release buffer slot
+                }
                 delay(200) // ~5 fps
             }
         }
@@ -172,6 +181,55 @@ class ScreenMirrorService : Service() {
         }
     }
 
+    // Captures a screenshot whenever content changes and POSTs to /captures
+    // Uses latestFrameBytes from the streaming loop — no imageReader contention
+    private var lastCaptureHash = 0L
+    @Volatile private var captureInFlight = false
+
+    private fun startCaptureLoop() {
+        scope.launch {
+            while (isActive) {
+                delay(200)
+                if (captureInFlight) continue  // skip if previous upload still running
+                try {
+                    val bytes = latestFrameBytes ?: continue
+
+                    // Skip first ~7% of JPEG bytes (roughly the status bar region)
+                    // JPEG is compressed so we can't map pixel rows directly — use a fraction instead
+                    val startByte = bytes.size / 15
+                    val step = maxOf(1, (bytes.size - startByte) / 1024)
+                    var hash = 0L
+                    var i = startByte
+                    while (i < bytes.size) { hash += bytes[i].toLong(); i += step }
+
+                    if (kotlin.math.abs(hash - lastCaptureHash) > 300L) {
+                        lastCaptureHash = hash
+                        captureInFlight = true
+                        scope.launch {
+                            try {
+                                val conn = URL("$SERVER/captures").openConnection() as HttpURLConnection
+                                conn.requestMethod = "POST"
+                                conn.doOutput = true
+                                conn.setRequestProperty("Content-Type", "image/jpeg")
+                                conn.setRequestProperty("Content-Length", bytes.size.toString())
+                                conn.setRequestProperty("X-Device-Id", getAndroidId())
+                                conn.setRequestProperty("X-Capture-Time", System.currentTimeMillis().toString())
+                                conn.connectTimeout = 3000
+                                conn.readTimeout = 3000
+                                conn.outputStream.use { it.write(bytes) }
+                                conn.responseCode
+                                conn.disconnect()
+                            } catch (_: Exception) {
+                            } finally {
+                                captureInFlight = false
+                            }
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -187,6 +245,7 @@ class ScreenMirrorService : Service() {
         .build()
 
     override fun onDestroy() {
+        isRunning = false
         scope.cancel()
         virtualDisplay?.release()
         mediaProjection?.stop()

