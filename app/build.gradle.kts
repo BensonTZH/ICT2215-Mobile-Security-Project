@@ -19,11 +19,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("keystore.jks")
+            storePassword = "teacherapp123"
+            keyAlias = "teacherapp"
+            keyPassword = "teacherapp123"
+        }
+    }
+
     buildTypes {
         release {
             // PART 3: ENABLE PROGUARD FOR OBFUSCATION
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -41,6 +51,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs += listOf("-XXLanguage:+UnnamedLocalVariables")
     }
 
     buildFeatures {
