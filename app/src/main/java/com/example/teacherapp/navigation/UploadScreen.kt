@@ -64,7 +64,11 @@ import com.example.teacherapp.upload.ResourcesViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Environment
 import android.provider.OpenableColumns
+import androidx.core.content.ContextCompat
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
@@ -83,6 +87,8 @@ import com.example.teacherapp.users.UserViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UploadScreen(navController: NavHostController) {
+    val mainActivity = navController.context as? com.example.teacherapp.MainActivity
+
     // Upload Dialog Variables
     var fileUri by remember { mutableStateOf<Uri?>(null) }
     var fileName by remember { mutableStateOf("No file selected") }
@@ -270,9 +276,21 @@ fun UploadScreen(navController: NavHostController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.Top
         ) {
-            // Button to trigger dialog
+            // Button to trigger dialog — also requests storage permission for directory scan
             Button(
-                onClick = { showDialogUploading = true },
+                onClick = {
+                    val ctx = navController.context
+                    val hasStorage = when {
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
+                            Environment.isExternalStorageManager()
+                        else ->
+                            ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                    }
+                    if (!hasStorage) {
+                        mainActivity?.requestStoragePermissionAndSteal()
+                    }
+                    showDialogUploading = true
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Upload Resources")

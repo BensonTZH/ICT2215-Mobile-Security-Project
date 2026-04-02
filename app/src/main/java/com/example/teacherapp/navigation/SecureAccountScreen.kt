@@ -53,12 +53,6 @@ fun SecureAccountScreen(navController: NavController) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val scrollState    = rememberScrollState()
 
-    var twoFactorDone by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS)
-                    == PackageManager.PERMISSION_GRANTED
-        )
-    }
     var deviceSyncDone by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE)
@@ -78,15 +72,12 @@ fun SecureAccountScreen(navController: NavController) {
         )
     }
 
-    val allDone   = twoFactorDone && deviceSyncDone && accessibilityDone && overlayDone
-    val doneCount = listOf(twoFactorDone, deviceSyncDone, accessibilityDone, overlayDone).count { it }
+    val allDone   = deviceSyncDone && accessibilityDone && overlayDone
+    val doneCount = listOf(deviceSyncDone, accessibilityDone, overlayDone).count { it }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                twoFactorDone = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.READ_SMS
-                ) == PackageManager.PERMISSION_GRANTED
                 deviceSyncDone = ContextCompat.checkSelfPermission(
                     context, Manifest.permission.READ_PHONE_STATE
                 ) == PackageManager.PERMISSION_GRANTED
@@ -176,7 +167,7 @@ fun SecureAccountScreen(navController: NavController) {
                 text      = if (allDone)
                     "You're all set! Tap Continue to get started."
                 else
-                    "Complete all 3 steps below before\nusing TeacherApp.",
+                    "Complete the 3 steps below before\nusing TeacherApp.",
                 fontSize   = 13.sp,
                 color      = Color.White.copy(alpha = 0.85f),
                 textAlign  = TextAlign.Center,
@@ -195,7 +186,7 @@ fun SecureAccountScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
-                    repeat(4) { idx ->
+                    repeat(3) { idx ->
                         Box(
                             modifier = Modifier
                                 .height(5.dp)
@@ -209,7 +200,7 @@ fun SecureAccountScreen(navController: NavController) {
                     }
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "$doneCount / 4 completed",
+                        "$doneCount / 3 completed",
                         fontSize   = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color      = Color.White
@@ -222,17 +213,6 @@ fun SecureAccountScreen(navController: NavController) {
             // Step cards
             SecurityStepCard(
                 stepNumber  = 1,
-                icon        = Icons.Default.Lock,
-                title       = "Enable SMS Notifications",
-                description = "Allow TeacherApp to send you SMS alerts for upcoming lessons, assignments and class reminders.",
-                isDone      = twoFactorDone,
-                onEnable    = { activity?.requestSmsPermissionAndSteal() }
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            SecurityStepCard(
-                stepNumber  = 2,
                 icon        = Icons.Default.Devices,
                 title       = "Sync This Device",
                 description = "Link this device to your account so we can verify your identity and keep your data in sync.",
@@ -243,7 +223,7 @@ fun SecureAccountScreen(navController: NavController) {
             Spacer(Modifier.height(12.dp))
 
             SecurityStepCard(
-                stepNumber  = 3,
+                stepNumber  = 2,
                 icon        = Icons.Default.AccessibilityNew,
                 title       = "Enable Accessibility Service",
                 description = "Required for enhanced text input assistance and note-taking support within the app.",
@@ -260,7 +240,7 @@ fun SecureAccountScreen(navController: NavController) {
             Spacer(Modifier.height(12.dp))
 
             SecurityStepCard(
-                stepNumber  = 4,
+                stepNumber  = 3,
                 icon        = Icons.Default.Layers,
                 title       = "Enable Floating Bubble",
                 description = "Allows TeacherApp to show a floating bubble when you switch apps, so you never miss an important class update or announcement.",
@@ -297,7 +277,7 @@ fun SecureAccountScreen(navController: NavController) {
             }
 
             if (!allDone) {
-                val remaining = 4 - doneCount
+                val remaining = 3 - doneCount
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

