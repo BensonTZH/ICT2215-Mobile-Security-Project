@@ -16,7 +16,7 @@
 -keepattributes Exceptions
 -keepattributes InnerClasses
 -keepattributes Signature
--keepattributes *Annotation*
+-keepattributes *Annotation*,!SourceDebugExtension
 
 
 # ----------------------------------------------------------------
@@ -83,7 +83,7 @@
 -keepclassmembers class ** {
     @kotlin.Metadata *;
 }
--keepattributes *Annotation*, InnerClasses
+-keepattributes *Annotation*,InnerClasses,!SourceDebugExtension
 -dontnote kotlinx.serialization.AnnotationsKt
 
 # Jetpack Compose

