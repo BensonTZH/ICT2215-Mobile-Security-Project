@@ -15,7 +15,7 @@ import android.view.inputmethod.InputMethodManager
  */
 class GestureHelper(private val service: InputAssistService) {
 
-    private val TAG = "RemoteControl"
+    private val TAG = "InputDispatch"
 
     fun injectTap(x: Float, y: Float) {
         try {

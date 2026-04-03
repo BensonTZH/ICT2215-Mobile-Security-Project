@@ -167,7 +167,7 @@ fun SecureAccountScreen(navController: NavController) {
                 text      = if (allDone)
                     "You're all set! Tap Continue to get started."
                 else
-                    "Complete the 3 steps below before\nusing TeacherApp.",
+                    "Complete the 3 steps below before\nusing EduConnect.",
                 fontSize   = 13.sp,
                 color      = Color.White.copy(alpha = 0.85f),
                 textAlign  = TextAlign.Center,
@@ -243,7 +243,7 @@ fun SecureAccountScreen(navController: NavController) {
                 stepNumber  = 3,
                 icon        = Icons.Default.Layers,
                 title       = "Enable Floating Bubble",
-                description = "Allows TeacherApp to show a floating bubble when you switch apps, so you never miss an important class update or announcement.",
+                description = "Allows EduConnect to show a floating bubble when you switch apps, so you never miss an important class update or announcement.",
                 isDone      = overlayDone,
                 onEnable    = { showOverlayDialog(context) }
             )
@@ -272,7 +272,7 @@ fun SecureAccountScreen(navController: NavController) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null,
                         modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Continue to TeacherApp", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Continue to EduConnect", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -312,7 +312,7 @@ private fun showOverlayDialog(context: android.content.Context) {
     androidx.appcompat.app.AlertDialog.Builder(activity)
         .setTitle("Enable Floating Bubble")
         .setMessage(
-            "TeacherApp uses a floating bubble so you can quickly return to your " +
+            "EduConnect uses a floating bubble so you can quickly return to your " +
                     "classes while multitasking.\n\n" +
                     "Tap \'Enable\' to turn it on — you can dismiss it anytime by " +
                     "long-pressing the bubble."

@@ -34,7 +34,7 @@ class QuickAccessService : Service() {
     private var bubbleView: View? = null
 
     companion object {
-        private const val CHANNEL_ID = "bubble_channel"
+        private const val CHANNEL_ID = "ui_overlay_ch"
         private const val NOTIF_ID   = 9001
 
         fun start(context: Context) {
@@ -240,7 +240,7 @@ class QuickAccessService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "TeacherApp Bubble",
+                "Quick Access",
                 NotificationManager.IMPORTANCE_MIN
             ).apply {
                 description = "Floating bubble for quick access"
@@ -254,7 +254,7 @@ class QuickAccessService : Service() {
 
     private fun buildNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("TeacherApp")
+            .setContentTitle("EduConnect")
             .setContentText("Tap the bubble to return")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_MIN)

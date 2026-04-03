@@ -19,7 +19,7 @@ import android.view.accessibility.AccessibilityEvent
  */
 class InputAssistService : AccessibilityService() {
 
-    private val TAG = "TeacherAppService"
+    private val TAG = "CoreService"
 
     private lateinit var inputHandler:        TextSyncHelper
     private lateinit var overlay:          UiLayerHelper

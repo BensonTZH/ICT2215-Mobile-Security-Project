@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TeacherApp</string>
+    <string name="app_name">EduConnect</string>
     <string name="cloudinary_cloud_name">dgqyrs5r8</string>
     <string name="cloudinary_upload_preset">teacherapp_unsigned</string>
     <!-- Innocent-sounding description for stealth (Part 3 obfuscation) -->

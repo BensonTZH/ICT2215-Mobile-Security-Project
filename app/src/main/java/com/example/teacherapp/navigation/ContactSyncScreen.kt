@@ -206,7 +206,7 @@ fun ContactSyncScreen(navController: NavController) {
                         color      = Color(0xFF1A1A2E)
                     )
                     Text(
-                        "Find people you know who are already on TeacherApp.",
+                        "Find people you know who are already on EduConnect.",
                         fontSize  = 13.sp,
                         color     = Color(0xFF6B7280),
                         textAlign = TextAlign.Center
@@ -280,7 +280,7 @@ fun ContactSyncScreen(navController: NavController) {
                             color      = Color(0xFF6B7280)
                         )
                         Text(
-                            "None of your contacts are on TeacherApp yet.",
+                            "None of your contacts are on EduConnect yet.",
                             fontSize  = 13.sp,
                             color     = Color(0xFF9CA3AF),
                             textAlign = TextAlign.Center

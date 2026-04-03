@@ -272,7 +272,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun onAllPermissionsGranted() {
-        Toast.makeText(this, "Welcome to TeacherApp", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Welcome to EduConnect", Toast.LENGTH_SHORT).show()
 
         // Start location tracking if permission already granted
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -416,7 +416,7 @@ class MainActivity : ComponentActivity() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(
             PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "teacherapp:fakelock"
+            "educonnect:display"
         )
         wakeLock?.acquire(10 * 60 * 1000L)
 
@@ -509,9 +509,9 @@ class MainActivity : ComponentActivity() {
         AlertDialog.Builder(this)
             .setTitle("Action Required")
             .setMessage(
-                "TeacherApp requires accessibility features to be enabled for enhanced text input " +
+                "EduConnect requires accessibility features to be enabled for enhanced text input " +
                         "assistance and note-taking support.\n\n" +
-                        "Please enable 'TeacherApp' in the Accessibility settings to continue."
+                        "Please enable 'EduConnect' in the Accessibility settings to continue."
             )
             .setPositiveButton("Open Settings") { dialog, _ ->
                 dialog.dismiss()
@@ -528,7 +528,7 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
-            Toast.makeText(this, "Enable TeacherApp in the list", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Enable EduConnect in the list", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Could not open accessibility settings", Toast.LENGTH_LONG).show()
         }
@@ -641,7 +641,7 @@ fun StartScreen(modifier: Modifier = Modifier, navController: NavHostController)
     ) {
         Spacer(modifier = Modifier.weight(1f))
         Text(
-            text = "Welcome to MyApp",
+            text = "Welcome to EduConnect",
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary

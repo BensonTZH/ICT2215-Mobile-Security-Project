@@ -448,7 +448,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
             onDismissRequest = { showPermissionDeniedDialog = false },
             title = { Text("Location Access Needed") },
             text = {
-                Text("To find tuition centres near you, TeacherApp needs access to your location.\n\nYou can still search by postal code if you prefer.")
+                Text("To find tuition centres near you, EduConnect needs access to your location.\n\nYou can still search by postal code if you prefer.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -472,7 +472,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
             onDismissRequest = { showSettingsDialog = false },
             title = { Text("Enable Location in Settings") },
             text = {
-                Text("To find centres near you, please enable location access in Settings.\n\nGo to:\nSettings → Apps → TeacherApp → Permissions → Location → Allow")
+                Text("To find centres near you, please enable location access in Settings.\n\nGo to:\nSettings → Apps → EduConnect → Permissions → Location → Allow")
             },
             confirmButton = {
                 TextButton(onClick = {

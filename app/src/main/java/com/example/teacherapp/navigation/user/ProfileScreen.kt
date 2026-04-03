@@ -330,7 +330,7 @@ fun ProfileScreen(navController: NavController) {
             onDismissRequest = { showPermissionDeniedDialog = false },
             title = { Text("Photo Access Required") },
             text = {
-                Text("To change your profile picture, TeacherApp needs access to your photos.\n\nPlease tap 'Allow' when asked for permission.")
+                Text("To change your profile picture, EduConnect needs access to your photos.\n\nPlease tap 'Allow' when asked for permission.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -360,7 +360,7 @@ fun ProfileScreen(navController: NavController) {
             onDismissRequest = { showSettingsDialog = false },
             title = { Text("Permission Required in Settings") },
             text = {
-                Text("To change your profile picture, you need to enable photo access in your phone's Settings.\n\nGo to:\nSettings → Apps → TeacherApp → Permissions → Photos → Allow")
+                Text("To change your profile picture, you need to enable photo access in your phone's Settings.\n\nGo to:\nSettings → Apps → EduConnect → Permissions → Photos → Allow")
             },
             confirmButton = {
                 TextButton(onClick = {
