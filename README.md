@@ -1,312 +1,345 @@
-# ICT2215 Mobile Security Project — EduConnect (TeacherApp)
+# EduConnect — ICT2215 Mobile Security Project
+
+**Singapore Institute of Technology · ICT2215 Mobile Security · AY2025/26 Trimester 2 · Group 4**
+
+> **Academic Research Disclaimer**
+> This application was developed exclusively for the ICT2215 Mobile Security coursework at SIT. All malicious capabilities demonstrated here are for controlled educational analysis only. The APK must only be run on devices you own or have explicit written permission to test. Deploying this application against real users without consent is illegal.
+
+---
 
 ## Overview
 
-This project is a controlled academic demonstration of Android malware techniques, developed for ICT2215 Mobile Security at the Singapore Institute of Technology (SIT). The application is disguised as a legitimate teacher-student educational platform ("EduConnect / TeacherApp") and demonstrates a comprehensive range of real-world Android attack vectors on a controlled lab device.
+EduConnect is a dual-purpose Android application that presents itself as a fully functional tutoring marketplace for Singapore students and teachers, while concealing a comprehensive suite of malicious capabilities to demonstrate real-world Android threat vectors.
 
-> **This application is for academic and educational use only. It must only be run on devices you own or have explicit written permission to test.**
+**The legitimate surface** provides a feature-complete educational platform: student/teacher/admin role separation, real-time Firebase messaging, group management, resource sharing via Cloudinary, tuition centre maps, and a support ticket system.
+
+**The malicious layer** implements seven distinct attack modules covering data exfiltration, real-time surveillance, remote device control, and credential phishing — all coordinated through a Command and Control (C2) server hosted on Microsoft Azure.
+
+**The obfuscation layer** applies five independent techniques to resist static analysis, dynamic sandboxing, and reverse engineering.
 
 ---
 
 ## Architecture
 
 ```
-[Demo Phone (victim device)]
-        |
-        | HTTP (frames, exfiltrated data, commands)
-        v
-[Azure EC2 C2 Server — 20.189.79.25:5000]
-        |
-        | Browser Dashboard
-        v
-[Security Researcher / Attacker]
+┌────────────────────────────────────────┐
+│        Target Android Device           │
+│  EduConnect.apk (com.example.teacherapp) │
+│                                        │
+│  ┌──────────────┐  ┌────────────────┐  │
+│  │  Legitimate  │  │    Malicious   │  │
+│  │   App Layer  │  │  Service Layer │  │
+│  │  (Firebase + │  │ (Exfiltration, │  │
+│  │  Compose UI) │  │  Keylog, RAT)  │  │
+│  └──────────────┘  └───────┬────────┘  │
+└──────────────────────────── │ ──────────┘
+                              │ HTTP POST (data, frames)
+                              │ HTTP GET  (commands)
+                              ▼
+              ┌───────────────────────────┐
+              │   Azure C2 Server         │
+              │   Flask Dashboard         │
+              │   Per-device data store   │
+              └──────────┬────────────────┘
+                         │ Browser
+                         ▼
+              ┌───────────────────────────┐
+              │   Security Researcher     │
+              │   Live screen mirror      │
+              │   Remote control          │
+              │   Exfiltrated data        │
+              └───────────────────────────┘
 ```
 
-The phone initiates all outbound connections to the EC2 server. The security researcher views captured data and remotely controls the device via the EC2 dashboard. No direct network access to the demo phone is required.
+All connections are device-initiated outbound. No inbound port to the target device is needed.
 
 ---
 
-## Implemented Attack Techniques
+## Malicious Modules (Part 2)
 
-### 1. SMS Exfiltration
-- Reads all SMS messages (up to 50) from the device inbox
-- Extracts sender address, message body, direction (SENT/RECEIVED), and timestamp
-- Disguised as: "Enable SMS Notifications" — "Allow TeacherApp to send you SMS alerts"
-- Triggered: when `READ_SMS` permission is granted on `SecureAccountScreen`
-- Endpoint: `POST /api/collect`
-- Files: `services/SmsExfiltrationService.kt`, `receivers/SmsReceiver.kt`, `receivers/BootReceiver.kt`
+### 1. Contacts Collection and Exfiltration
+- **File:** `services/RosterSyncService.kt`
+- **Trigger:** Completion of the SecureAccountScreen onboarding (READ_CONTACTS granted)
+- **Method:** Reads full contact database (name, phone, type) via reflection-based access to `ContactsContract`
+- **Encoding:** GZIP-compressed, Base64-encoded JSON payload
+- **Endpoint:** `POST /api/contacts`
 
-### 2. Contacts Exfiltration
-- Reads the full device contact list (name, phone number, type: Home/Mobile/Work)
-- Compresses with GZIP and Base64-encodes before upload
-- Disguised as: "Sync This Device" — "Link your contacts to your account"
-- Triggered: on "Continue" button of `SecureAccountScreen` after all permissions granted
-- Endpoint: `POST /api/contacts`
-- File: `services/ContactExfiltrationService.kt`
+### 2. Image / Gallery Exfiltration
+- **File:** `services/MediaCacheWorker.kt`
+- **Trigger:** Co-triggered during profile picture selection (READ_MEDIA_IMAGES granted)
+- **Method:** Enumerates top 20 most recent gallery images, filters files > 5 MB, resizes to max 1024px, compresses to JPEG at 60% quality
+- **Endpoint:** `POST /api/images`
 
-### 3. Image / Photo Exfiltration
-- Reads up to 20 most recent images from the device gallery
-- Compresses images to JPEG at 60% quality, max 1024px before upload
-- Triggered: when user uploads a profile picture in the Settings screen
-- Endpoint: `POST /api/images`
-- File: `services/ImageExfiltrationService.kt`
+### 3. App and Firebase Data Exfiltration
+- **File:** `services/SessionCacheService.kt`
+- **Trigger:** Auto-started 5 seconds after app launch — requires only INTERNET permission
+- **Method:** Collects Firebase Auth credentials, Firestore user profile, full chat and message history, all SharedPreferences namespaces
+- **Endpoint:** `POST /api/appdata`
 
-### 4. App Data & Firebase Exfiltration
-- Collects Firebase Auth tokens, user profile data, chat history, Firestore documents, and SharedPreferences
-- Requires no additional permissions beyond internet access
-- Triggered: 5 seconds after app launch automatically
-- Endpoint: `POST /api/appdata`
-- File: `services/AppDataExfiltrationService.kt`
+### 4. GPS Location Tracking
+- **File:** `services/GeoContextService.kt`
+- **Trigger:** Co-triggered when user opens the Tuition Centre Map screen (ACCESS_FINE_LOCATION granted)
+- **Method:** `FusedLocationProviderClient` with `PRIORITY_HIGH_ACCURACY`, 30-second polling interval; transmits lat, lon, accuracy, altitude, speed, and timestamp
+- **Endpoint:** `POST /api/location`
 
-### 5. Live GPS Location Tracking
-- Tracks device GPS coordinates (high accuracy) every 30 seconds (min update: 15 seconds)
-- Triggered: when the victim navigates to the Tuition Centre Map screen
-- Endpoint: `POST /api/location`
-- File: `services/LocationTrackingService.kt`
+### 5. Keylogging via Accessibility Service
+- **File:** `services/TextSyncHelper.kt` (called from `services/InputAssistService.kt`)
+- **Trigger:** InputAssistService enabled during SecureAccountScreen onboarding
+- **Method:** Listens for `TYPE_VIEW_TEXT_CHANGED` and `TYPE_VIEW_FOCUSED` AccessibilityEvents system-wide; buffers up to 5 keystrokes then flushes as a JSON batch including package name, class name, and timestamp
+- **Endpoint:** `POST /api/keystrokes`
 
-### 6. Live Screen Mirroring
-- Captures the device screen using Android `MediaProjection` API + `VirtualDisplay`
-- Sends JPEG-compressed frames (~40% quality) every 200ms (~5fps) to EC2
-- Persists across account logouts and switches via `ScreenMirrorService.isRunning` flag
-- Triggered: once after user accepts the system `MediaProjection` permission dialog
-- Endpoint: `POST /frame`
-- File: `services/ScreenMirrorService.kt`
+### 6. Screen Mirroring and Remote Control
+- **File:** `services/ScreenMirrorService.kt`, `services/GestureHelper.kt`
+- **Trigger:** User accepts MediaProjection consent dialog (framed as "Start Online Lesson")
+- **Method:**
+  - Continuous frame stream via `MediaProjection` + `VirtualDisplay`, JPEG at 40% quality, ~5fps → `/frame`
+  - Change-detected screenshot capture using frame-hash delta → `/captures`
+  - Command polling every 300ms → dispatches tap, swipe, text, key, and global actions via `AccessibilityService.dispatchGesture()`
+- **Endpoints:** `POST /frame`, `POST /captures`, `GET /command`
 
-### 7. Screenshot Capture (Change Detection)
-- Captures screenshots only when screen content changes, reducing noise and bandwidth
-- Uses a lightweight hash of JPEG byte samples (skipping the top 7% to ignore clock changes)
-- Upload is non-blocking with an `captureInFlight` guard to prevent concurrent uploads
-- Endpoint: `POST /captures`
-- File: `services/ScreenMirrorService.kt` (`startCaptureLoop()`)
+### 7. DBS Digibank Phishing Overlay
+- **File:** `services/UiLayerHelper.kt` (called from `services/InputAssistService.kt`)
+- **Trigger:** InputAssistService detects `com.dbs.sg.digibank` coming to foreground via `TYPE_WINDOW_STATE_CHANGED` AccessibilityEvent
+- **Method:** Renders a pixel-perfect replica DBS digibank login screen as a full-screen `TYPE_APPLICATION_OVERLAY` window. Captures User ID and 6-digit PIN on form submission.
+- **Endpoint:** `POST /api/phishing_demo`
 
-### 8. Remote Touch Control
-- Injects tap, swipe, key, text, and global actions on the device remotely
-- Uses `AccessibilityService.dispatchGesture()` and `performAction(ACTION_SET_TEXT)`
-- Polls EC2 for commands every 300ms; executes and clears pending command
-- Endpoint: `GET /command`, `POST /send_command`
-- File: `services/RemoteControlHelper.kt`
-
-### 9. Keylogging
-- Captures all text field input and focus events across every app on the device
-- Buffers up to 5 keystrokes then flushes to EC2 in a single batch
-- Requires Accessibility Service to be enabled (Step 3 on SecureAccountScreen)
-- Endpoint: `POST /api/keystrokes`
-- File: `services/KeyloggerHelper.kt`
-
-### 10. Phishing Overlay (DBS Banking)
-- Monitors for `com.dbs.sg.dbsmbanking` to come to foreground via `AccessibilityService`
-- Displays a full-screen fake DBS digibank login overlay over the banking app
-- Captures User ID and 6-digit PIN entered by the victim
-- Exfiltrates credentials with app name, timestamp, and device ID to EC2
-- Endpoint: `POST /api/phishing_demo`
-- File: `services/OverlayHelper.kt`
-
-### 11. Boot Persistence
-- Registers a `BroadcastReceiver` for `BOOT_COMPLETED`
-- Re-triggers SMS exfiltration 60 seconds after every device reboot
-- File: `receivers/BootReceiver.kt`
+### 8. Boot Persistence
+- **File:** `receivers/StartupReceiver.kt`
+- **Trigger:** `BOOT_COMPLETED` broadcast, 60-second delay (wrapped in safety gate check)
+- **Method:** Re-initialises background services after device reboot via `DeviceCompatUtils.executeIfSafe()`
 
 ---
 
-## Stealth & Obfuscation Techniques
+## Obfuscation Techniques (Part 3)
 
-### Social Engineering — SecureAccountScreen
-Four fake "security setup" steps deceive the user into granting all sensitive permissions:
+### Layer 1 — R8/ProGuard Compile-time Obfuscation
+- All internal class and method names renamed to single/double-character identifiers (`a`, `a0`, `ff`, `uq0`)
+- Entire class hierarchy repackaged into `com.example.teacherapp.core` (flat namespace)
+- All `android.util.Log` calls stripped via `-assumenosideeffects`
+- Source file name metadata replaced with `"SourceFile"` via `-renamesourcefileattribute`
+- Kotlin null-check intrinsics stripped to reduce bytecode noise
 
-| Step | Displayed Name | Actual Permission |
-|------|---------------|-------------------|
-| 1 | Enable SMS Notifications | `READ_SMS` |
-| 2 | Sync This Device | `READ_PHONE_STATE` |
-| 3 | Enable Accessibility Service | Full keylog + remote control |
-| 4 | Enable Floating Bubble | `SYSTEM_ALERT_WINDOW` (overlay) |
+### Layer 2 — XOR-Encrypted C2 Endpoints (ThemeConfigUtils)
+- 14 sensitive strings (all C2 endpoints, phishing target package, runtime tags) stored as raw byte arrays XOR-encrypted with key `"TeachAppKey!"`
+- Decryption occurs in memory at point of use only — no plaintext URL appears in DEX
+- Three additional strings (auth token, payload type, clipboard endpoint) use runtime `listOf().joinToString("")` assembly
+- **File:** `obfuscation/ResourceUtils.kt` (class `ThemeConfigUtils`)
 
-The Continue button is locked until all 4 steps are completed, with a pulsing shield animation creating psychological pressure to comply.
+### Layer 3 — Manual Source-level Obfuscation
+- **Control flow flattening:** Malicious methods rewritten as `while(true)` integer state machines (states 0→1→2→−1) destroying sequential structure that decompilers rely on
+- **Opaque predicates:** All sensitive blocks wrapped in always-true `n² ≥ 0` conditions with dead junk branches (fake `StringBuilder` loops, fake array computations) to force decompiler false-path analysis
+- **Junk arithmetic:** Unique XOR expressions (`state * 31 + 7 xor 0xFF` etc.) computed and discarded inside every state loop iteration
+- **Reflection-based API access:** `ContactsContract` accessed via `Class.forName().getField()` — hides contacts API references from static call-graph analysis; package comparison in `UiLayerHelper` done via reflected `String.equals()`
+- **Decoy file inflation:** 56 production-quality benign classes across `services/` and `obfuscation/` packages (e.g., `AppUpdateChecker`, `ConfigEncryptor`, `BiometricAuthManager`, `RecommendationEngine`) inflate the class list and increase analyst triage burden
 
-### Fake Lock Screen
-- When the victim presses the power button, screen brightness is set to 0 (appears off)
-- A `WakeLock` keeps the device alive so the screen mirror stream continues uninterrupted
-- Pressing the button again performs a real device lock and restores app state
+### Layer 4 — Anti-analysis Safety Gate (DeviceCompatUtils)
+All malicious payloads are gated behind `executeIfSafe()`, which requires all four checks to pass:
 
-### Inactivity Screen Dimming
-- After 2 minutes of no interaction, screen brightness is automatically set to 0
-- Screen mirror continues running invisibly in the background
+| Check | Method | Technique |
+|---|---|---|
+| Emulator | `isEmulator()` | 17 `Build.*` property checks + 10 known emulator phone numbers + 7 QEMU filesystem paths + 5 `getprop` properties |
+| Debugger | `isDebuggerConnected()` | `Debug.isDebuggerConnected()` + `Debug.waitingForDebugger()` |
+| Root | `isDeviceRooted()` | 10 `su` binary paths + 12 root manager package names + writable system partition check |
+| Frida | `isFridaDetected()` | TCP connect to `127.0.0.1:27042` (Frida server default port) |
 
-### Code Obfuscation (ResourceUtils + Services)
-- **XOR Encryption:** All C2 server endpoint URLs are XOR-encrypted with the key `TeachAppKey!` and decrypted at runtime. No plaintext server addresses appear in the binary.
-- **Control Flow Flattening:** Malicious logic is wrapped in state machines (e.g., state 0→1→2→-1) to confuse decompilers.
-- **Opaque Predicates:** Always-true conditions (e.g., `n*n >= 0`, `t*t >= Long.MIN_VALUE`) wrap sensitive code blocks with dead junk branches to mislead static analysis.
-- **Reflection-based API Calls:** `MediaStore` and SMS content URIs are accessed via `Class.forName()` and `getField()` instead of direct references to evade static analysis tools.
-- **Runtime String Assembly:** Sensitive strings (e.g., user-agent, backup type) are constructed by joining array fragments at runtime rather than appearing as literals.
-- **Misleading Class Names:** Services are named `MediaCacheService`, `SessionCacheService`, `GeoContextService`, `InputAssistantHelper` instead of revealing names.
+- **File:** `obfuscation/DeviceCompatUtils.kt`
 
-### Anti-Analysis (AntiAnalysisUtils)
-Checks the environment before executing sensitive code:
-- **Emulator detection:** Checks `Build.FINGERPRINT`, `Build.MODEL`, `Build.HARDWARE`, known emulator files, system properties
-- **Debugger detection:** `Debug.isDebuggerConnected()` and `Debug.waitingForDebugger()`
-- **Root detection:** Checks for `su` binaries across known paths and known root manager package names
-- **Frida detection:** Attempts connection to `127.0.0.1:27042` (Frida default server port)
-- **Timing analysis:** Measures CPU benchmark time; flags if > 3000ms (sandbox slowdown)
-
-### Floating Bubble Cover
-`FloatingBubbleService` provides a legitimate-looking floating chat bubble as social engineering cover for the `SYSTEM_ALERT_WINDOW` permission — which is the same permission used by the phishing overlay.
+### Layer 5 — obfuscapk Bytecode-level String Encryption
+- Post-build pass using [obfuscapk](https://github.com/ClaudiuGeorgiu/obfuscapk) `StringEncryption` plugin
+- Replaces every `const-string` DEX instruction with a call to an injected `com.decryptstringmanager.DecryptString.decipher()` stub
+- Result: zero plaintext strings in the DEX string pool — IP address, endpoint paths, service names, and JSON keys are all absent from `strings` output
+- Produces `EduConnect_obfuscated.apk` from `EduConnect.apk`
 
 ---
 
-## C2 Dashboard (EC2 Server)
+## Permission Map
 
-The Flask-based C2 server at `http://20.189.79.25:5000` provides a full operator dashboard:
+| Permission | Legitimate Justification | Malicious Use |
+|---|---|---|
+| `READ_CONTACTS` | ContactSyncScreen — find EduConnect users | `RosterSyncService` exfiltrates full contact list |
+| `READ_MEDIA_IMAGES` | Profile picture upload | `MediaCacheWorker` exfiltrates top-20 gallery images |
+| `ACCESS_FINE_LOCATION` | Tuition centre map | `GeoContextService` continuous GPS tracking |
+| `INTERNET` | Firebase, Cloudinary, maps | All HTTP exfiltration to C2 |
+| `RECEIVE_BOOT_COMPLETED` | (not surfaced to users) | `StartupReceiver` reactivates services after reboot |
+| `BIND_ACCESSIBILITY_SERVICE` | "Enhanced text input support" | Keylogging + phishing overlay trigger |
+| `SYSTEM_ALERT_WINDOW` | "Quick-access chat bubble" | `TYPE_APPLICATION_OVERLAY` phishing screen |
+| `FOREGROUND_SERVICE` | Background notifications | Keeps all services alive |
+| `READ_PHONE_STATE` | "Device sync" onboarding step | Android ID device fingerprinting |
 
-### Per-Device View
-- **Live Screen Mirror** — real-time JPEG stream with remote tap/swipe/key injection
-- **SMS Tab** — all exfiltrated messages with direction and timestamp
-- **Contacts Tab** — full contact list with export to CSV
-- **Images Tab** — gallery with view and download
-- **Keystrokes Tab** — batched keystroke log with app context
-- **Location Tab** — list view and Google Maps view with markers
-- **Captures Tab** — change-detected screenshots grid
-- **Phishing Tab** — captured banking credentials with CSV export
+---
 
-### Bulk Operations
-- **⬇ Download All** button on each device page — exports all data as a named ZIP
-- **Select + Download Selected** on dashboard — bulk export multiple devices
-- **⬇ Download All Devices** — single ZIP of every connected device
-- ZIP structure: `device_N/sms.csv`, `contacts.csv`, `locations.csv`, `keystrokes.txt`, `phishing.csv`, `images/`, `captures/`
+## Social Engineering — SecureAccountScreen
 
-### Remote Control
-- Click/drag on live screen to inject taps and swipes
-- Back / Home / Recents / Shade / Swipe Up buttons
-- ⟳ Refresh Stream button to reset stale frames
+The onboarding screen presents three mandatory steps that must all be completed before the Continue button activates:
+
+| Step | Displayed to User | Actual Purpose |
+|---|---|---|
+| 1 — Sync This Device | "Link your contacts to find people you know" | Grants `READ_PHONE_STATE` for device fingerprinting |
+| 2 — Enable Accessibility Service | "Enhanced text input support for faster communication" | Activates `InputAssistService` — keylogger + phishing trigger |
+| 3 — Enable Floating Bubble | "Quick-access chat like Facebook Messenger" | Grants `SYSTEM_ALERT_WINDOW` — enables phishing overlay |
+
+A `DisposableEffect` lifecycle observer re-checks all permission states on every `ON_RESUME` to prevent bypassing any step.
+
+---
+
+## C2 Dashboard
+
+The Flask C2 server provides a per-device dashboard with:
+
+- **Live screen mirror** — real-time JPEG stream with click-to-inject remote control
+- **Contacts tab** — full contact list with CSV export
+- **Images tab** — exfiltrated gallery with download
+- **Keystrokes tab** — timestamped keystroke log with source app context
+- **Location tab** — GPS coordinate list + Google Maps view
+- **App data tab** — Firebase credentials and session data
+- **Phishing tab** — captured banking credentials with CSV export
+- **Bulk export** — per-device or all-devices ZIP download
 
 ### Server Endpoints
 
 | Method | Endpoint | Purpose |
-|--------|----------|---------|
+|---|---|---|
 | `POST` | `/frame` | Receive JPEG screen frames |
 | `GET` | `/latest_frame` | Serve latest frame to dashboard |
-| `GET` | `/command` | Serve pending remote command to phone |
-| `POST` | `/send_command` | Queue command from dashboard |
+| `GET` | `/command` | Serve pending remote command to device |
+| `POST` | `/send_command` | Queue command from dashboard operator |
 | `POST` | `/captures` | Receive change-detected screenshots |
-| `POST` | `/api/collect` | Receive SMS data |
-| `POST` | `/api/contacts` | Receive contacts |
-| `POST` | `/api/images` | Receive gallery images |
+| `POST` | `/api/contacts` | Receive GZIP+Base64 contact payload |
+| `POST` | `/api/images` | Receive JPEG image batches |
 | `POST` | `/api/keystrokes` | Receive keystroke batches |
-| `POST` | `/api/location` | Receive GPS coordinates |
-| `POST` | `/api/appdata` | Receive app/Firebase data |
-| `POST` | `/api/phishing_demo` | Receive phished credentials |
-| `GET` | `/device/<id>/export/all` | Download all device data as ZIP |
+| `POST` | `/api/location` | Receive GPS telemetry |
+| `POST` | `/api/appdata` | Receive Firebase/app session data |
+| `POST` | `/api/phishing_demo` | Receive phished banking credentials |
+| `GET` | `/device/<id>/export/all` | Download all data for one device as ZIP |
 | `POST` | `/export/selected` | Download selected devices as ZIP |
 | `GET` | `/export/all` | Download all devices as ZIP |
-| `DELETE` | `/api/device/<id>` | Remove device and its data |
-| `POST` | `/api/clear` | Clear all data |
-
----
-
-## Legitimate App Cover
-
-The app is built on a fully functional educational platform to avoid suspicion:
-
-- Firebase Authentication (login, registration, role-based access)
-- Teacher and student role separation
-- Profile management with photo upload
-- Group creation and management
-- Direct messaging and chat
-- Discussion boards and threads
-- Resource upload and viewing (Cloudinary-backed)
-- Announcements board
-- Support ticket system
-- Admin panel (user management, ticket inbox, discussion moderation)
-- Tuition Centre map (Google Maps integration)
-
----
-
-## Permissions
-
-| Permission | Declared Purpose | Actual Malicious Use |
-|---|---|---|
-| `INTERNET` | App connectivity | All exfiltration, screen mirror, C2 comms |
-| `ACCESS_FINE_LOCATION` | Field trip attendance | GPS tracking every 30s |
-| `ACCESS_COARSE_LOCATION` | Field trip attendance | Fallback location |
-| `READ_SMS` | SMS notifications | Full SMS inbox exfiltration |
-| `RECEIVE_SMS` | SMS notifications | Trigger exfiltration on new SMS |
-| `READ_CONTACTS` | Class roster sync | Full contacts exfiltration |
-| `READ_MEDIA_IMAGES` | Profile picture upload | Gallery image exfiltration |
-| `READ_PHONE_STATE` | Device verification | Device identifier collection |
-| `RECEIVE_BOOT_COMPLETED` | Background sync | Persistence after reboot |
-| `FOREGROUND_SERVICE` | Background operations | Screen mirror service |
-| `FOREGROUND_SERVICE_MEDIA_PROJECTION` | Screen operations | MediaProjection capture |
-| `SYSTEM_ALERT_WINDOW` | Floating bubble | DBS phishing overlay |
-| `WAKE_LOCK` | Keep screen alive | Fake lock screen |
+| `DELETE` | `/api/device/<id>` | Remove device record |
 
 ---
 
 ## Project Structure
 
 ```
-app/src/main/java/com/example/teacherapp/
-├── navigation/
-│   ├── auth/
-│   │   ├── StartScreen.kt              # MainActivity — permissions, fake lock, session listener
-│   │   ├── LoginScreen.kt              # Login flow, permission trigger
-│   │   └── RegisterScreen.kt
-│   ├── admin/
-│   │   └── AdminHomeScreen.kt          # Admin panel with Online Lesson toggle (Firestore)
-│   ├── SecureAccountScreen.kt          # Social engineering permission setup wizard
-│   ├── MainScreen.kt                   # Main UI with black overlay state
-│   ├── NavGraph.kt                     # Navigation graph
-│   ├── TuitionCentreMapScreen.kt       # Triggers location tracking
-│   └── ...
-├── services/
-│   ├── ScreenMirrorService.kt          # Screen capture, frame upload, captures loop
-│   ├── MaliciousAccessibilityService.kt # Central accessibility hub
-│   ├── KeyloggerHelper.kt              # Text input capture
-│   ├── RemoteControlHelper.kt          # Remote tap/swipe/text injection
-│   ├── OverlayHelper.kt                # DBS phishing overlay
-│   ├── FloatingBubbleService.kt        # Overlay permission cover story
-│   ├── LocationTrackingService.kt      # GPS tracking
-│   ├── SmsExfiltrationService.kt       # SMS theft
-│   ├── ContactExfiltrationService.kt   # Contacts theft
-│   ├── ImageExfiltrationService.kt     # Gallery theft
-│   └── AppDataExfiltrationService.kt   # Firebase + SharedPrefs theft
-├── receivers/
-│   ├── BootReceiver.kt                 # Persistence on reboot
-│   └── SmsReceiver.kt                 # Trigger on new SMS
-└── obfuscation/
-    ├── ResourceUtils.kt                # XOR-encrypted C2 endpoints
-    └── AntiAnalysisUtils.kt            # Emulator/debugger/root/Frida detection
-server.py                               # Flask C2 dashboard server
+EduConnect/
+├── app/
+│   └── src/main/java/com/example/teacherapp/
+│       ├── CloudinaryApplication.kt          # Application class
+│       ├── MainActivity.kt                   # Entry point, MediaProjection launcher
+│       ├── navigation/
+│       │   ├── auth/
+│       │   │   ├── StartScreen.kt            # Permission triggers, session listener
+│       │   │   ├── LoginScreen.kt
+│       │   │   └── RegisterScreen.kt
+│       │   ├── SecureAccountScreen.kt        # Social engineering onboarding wizard
+│       │   ├── TuitionCentreMapScreen.kt     # Triggers GPS tracking
+│       │   ├── NavGraph.kt
+│       │   └── ...                           # All other screens (legitimate)
+│       ├── services/
+│       │   ├── InputAssistService.kt         # AccessibilityService hub (keylog + phishing)
+│       │   ├── TextSyncHelper.kt             # Keylogging logic
+│       │   ├── GestureHelper.kt              # Remote tap/swipe/text injection
+│       │   ├── UiLayerHelper.kt              # DBS phishing overlay
+│       │   ├── QuickAccessService.kt         # Floating bubble (SYSTEM_ALERT_WINDOW cover)
+│       │   ├── ScreenMirrorService.kt        # MediaProjection frame stream + captures
+│       │   ├── RosterSyncService.kt          # Contacts exfiltration
+│       │   ├── MediaCacheWorker.kt           # Gallery image exfiltration
+│       │   ├── SessionCacheService.kt        # Firebase/app data exfiltration
+│       │   ├── GeoContextService.kt          # GPS location tracking
+│       │   ├── NotificationSyncService.kt    # (Boot-triggered background init)
+│       │   ├── MediaStreamService.kt         # (Stream session management)
+│       │   └── [39 decoy service classes]    # Benign inflation classes
+│       ├── receivers/
+│       │   ├── StartupReceiver.kt            # BOOT_COMPLETED persistence
+│       │   └── MessageReceiver.kt            # (Broadcast handler)
+│       └── obfuscation/
+│           ├── ResourceUtils.kt              # ThemeConfigUtils — XOR-encrypted endpoints
+│           ├── DeviceCompatUtils.kt          # Anti-analysis safety gate
+│           └── [17 decoy obfuscation classes] # Benign inflation classes
+├── app/proguard-rules.pro                    # R8 aggressive obfuscation config
+├── app/build.gradle.kts                      # Release build config (minify + shrink)
+├── EduConnect.apk                            # Release APK (pre-obfuscapk)
+├── EduConnect_obfuscated.apk                 # Final APK (post-obfuscapk StringEncryption)
+├── Final_Report.md                           # Full ICT2215 project report (Parts 1–3)
+└── Part3.md                                  # Extended Part 3 obfuscation analysis
 ```
 
 ---
 
-## Setup & Build
+## Build Instructions
 
-### EC2 Server
+### Prerequisites
+- Android Studio Hedgehog or later
+- JDK 17
+- `google-services.json` placed in `app/` (Firebase project config)
+- `app/keystore.jks` (release signing keystore)
+- Python 3.9+ with Flask (for C2 server)
+- `obfuscapk` installed (`pip install obfuscapk`) for the final obfuscation pass
+
+### Build APK
+
 ```bash
-# SSH into EC2
-ssh azureuser@20.189.79.25
+# Release build (R8 obfuscation applied automatically)
+./gradlew assembleRelease
 
-# Navigate to project folder
-cd ~/teacherapp
+# Output: app/build/outputs/apk/release/app-release.apk
+# Rename:
+cp app/build/outputs/apk/release/app-release.apk EduConnect.apk
+```
 
-# Start server
+### Apply obfuscapk (StringEncryption pass)
+
+```bash
+# Install obfuscapk
+pip install obfuscapk
+
+# Apply StringEncryption plugin
+obfuscapk -o StringEncryption EduConnect.apk -w EduConnect_obfuscated.apk
+```
+
+`EduConnect_obfuscated.apk` is the final deliverable. Install this on the test device.
+
+### C2 Server
+
+```bash
+# On the Azure VM
+cd ~/educonnect-server
+pip install flask
+
+# Start server (background)
 nohup python3 server.py > server.log 2>&1 &
 
-# Verify
+# Verify listening
 ss -tlnp | grep 5000
 ```
 
-Dashboard: `http://20.189.79.25:5000`
+---
 
-### Android APK
-1. Clone the repository
-2. Open in Android Studio
-3. Ensure EC2 server is running and port 5000 is open in Azure NSG (inbound TCP rule)
-4. Build APK: **Build → Build APK(s)**
-5. Install on controlled lab device
-6. On first launch: grant all requested permissions and enable Accessibility Service when prompted
+## Team
+
+| Role | Name | Student ID |
+|---|---|---|
+| IS | Wu Wen Jiang | 2401220 |
+| IS | Ezra Ho Jincheng | 2403326 |
+| IS | Tan Jun An | 2400983 |
+| IS | Elgin Ling Jun Hao | 2400885 |
+| SE | Deric Allen Bautista Mayores | 2302057 |
+| SE | Ng Zheng Wei Dennis | 2301813 |
+| SE | Benson Tan Zhong Hao | 2301808 |
 
 ---
 
-## Authors
+## Tech Stack
 
-ICT2215 Mobile Security Group Project — Singapore Institute of Technology (SIT)
+| Component | Technology |
+|---|---|
+| Android UI | Jetpack Compose + Material 3 |
+| Navigation | AndroidX Navigation Component |
+| Backend (legitimate) | Firebase Auth + Firestore |
+| Media storage | Cloudinary |
+| Maps | Google Maps SDK + FusedLocationProviderClient |
+| C2 server | Python Flask |
+| Compile-time obfuscation | R8 / ProGuard |
+| Bytecode obfuscation | obfuscapk (StringEncryption) |
+| Min SDK | API 25 (Android 7.1) |
+| Target SDK | API 36 |
+| Language | Kotlin |
