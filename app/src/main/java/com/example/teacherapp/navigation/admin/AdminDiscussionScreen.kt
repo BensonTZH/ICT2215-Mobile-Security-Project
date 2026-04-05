@@ -57,9 +57,14 @@ fun AdminDiscussionScreen(navController: NavController) {
                 for (document in result) {
                     val groupName   = document.getString("name")        ?: ""
                     val teacherId   = document.getString("teacherId")   ?: ""
-                    val teacherName = document.getString("teacherName") ?: ""
+//                    val teacherName = document.getString("teacherName") ?: ""
                     if (groupName.isNotBlank() && teacherId.isNotBlank()) {
-                        groups.add(Group(groupName, teacherName, teacherId))
+//                        groups.add(Group(groupName, teacherName, teacherId))
+                        db.collection("users").document(teacherId).get()
+                            .addOnSuccessListener { userDoc ->
+                                val teacherName = userDoc.getString("name") ?: "Unknown"
+                                groups.add(Group(groupName, teacherName, teacherId))
+                            }
                     }
                 }
             }
