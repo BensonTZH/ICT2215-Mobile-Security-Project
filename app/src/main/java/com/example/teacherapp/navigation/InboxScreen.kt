@@ -72,7 +72,7 @@ fun InboxScreen(navController: NavController) {
     }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    // Listen for chats involving the current user
+    
     LaunchedEffect(currentUser?.uid, userRole) {
         if (currentUser == null) return@LaunchedEffect
         if (userRole == "administrator") return@LaunchedEffect
@@ -103,7 +103,7 @@ fun InboxScreen(navController: NavController) {
             }
     }
 
-    // Filtered chats based on the search query
+    
     val filteredChats = chats.filter { chat ->
         if (currentUser == null) return@filter false
         chat.participants.any { participant ->
@@ -111,7 +111,7 @@ fun InboxScreen(navController: NavController) {
         }
     }
 
-    // Fetch names for the other users
+    
     LaunchedEffect(chats, userRole) {
         if (currentUser == null) return@LaunchedEffect
         if (userRole == "administrator") return@LaunchedEffect
@@ -151,7 +151,7 @@ fun InboxScreen(navController: NavController) {
                 windowInsets = WindowInsets(0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = indigo,
-                    scrolledContainerColor = indigo, // Keeps it red when scrolling
+                    scrolledContainerColor = indigo, 
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -250,7 +250,7 @@ fun InboxChatCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp) // Small gap between cards
+            .padding(vertical = 4.dp) 
             .clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -260,7 +260,7 @@ fun InboxChatCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Profile Icon
+            
             Surface(
                 modifier = Modifier.size(52.dp),
                 shape = CircleShape,

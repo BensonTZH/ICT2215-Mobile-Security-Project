@@ -59,11 +59,11 @@ fun SubmitTicketScreen(navController: NavController) {
                     userRole = doc.getString("role") ?: "student"
                 }
                 .addOnFailureListener { e ->
-                    // Handle error
+                    
                     Log.e("Firestore", "Error getting user role", e)
                 }
         } else {
-            // Handle case where the user is not logged in
+            
             userRole = "Student"
         }
     }

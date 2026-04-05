@@ -78,7 +78,7 @@ fun DiscoveryScreen(navController: NavController) {
             val matchesDay = if (selectedDays.contains("Any")) {
                 true
             } else {
-                // Check if there is any overlap between teacher availability and selected days
+                
                 availability.any { it in selectedDays }
             }
 
@@ -90,7 +90,7 @@ fun DiscoveryScreen(navController: NavController) {
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = BackgroundGray, // Softens the white background
+        containerColor = BackgroundGray, 
         topBar = {
             TopAppBar(
                 title = {
@@ -108,7 +108,7 @@ fun DiscoveryScreen(navController: NavController) {
                 windowInsets = WindowInsets(0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = EducationBlue,
-                    scrolledContainerColor = EducationBlue, // Changed from Transparent to Blue
+                    scrolledContainerColor = EducationBlue, 
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -119,10 +119,10 @@ fun DiscoveryScreen(navController: NavController) {
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
-            // Modern Search Bar
+            
             SearchBarSection(searchQuery) { searchQuery = it }
 
-            // Filter Section
+            
             Column(modifier = Modifier.fillMaxWidth().background(Color.White).padding(bottom = 16.dp)) {
                 Text(
                     "Expertise",
@@ -132,7 +132,7 @@ fun DiscoveryScreen(navController: NavController) {
                 )
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp), // Increased spacing
+                    horizontalArrangement = Arrangement.spacedBy(12.dp), 
                     modifier = Modifier.padding(vertical = 12.dp)
                 ) {
                     items(subjectOptions) { subject ->
@@ -140,7 +140,7 @@ fun DiscoveryScreen(navController: NavController) {
                         LargeCustomChip(
                             label = subject,
                             selected = isSelected,
-                            // Pass a custom icon based on the subject name
+                            
                             iconResId = when(subject.lowercase().trim()) {
                                 "mathematics" -> R.drawable.mathematic
                                 "computer science" -> R.drawable.data_science
@@ -171,7 +171,7 @@ fun DiscoveryScreen(navController: NavController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween // Spreads icons across the screen
+                    horizontalArrangement = Arrangement.SpaceBetween 
                 ) {
                     days.forEach { day ->
                         val isSelected = selectedDays.contains(day)
@@ -180,10 +180,10 @@ fun DiscoveryScreen(navController: NavController) {
                             isSelected = isSelected,
                             onClick = {
                                 if (day == "Any") {
-                                    selectedDays = setOf("Any") // Reset to only "Any"
+                                    selectedDays = setOf("Any") 
                                 } else {
                                     val newSelection = selectedDays.toMutableSet()
-                                    newSelection.remove("Any") // Remove "Any" if a specific day is picked
+                                    newSelection.remove("Any") 
 
                                     if (isSelected) {
                                         newSelection.remove(day)
@@ -191,7 +191,7 @@ fun DiscoveryScreen(navController: NavController) {
                                         newSelection.add(day)
                                     }
 
-                                    // If nothing is selected, default back to "Any"
+                                    
                                     selectedDays = if (newSelection.isEmpty()) setOf("Any") else newSelection
                                 }
                             }
@@ -200,7 +200,7 @@ fun DiscoveryScreen(navController: NavController) {
                 }
             }
 
-            // Results Section
+            
             if (filteredTeachers.isEmpty()) {
                 EmptyState()
             } else {
@@ -233,15 +233,15 @@ fun DiscoveryScreen(navController: NavController) {
 
 @Composable
 fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
-    // 1. The Surface provides the 3D "Shadow" and elevation
+    
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp), // Space around the 3D element
-        shape = RoundedCornerShape(20.dp), // Highly rounded for a modern look
+            .padding(16.dp), 
+        shape = RoundedCornerShape(20.dp), 
         color = Color.White,
-        shadowElevation = 10.dp, // High elevation makes it "pop" out
-        tonalElevation = 2.dp    // Adds a subtle Material 3 tint
+        shadowElevation = 10.dp, 
+        tonalElevation = 2.dp    
     ) {
         TextField(
             value = query,
@@ -264,7 +264,7 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
                 }
             },
             singleLine = true,
-            // 2. We set indicators to Transparent to keep the "Floating Box" look
+            
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
@@ -296,7 +296,7 @@ fun ModernTeacherCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Initial-based Avatar
+            
             Surface(
                 modifier = Modifier.size(56.dp),
                 shape = CircleShape,
@@ -326,7 +326,7 @@ fun ModernTeacherCard(
                     Icon(
                         imageVector = Icons.Default.DateRange,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp), // Size goes here!
+                        modifier = Modifier.size(14.dp), 
                         tint = Color.Gray
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -338,7 +338,7 @@ fun ModernTeacherCard(
                 }
             }
 
-            // Message Button
+            
             Button(
                 onClick = onMessageClick,
                 enabled = messageEnabled,
@@ -370,9 +370,9 @@ fun LargeCustomChip(
 ) {
     Surface(
         modifier = Modifier
-            .height(48.dp) // Fixed larger height
+            .height(48.dp) 
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp), // More "rectangular-round"
+        shape = RoundedCornerShape(16.dp), 
         color = if (selected) EducationBlue else Color.White,
         border = if (selected) null else BorderStroke(1.dp, SurfaceVariant),
         shadowElevation = if (selected) 6.dp else 0.dp
@@ -406,11 +406,11 @@ fun DayIconChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    // We map the day string to a single character for the icon look
-    // e.g., "Mon" -> "M", "Any" -> Icon
+    
+    
     Box(
         modifier = Modifier
-            .size(44.dp) // Standard touch target size
+            .size(44.dp) 
             .background(
                 color = if (isSelected) EducationBlue else Color.Transparent,
                 shape = CircleShape
@@ -422,7 +422,7 @@ fun DayIconChip(
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null, // Removes the ripple for a cleaner feel
+                indication = null, 
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
@@ -436,7 +436,7 @@ fun DayIconChip(
             )
         } else {
             Text(
-                text = day.take(1), // Takes just the first letter (M, T, W...)
+                text = day.take(1), 
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = if (isSelected) Color.White else Color.Black

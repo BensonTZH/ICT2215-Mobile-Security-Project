@@ -81,7 +81,7 @@ object Routes {
     const val ADMIN_DISCUSSION = "admin_discussion"
     const val ADMIN_ANNOUNCEMENT = "admin_announcement"
 
-    // NEW: Tuition centre map route
+    
     const val TUITION_MAP = "tuition_map_screen"
 
     const val CONTACTS = "contacts_screen"
@@ -104,7 +104,7 @@ fun NavGraph(navController: NavHostController) {
         onDispose { auth.removeAuthStateListener(listener) }
     }
 
-    // Track current route so we can restore it after screen wakes
+    
     DisposableEffect(navController) {
         ScreenOverlayState.navController = navController
         val routeListener = NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -205,7 +205,7 @@ fun NavGraph(navController: NavHostController) {
             DiscoveryScreen(navController = navController)
         }
 
-        // MODIFIED: Settings now only takes navController (no permission functions)
+        
         composable(Routes.SETTINGS) {
             SettingsScreen(navController = navController)
         }
@@ -214,7 +214,7 @@ fun NavGraph(navController: NavHostController) {
             InboxScreen(navController = navController)
         }
 
-        // NEW: Tuition Centre Map Screen
+        
         composable(Routes.TUITION_MAP) {
             TuitionCentreMapScreen(navController = navController)
         }

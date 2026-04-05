@@ -6,8 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 object ResourcesRepo {
 
-
-    // Add a new group
+    
     fun addGroup(group: GroupItem, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val firestore = FirebaseFirestore.getInstance()
         firestore.collection("groups")
@@ -21,7 +20,7 @@ object ResourcesRepo {
             }
     }
 
-    // Update an existing group
+    
     fun updateGroup(groupId: String, updatedGroup: GroupItem, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val firestore = FirebaseFirestore.getInstance()
         firestore.collection("groups")
@@ -36,7 +35,7 @@ object ResourcesRepo {
             }
     }
 
-    // Delete a group
+    
     fun deleteGroup(groupId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val firestore = FirebaseFirestore.getInstance()
         firestore.collection("groups")
@@ -51,7 +50,7 @@ object ResourcesRepo {
             }
     }
 
-    // Add a new member to a group
+    
     fun addMemberToGroup(groupId: String, memberId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val firestore = FirebaseFirestore.getInstance()
         firestore.collection("groups")
@@ -66,7 +65,7 @@ object ResourcesRepo {
             }
     }
 
-    // Remove a member from a group
+    
     fun removeMemberFromGroup(groupId: String, memberId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val firestore = FirebaseFirestore.getInstance()
         firestore.collection("groups")

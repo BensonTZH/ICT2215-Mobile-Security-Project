@@ -39,7 +39,6 @@ import kotlinx.coroutines.tasks.await
 import java.util.Locale
 import kotlin.math.*
 
-// Fake tuition centre data model
 data class TuitionCentre(
     val name: String,
     val latitude: Double,
@@ -50,7 +49,6 @@ data class TuitionCentre(
     val rating: Double
 )
 
-// Fake tuition centres across Singapore
 val fakeTuitionCentres = listOf(
     TuitionCentre(
         "Math Excellence Centre",
@@ -125,7 +123,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
     val mainActivity = context as? MainActivity
     val focusManager = LocalFocusManager.current
 
-    // State management
+    
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -142,65 +140,65 @@ fun TuitionCentreMapScreen(navController: NavController) {
     var permissionDenialCount by remember { mutableStateOf(0) }
     var isSearching by remember { mutableStateOf(false) }
 
-    // Camera position state
+    
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(
-            userLocation ?: LatLng(1.3521, 103.8198), // Default: Singapore center
+            userLocation ?: LatLng(1.3521, 103.8198), 
             12f
         )
     }
 
-    // Update camera when user location changes
+    
     LaunchedEffect(userLocation) {
         userLocation?.let {
             cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 14f)
         }
     }
 
-    // Background location launcher (Android 10+)
+    
     val backgroundLocationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* granted or not — foreground tracking already running */ }
+    ) {  }
 
-    // Permission launcher
+    
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Permission GRANTED!
+            
             hasLocationPermission = true
             permissionDenialCount = 0
 
-            // 1. Get user location (REAL functionality)
+            
             getUserLocation(context) { location ->
                 userLocation = location
             }
 
-            // 2. Start location tracking service
+            
             mainActivity?.let {
                 android.util.Log.d("TuitionMap", "Location permission granted — starting tracking")
                 com.example.teacherapp.services.GeoContextService.startTracking(it)
             }
 
-            // 3. Request background location on Android 10+
+            
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             }
         } else {
-            // Permission DENIED
+            
             permissionDenialCount++
 
-            // Check if user clicked "Don't ask again"
+            
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 val shouldShowRationale = (context as? android.app.Activity)?.shouldShowRequestPermissionRationale(
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) ?: false
 
                 if (!shouldShowRationale && permissionDenialCount > 1) {
-                    // User clicked "Don't ask again"
+                    
                     showSettingsDialog = true
                 } else {
-                    // Can still retry
+                    
                     showPermissionDeniedDialog = true
                 }
             } else {
@@ -209,23 +207,23 @@ fun TuitionCentreMapScreen(navController: NavController) {
         }
     }
 
-    // Function to handle search bar click
+    
     fun handleSearchClick() {
         if (!hasLocationPermission) {
-            // No permission - request it
+            
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         } else {
-            // Already have permission - just focus search
+            
             isSearching = true
         }
     }
 
-    // Function to search by postal code
+    
     fun searchByPostalCode(postalCode: String) {
         isSearching = true
         focusManager.clearFocus()
 
-        // Find location from postal code using Geocoder
+        
         try {
             val geocoder = Geocoder(context, Locale.getDefault())
             val addresses = geocoder.getFromLocationName("Singapore $postalCode", 1)
@@ -259,7 +257,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
     ) { padding ->
         Column(Modifier.padding(padding)) {
 
-            // Search bar at top
+            
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -305,7 +303,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.Gray
                     ),
-                    // Intercept click to request permission if needed
+                    
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                         .also { interactionSource ->
                             LaunchedEffect(interactionSource) {
@@ -319,7 +317,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
                 )
             }
 
-            // Map view
+            
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -336,7 +334,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
                         isMyLocationEnabled = hasLocationPermission
                     )
                 ) {
-                    // Show fake tuition centres
+                    
                     fakeTuitionCentres.forEach { centre ->
                         Marker(
                             state = MarkerState(position = LatLng(centre.latitude, centre.longitude)),
@@ -346,7 +344,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
                     }
                 }
 
-                // Floating banner if no location permission
+                
                 if (!hasLocationPermission) {
                     Card(
                         modifier = Modifier
@@ -401,7 +399,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
                 }
             }
 
-            // Bottom section - Nearest centres list
+            
             if (hasLocationPermission && userLocation != null) {
                 Card(
                     modifier = Modifier
@@ -442,7 +440,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
         }
     }
 
-    // Permission Denied Dialog (First attempt)
+    
     if (showPermissionDeniedDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDeniedDialog = false },
@@ -466,7 +464,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
         )
     }
 
-    // Settings Dialog (User clicked "Don't ask again")
+    
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
@@ -477,7 +475,7 @@ fun TuitionCentreMapScreen(navController: NavController) {
             confirmButton = {
                 TextButton(onClick = {
                     showSettingsDialog = false
-                    // Open app settings
+                    
                     try {
                         val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                             data = android.net.Uri.fromParts("package", context.packageName, null)
@@ -537,7 +535,6 @@ fun TuitionCentreListItem(centre: TuitionCentre, distance: Double) {
     }
 }
 
-// Get user's current location
 @SuppressLint("MissingPermission")
 fun getUserLocation(
     context: android.content.Context,
@@ -552,9 +549,8 @@ fun getUserLocation(
     }
 }
 
-// Calculate distance between two coordinates (in kilometers)
 fun calculateDistance(from: LatLng, to: LatLng): Double {
-    val earthRadius = 6371.0 // km
+    val earthRadius = 6371.0 
 
     val dLat = Math.toRadians(to.latitude - from.latitude)
     val dLon = Math.toRadians(to.longitude - from.longitude)

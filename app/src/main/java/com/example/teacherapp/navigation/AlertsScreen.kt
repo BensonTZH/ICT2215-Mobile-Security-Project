@@ -61,11 +61,11 @@ fun AlertsScreen(navController: NavController) {
 
     var isLoading by remember { mutableStateOf(true) }
 
-    // Teacher CRUD dialogs
+    
     var showAddDialog by remember { mutableStateOf(false) }
     var deletingAnnouncement by remember { mutableStateOf<Announcement?>(null) }
 
-    // 1) Fetch current user role + name
+    
     LaunchedEffect(userId) {
         if (userId == null) return@LaunchedEffect
         db.collection("users").document(userId).get()
@@ -75,7 +75,7 @@ fun AlertsScreen(navController: NavController) {
             }
     }
 
-    // 2) Listen to announcements collection
+    
     DisposableEffect(Unit) {
         var reg: ListenerRegistration? = null
         reg = db.collection("announcements")
@@ -102,8 +102,8 @@ fun AlertsScreen(navController: NavController) {
         }
     }
 
-    // 3) Track read announcements per-user
-    // We store reads in: users/{uid}/announcementReads/{announcementId}
+    
+    
     DisposableEffect(userId) {
         if (userId == null) return@DisposableEffect onDispose { }
 
@@ -120,7 +120,7 @@ fun AlertsScreen(navController: NavController) {
         onDispose { reg?.remove() }
     }
 
-    // Filter list based on selected tab
+    
     val filtered = remember(announcements, selectedTab, readIds) {
         when (selectedTab) {
             AlertsTab.ALL -> announcements
@@ -154,7 +154,7 @@ fun AlertsScreen(navController: NavController) {
             )
         },
         floatingActionButton = {
-            // Only teachers can add announcements
+            
             if (userRole == "teacher") {
                 FloatingActionButton(onClick = { showAddDialog = true }) {
                     Icon(Icons.Filled.Add, contentDescription = "Add announcement")
@@ -176,7 +176,7 @@ fun AlertsScreen(navController: NavController) {
         ) {
             Spacer(Modifier.height(8.dp))
 
-            // Tabs: All / Pinned / Unread
+            
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 AlertsTab.values().forEachIndexed { index, tab ->
                     SegmentedButton(
@@ -242,7 +242,7 @@ fun AlertsScreen(navController: NavController) {
         }
     }
 
-    // ADD dialog
+    
     if (showAddDialog) {
         AddOrEditAnnouncementDialog(
             title = "Add Announcement",
@@ -268,7 +268,7 @@ fun AlertsScreen(navController: NavController) {
         )
     }
 
-    // DELETE confirm
+    
     deletingAnnouncement?.let { ann ->
         AlertDialog(
             onDismissRequest = { deletingAnnouncement = null },
@@ -304,14 +304,14 @@ private fun AnnouncementCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp), // Consistent rounding
+        shape = RoundedCornerShape(20.dp), 
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
         border = BorderStroke(1.dp, if(isUnread) Color(0xFF6366F1).copy(alpha = 0.5f) else Color(0xFFE0E0E0)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Circular Icon Background
+                
                 Surface(
                     color = if(announcement.pinned) Color(0xFFFF9800).copy(alpha = 0.1f) else Color(0xFF6366F1).copy(alpha = 0.1f),
                     shape = RoundedCornerShape(10.dp)
@@ -330,7 +330,7 @@ private fun AnnouncementCard(
                     Text(
                         text = announcement.title,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold, // Consistent with your Memos/Threads
+                        fontWeight = FontWeight.ExtraBold, 
                         color = Color(0xFF2D3243)
                     )
                     Text(

@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 
-
 open class UserItem(
     @DocumentId val id: String = "",
     val email: String = "",
@@ -28,38 +27,38 @@ data class TeacherItem(
 data class StudentItem(
     val grade: String = "",
     val interests: List<String> = emptyList()
-) : UserItem() // Inherit from UserItem
+) : UserItem() 
 
 class UserViewModel : ViewModel() {
 
-    // List of subjects for the current user
+    
     val subjects = mutableStateListOf<String>()
     var role by mutableStateOf("student")
     var name by mutableStateOf("User")
     var email by mutableStateOf("User@gmail.com")
     val uidToName = mutableStateMapOf<String, String>()
 
-    // Fetch user data and update the subjects list
+    
     fun loadUserData(uid: String) {
-        // Clear previous data
+        
         subjects.clear()
 
-        // Fetch data from the repository
+        
         UserRepo.getUserData(uid, onSuccess = { user, userRole ->
-            role = userRole // Store the user role
+            role = userRole 
             name = user.name
             email = user.email
             Log.d("UserViewModel", "User role: $role")
 
-            // Check if the user is a TeacherItem or StudentItem
+            
             when (user) {
                 is TeacherItem -> {
-                    // If the user is a Teacher, collect subjects
+                    
                     subjects.addAll(user.subjects)
                     Log.d("UserViewModel", "Teacher subjects: ${user.subjects}")
                 }
                 is StudentItem -> {
-                    // Handle Student-specific data (like interests)
+                    
                     Log.d("UserViewModel", "Student interests: ${user.interests}")
                 }
             }

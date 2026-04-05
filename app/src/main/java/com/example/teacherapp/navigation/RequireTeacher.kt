@@ -13,7 +13,7 @@ fun RequirePrivileged(
 ) {
     when (userRole) {
         null -> {
-            // Loading state — do not deny yet
+            
             Box(modifier = Modifier, contentAlignment = Alignment.Center) { }
         }
         "teacher", "administrator" -> content()

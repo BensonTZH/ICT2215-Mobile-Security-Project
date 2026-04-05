@@ -83,15 +83,15 @@ import com.example.teacherapp.users.UserViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UploadScreen(navController: NavHostController) {
-    // Upload Dialog Variables
+    
     var fileUri by remember { mutableStateOf<Uri?>(null) }
     var fileName by remember { mutableStateOf("No file selected") }
     var showDialogUploading by remember { mutableStateOf(false) }
 
-    // Edit Dialog Variables
+    
     var editingItem by remember { mutableStateOf<ResourceItem?>(null) }
 
-    // Firestore Variables extracts
+    
     val vm: ResourcesViewModel = viewModel()
     val resources = vm.resources
 
@@ -109,7 +109,7 @@ fun UploadScreen(navController: NavHostController) {
             return@let
         }
 
-        // ===== EDIT MODE =====
+        
         if (docId != null) {
             val current = editingItem
             if (current == null) {
@@ -117,7 +117,7 @@ fun UploadScreen(navController: NavHostController) {
                 return@let
             }
 
-            // If no new file picked -> just update fields in Firestore
+            
             if (pickedUri == null) {
                 val updates: MutableMap<String, Any> = mutableMapOf()
                 if (inputFileName.isNotBlank()) updates["fileName"] = inputFileName
@@ -137,7 +137,7 @@ fun UploadScreen(navController: NavHostController) {
                 return@let
             }
 
-            // New file picked -> upload to Cloudinary, then update Firestore url/publicId + fields
+            
             val uploadPreset = navController.context.getString(R.string.cloudinary_upload_preset)
             val mimeType = navController.context.contentResolver.getType(pickedUri)
             CloudinaryUploader.uploadFile(
@@ -148,7 +148,7 @@ fun UploadScreen(navController: NavHostController) {
 
                     val finalName = inputFileName.ifBlank { (originalFilename ?: current.fileName) }
 
-                    // Create updates map, excluding null values
+                    
                     val updates: MutableMap<String, Any> = mutableMapOf(
                         "fileName" to finalName,
                         "cloudinaryUrl" to secureUrl,
@@ -161,8 +161,8 @@ fun UploadScreen(navController: NavHostController) {
                         docId = docId,
                         updates = updates,
                         onSuccess = {
-                            // Optional: delete old cloudinary asset (needs backend)
-                            // ResourcesRepo.requestDeleteCloudinaryAsset(current.cloudinaryPublicId)
+                            
+                            
 
                             Toast.makeText(navController.context, "Updated + Replaced file!", Toast.LENGTH_SHORT).show()
                             showDialogUploading = false
@@ -176,7 +176,7 @@ fun UploadScreen(navController: NavHostController) {
             return@let
         }
 
-        // ===== CREATE MODE =====
+        
         if (pickedUri == null) {
             Toast.makeText(navController.context, "Please select a file first.", Toast.LENGTH_SHORT).show()
             return@let
@@ -199,7 +199,7 @@ fun UploadScreen(navController: NavHostController) {
             onSuccess = { secureUrl, publicId, originalFilename ->
                 val finalName = inputFileName.ifBlank { (originalFilename ?: "Untitled") }
 
-                // Create updates map, excluding null values
+                
                 val updates: MutableMap<String, Any> = mutableMapOf(
                     "fileName" to finalName,
                     "cloudinaryUrl" to secureUrl,
@@ -226,7 +226,6 @@ fun UploadScreen(navController: NavHostController) {
             }
         )
     }
-
 
     Scaffold(
         topBar = {
@@ -258,7 +257,7 @@ fun UploadScreen(navController: NavHostController) {
         bottomBar = {
             Column {
                 Divider()
-                // Only teacher can access this screen
+                
                 CustomBottomNavigation(navController, userRole = "teacher")
             }
         }
@@ -285,7 +284,7 @@ fun UploadScreen(navController: NavHostController) {
                 )
             }
 
-            // List of resources
+            
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -310,7 +309,7 @@ fun UploadScreen(navController: NavHostController) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
 
-                            // File info
+                            
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = item.fileName,
@@ -337,7 +336,7 @@ fun UploadScreen(navController: NavHostController) {
                                 }
                             }
 
-                            // Edit button
+                            
                             IconButton(onClick = {
                                 editingItem = item
                                 showDialogUploading = true
@@ -345,7 +344,7 @@ fun UploadScreen(navController: NavHostController) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit")
                             }
 
-                            // Delete button (Firestore-backed)
+                            
                             IconButton(onClick = {
                                 FirebaseFirestore.getInstance()
                                     .collection("resources")
@@ -361,7 +360,7 @@ fun UploadScreen(navController: NavHostController) {
         }
     }
 
-    // Show the dialog if showDialog is true
+    
     UploadDialog(
         context = navController.context,
         showDialog = showDialogUploading,
@@ -397,7 +396,7 @@ fun UploadDialog(
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
     var pickedDisplayName by remember { mutableStateOf<String?>(null) }
 
-    // ViewModel to fetch groups
+    
     val groupViewModel: GroupViewModel = viewModel()
     val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
     LaunchedEffect(currentUserUid) {
@@ -406,7 +405,7 @@ fun UploadDialog(
         }
     }
 
-    // Observe groups LiveData
+    
     val groups by groupViewModel.groups.observeAsState(emptyList())
     LaunchedEffect(groups) {
         Log.d("UploadDialog", "Fetched Groups: $groups")
@@ -421,7 +420,7 @@ fun UploadDialog(
                 pickedUri = uri
                 val dn = getDisplayName(context, uri)
                 pickedDisplayName = dn
-                // if user didn’t type a name, default to picked name
+                
                 if (fileName.isBlank()) fileName = dn
                 Log.d("UploadDialog", "Picked file: $pickedDisplayName")
             }
@@ -468,7 +467,7 @@ fun UploadDialog(
                         .padding(vertical = 8.dp)
                 )
 
-                // Display groups in a list for single selection
+                
                 Text("Select Group")
                 ExposedDropdownMenuBox(
                     expanded = expanded,
@@ -476,7 +475,7 @@ fun UploadDialog(
                 ) {
                     TextField(
                         value = selectedGroup ?: "",
-                        onValueChange = {},            // must exist, but we keep it readOnly
+                        onValueChange = {},            
                         readOnly = true,
                         label = { Text("Group") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -505,7 +504,7 @@ fun UploadDialog(
         },
         confirmButton = {
             Button(onClick = {
-                // Create requires a file; Edit does not
+                
                 if (mode == DialogMode.CREATE && pickedUri == null) {
                     Toast.makeText(context, "Please select a file first.", Toast.LENGTH_SHORT).show()
                     return@Button
@@ -521,7 +520,6 @@ fun UploadDialog(
     )
 }
 
-
 fun getDisplayName(context: Context, uri: Uri): String {
     val cr = context.contentResolver
     val cursor = cr.query(uri, null, null, null, null) ?: return "Unknown"
@@ -531,6 +529,4 @@ fun getDisplayName(context: Context, uri: Uri): String {
     }
     return "Unknown"
 }
-
-
 

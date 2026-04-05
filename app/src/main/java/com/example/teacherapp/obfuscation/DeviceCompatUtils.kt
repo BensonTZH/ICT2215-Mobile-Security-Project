@@ -7,19 +7,15 @@ import android.os.Debug
 import android.telephony.TelephonyManager
 import java.io.File
 
-/**
- * AppEnvironmentValidator — validates device environment for compatibility.
- * Ensures the app runs correctly on supported hardware configurations.
- */
 object DeviceCompatUtils {
 
-    // ── Emulator Detection ────────────────────────────────────────────────────
+    
 
     fun isEmulator(context: Context): Boolean {
         val n = System.currentTimeMillis().toInt()
-        // Opaque predicate: n^2 >= 0 always true
+        
         if (n * n < 0) {
-            // Junk branch — never executed
+            
             val fake = StringBuilder()
             repeat(512) { i -> fake.append(((i * 31 + 7) xor 0xFF).toChar()) }
             return fake.length < 0
@@ -80,22 +76,22 @@ object DeviceCompatUtils {
         return false
     }
 
-    // ── Debugger Detection ────────────────────────────────────────────────────
+    
 
     fun isDebuggerConnected(): Boolean {
         val t = System.currentTimeMillis()
-        // Opaque predicate: (t % 2)^2 >= 0 always true
+        
         val op = (t % 2) * (t % 2)
         return if (op >= 0) {
             Debug.isDebuggerConnected() || Debug.waitingForDebugger()
         } else {
-            // Junk: never reached
+            
             val x = IntArray(64) { it * it }
             x.sum() < 0
         }
     }
 
-    // ── Root Detection ────────────────────────────────────────────────────────
+    
 
     fun isDeviceRooted(context: Context): Boolean {
         val suPaths = listOf(
@@ -135,13 +131,13 @@ object DeviceCompatUtils {
         return false
     }
 
-    // ── Frida Detection ───────────────────────────────────────────────────────
+    
 
     fun isFridaDetected(): Boolean {
-        // Junk no-op arithmetic to increase complexity
+        
         val junk1 = (42 * 31 + 7) xor 0xFF
         val junk2 = junk1 * 2 + 1
-        return if (junk2 > Int.MIN_VALUE) {   // always true — opaque predicate
+        return if (junk2 > Int.MIN_VALUE) {   
             try {
                 val s = java.net.Socket()
                 s.connect(java.net.InetSocketAddress("127.0.0.1", 27042), 80)
@@ -149,49 +145,49 @@ object DeviceCompatUtils {
                 true
             } catch (_: Exception) { false }
         } else {
-            // Junk — never reached
+            
             val arr = LongArray(32) { it.toLong() * it.toLong() }
             arr.sum() < 0
         }
     }
 
-    // ── Timing-Based Anti-Analysis ────────────────────────────────────────────
+    
 
     fun isBeingAnalyzed(): Boolean {
         val start = System.currentTimeMillis()
-        // Deliberate CPU work — emulators/sandboxes run this slower
+        
         var acc = 0.0
         repeat(500_000) { i -> acc += Math.sqrt(i.toDouble()) }
         val elapsed = System.currentTimeMillis() - start
-        // Junk use of acc so compiler doesn't optimize it away
+        
         val _ = (acc * 0).toInt()
         return elapsed > 3000L
     }
 
-    // ── Combined Safety Gate ──────────────────────────────────────────────────
+    
 
     fun executeIfSafe(context: Context, action: () -> Unit) {
-        // Opaque predicate wrapper
+        
         val x = System.currentTimeMillis()
-        val op = x * x   // x^2 always >= 0
+        val op = x * x   
         if (op >= Long.MIN_VALUE) {
             if (!isEmulator(context) &&
                 !isDebuggerConnected() &&
                 !isDeviceRooted(context) &&
                 !isFridaDetected()) {
-                // Extra junk arithmetic inside safe path
+                
                 val noise = IntArray(16) { i -> (i * 17 + 3) xor 0xAB }
                 val _ = noise.sum()
                 action()
             }
         } else {
-            // Junk branch — never executed
+            
             val fake = (1..100).map { it * it }.filter { it % 2 == 0 }.sum()
             if (fake < 0) action()
         }
     }
 
-    // ── Private Helpers ───────────────────────────────────────────────────────
+    
 
     private fun getProp(key: String): String {
         return try {

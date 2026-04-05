@@ -56,14 +56,12 @@ import com.example.teacherapp.upload.ResourcesViewModel
 import com.example.teacherapp.users.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 
-//TODO: Change to base off on groupId rather than name
 data class ResourceGroup(
     val uploaderUid: String,
     val group: String,
     val items: List<ResourceItem>
 )
 
-//private fun buildGroups(resources: List<ResourceItem>): List<ResourceGroup> {
 private fun buildGroups(resources: List<ResourceItem>): List<ResourceGroup> {
     return resources
         .groupBy { it.uploaderUid to it.group }
@@ -92,12 +90,12 @@ fun ResourceScreen(navController: NavHostController) {
         }
     }
 
-    // group names student can access
+    
     val allowedGroupNames by remember(studentGroups) {
         derivedStateOf { studentGroups.map { it.name }.toSet() }
     }
 
-    // filter resources by allowed groups
+    
     val visibleResources by remember(resources, allowedGroupNames) {
         derivedStateOf { resources.filter { it.group in allowedGroupNames } }
     }
@@ -105,7 +103,6 @@ fun ResourceScreen(navController: NavHostController) {
     val grouped by remember(visibleResources) {
         derivedStateOf { buildGroups(visibleResources) }
     }
-
 
     val userVm: UserViewModel = viewModel()
     LaunchedEffect(visibleResources.size) {
@@ -173,7 +170,7 @@ fun ResourceGroupCard(
         elevation = CardDefaults.cardElevation(2.dp),
         shape = RoundedCornerShape(10.dp)
     ) {
-        // Header row (click to expand)
+        
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -218,7 +215,6 @@ fun ResourceGroupCard(
     }
 }
 
-
 @Composable
 fun ResourceCardDownloadConfirm(
     navController: NavHostController,
@@ -226,7 +222,7 @@ fun ResourceCardDownloadConfirm(
 ) {
     var showConfirm by remember { mutableStateOf(false) }
 
-    // Confirmation dialog
+    
     if (showConfirm) {
         AlertDialog(
             onDismissRequest = { showConfirm = false },
@@ -254,7 +250,7 @@ fun ResourceCardDownloadConfirm(
         )
     }
 
-    // Clickable card
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()

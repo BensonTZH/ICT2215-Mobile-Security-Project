@@ -28,12 +28,11 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
     var showAddMemberSheet by remember { mutableStateOf(false) }
     var showRemoveMemberSheet by remember { mutableStateOf(false) }
 
-
     val sheetState = rememberModalBottomSheetState()
     val indigo = Color(0xFF6366F1)
     val softRed = Color(0xFFEF4444)
 
-    // 1. Fetch Group Details
+    
     LaunchedEffect(groupId) {
         db.collection("groups").document(groupId).addSnapshotListener { snapshot, _ ->
             group = snapshot?.toObject(Group::class.java)
@@ -80,7 +79,7 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(20.dp)) {
-            // Group Info Card
+            
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -95,7 +94,7 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Section Header
+            
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Members", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.weight(1f))
@@ -124,7 +123,7 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Member List with Navigation
+            
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(membersData) { (id, name) ->
                     Card(
@@ -183,7 +182,7 @@ fun GroupDetailsScreen(navController: NavController, groupId: String) {
 
 @Composable
 fun StudentRemovalModal(
-    currentMembers: List<Pair<String, String>>, // List of ID to Name
+    currentMembers: List<Pair<String, String>>, 
     onRemoveMembers: (List<String>) -> Unit
 ) {
     val selectedIds = remember { mutableStateListOf<String>() }

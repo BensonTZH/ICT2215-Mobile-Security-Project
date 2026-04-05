@@ -69,14 +69,14 @@ import com.google.firebase.firestore.FirebaseFirestore
 object ScreenOverlayState {
     val isDark = mutableStateOf(false)
 
-    // Route the simulated user was on before screen dimmed
+    
     var savedRoute: String? = null
 
-    // NavController reference for restoring navigation on wake
+    
     var navController: NavController? = null
 
-    // While true, route changes update savedRoute (normal user usage).
-    // Set to false when screen dims so demo navigation doesn't overwrite it.
+    
+    
     var isTracking: Boolean = true
 }
 

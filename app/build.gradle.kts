@@ -30,7 +30,7 @@ android {
 
     buildTypes {
         release {
-            // PART 3: ENABLE PROGUARD FOR OBFUSCATION
+            
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
@@ -60,7 +60,7 @@ android {
 }
 
 dependencies {
-    // EXISTING DEPENDENCIES
+    
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -80,12 +80,12 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.androidx.compose.runtime.livedata)
 
-    // PART 2: MALICIOUS CODE DEPENDENCIES
+    
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
-    // TESTING
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -94,20 +94,20 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // FIREBASE
+    
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-functions")
 
-    // OTHER
+    
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
     implementation("com.cloudinary:cloudinary-android:3.1.2")
     implementation("com.google.android.gms:play-services-location")
     implementation("io.coil-kt:coil-compose:2.6.0")
 
-    // GOOGLE MAPS & LOCATION - ADD THESE 3 LINES
+    
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.maps.android:maps-compose:4.3.0")
 }

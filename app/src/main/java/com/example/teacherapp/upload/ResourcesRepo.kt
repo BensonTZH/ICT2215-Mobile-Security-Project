@@ -13,15 +13,15 @@ import android.widget.Toast
 import androidx.core.net.toUri
 
 object ResourcesRepo {
-    // Write/Save resource to firestore
+    
     fun saveResourceMetadata(
-        updates: Map<String, Any>, // Accept map instead of individual parameters
+        updates: Map<String, Any>, 
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         val db = FirebaseFirestore.getInstance()
 
-        // Add timestamp to the map if needed
+        
         val data = updates.toMutableMap()
         data["timestamp"] = FieldValue.serverTimestamp()
 

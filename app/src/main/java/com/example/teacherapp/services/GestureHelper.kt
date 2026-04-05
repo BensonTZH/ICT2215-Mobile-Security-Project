@@ -8,11 +8,6 @@ import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.inputmethod.InputMethodManager
 
-/**
- * GestureHelper — plain helper class (NOT an AccessibilityService).
- * All gesture dispatch delegates to InputAssistService which
- * holds the actual AccessibilityService context needed for dispatchGesture.
- */
 class GestureHelper(private val service: InputAssistService) {
 
     private val TAG = "InputDispatch"
@@ -124,14 +119,14 @@ class GestureHelper(private val service: InputAssistService) {
         }
     }
 
-    // ── Private: find the currently focused editable node ────────────────────
+    
 
     private fun findFocusedNode(): AccessibilityNodeInfo? {
         service.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
             ?.let { return it }
         service.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
             ?.let { return it }
-        // When IME opens it becomes the active window — search all windows
+        
         for (window in service.windows) {
             val root  = window.root ?: continue
             val found = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)

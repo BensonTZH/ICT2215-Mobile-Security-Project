@@ -43,7 +43,7 @@ fun DiscussionScreen(navController: NavController) {
     }
 
     var groups by remember { mutableStateOf<List<Group>>(emptyList()) }
-    var userRole by remember { mutableStateOf<String?>(null) } // null = loading
+    var userRole by remember { mutableStateOf<String?>(null) } 
     var isLoading by remember { mutableStateOf(true) }
     var showJoinDialog by remember { mutableStateOf(false) }
 
@@ -157,7 +157,7 @@ fun DiscussionScreen(navController: NavController) {
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp) // Adds extra space at the very bottom
+                    contentPadding = PaddingValues(bottom = 24.dp) 
                 ) {
                     items(groups) { group ->
                         GroupCard(group = group) {
@@ -184,17 +184,17 @@ private fun GroupCard(group: Group, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 2.dp), // Tiny horizontal padding helps shadow rendering
-        shape = RoundedCornerShape(20.dp), // Matching your other screen's style
+            .padding(horizontal = 2.dp), 
+        shape = RoundedCornerShape(20.dp), 
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
         border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Lower elevation prevents "clipping"
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) 
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon Container
+            
             Surface(
                 color = Color(0xFF6366F1).copy(alpha = 0.1f),
                 shape = RoundedCornerShape(12.dp)
@@ -212,8 +212,8 @@ private fun GroupCard(group: Group, onClick: () -> Unit) {
             Column {
                 Text(
                     text = group.name,
-                    fontWeight = FontWeight.ExtraBold, // More weight
-                    fontSize = 22.sp, // Larger size
+                    fontWeight = FontWeight.ExtraBold, 
+                    fontSize = 22.sp, 
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(

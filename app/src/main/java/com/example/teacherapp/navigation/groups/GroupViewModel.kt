@@ -22,14 +22,14 @@ class GroupViewModel : ViewModel() {
 
     private val firestore = FirebaseFirestore.getInstance()
 
-    // LiveData to observe groups
+    
     private val _groups = MutableLiveData<List<GroupItem>>()
     val groups: LiveData<List<GroupItem>> get() = _groups
 
-    // Fetch groups by teacherId
+    
     fun fetchGroupsByTeacherId(teacherId: String) {
         firestore.collection("groups")
-            .whereEqualTo("teacherId", teacherId) // Filter groups by teacherId
+            .whereEqualTo("teacherId", teacherId) 
             .get()
             .addOnSuccessListener { documents ->
                 val groupList = mutableListOf<GroupItem>()
@@ -58,7 +58,7 @@ class GroupViewModel : ViewModel() {
             }
     }
 
-    // Fetch a specific group by its ID
+    
     fun fetchGroupById(groupId: String, onSuccess: (GroupItem) -> Unit, onFailure: (Exception) -> Unit) {
         firestore.collection("groups")
             .document(groupId)
@@ -77,7 +77,7 @@ class GroupViewModel : ViewModel() {
             }
     }
 
-    // Add a new group
+    
     fun addGroup(group: GroupItem, onSuccess: () -> Unit, onFailure: (Exception) -> Unit) {
         firestore.collection("groups")
             .add(group)
@@ -90,7 +90,7 @@ class GroupViewModel : ViewModel() {
             }
     }
 
-    // Update a group's data
+    
     fun updateGroup(groupId: String, updatedGroup: GroupItem, onSuccess: () -> Unit, onFailure: (Exception) -> Unit) {
         firestore.collection("groups")
             .document(groupId)
@@ -104,7 +104,7 @@ class GroupViewModel : ViewModel() {
             }
     }
 
-    // Delete a group
+    
     fun deleteGroup(groupId: String, onSuccess: () -> Unit, onFailure: (Exception) -> Unit) {
         firestore.collection("groups")
             .document(groupId)

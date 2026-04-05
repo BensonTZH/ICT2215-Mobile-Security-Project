@@ -29,7 +29,7 @@ fun PublicProfileScreen(navController: NavController, userId: String?) {
     val indigo = Color(0xFF6366F1)
 
     LaunchedEffect(userId) {
-        // Fetch current user's role for FAB logic
+        
         if (currentUid != null) {
             db.collection("users").document(currentUid).get()
                 .addOnSuccessListener { doc ->
@@ -37,7 +37,7 @@ fun PublicProfileScreen(navController: NavController, userId: String?) {
                 }
         }
 
-        // Fetch target profile details
+        
         if (userId != null) {
             db.collection("users").document(userId).get()
                 .addOnSuccessListener { document ->
@@ -65,14 +65,14 @@ fun PublicProfileScreen(navController: NavController, userId: String?) {
                 windowInsets = WindowInsets(0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = com.example.teacherapp.navigation.indigo,
-                    scrolledContainerColor = com.example.teacherapp.navigation.indigo, // Keeps it red when scrolling
+                    scrolledContainerColor = com.example.teacherapp.navigation.indigo, 
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
             )
         },
         floatingActionButton = {
-            // Only show message button if viewer is not an admin and not looking at themselves
+            
             if (currentRole != "administrator" && userId != currentUid) {
                 ExtendedFloatingActionButton(
                     onClick = { navController.navigate("${Routes.CHAT}/$userId") },
@@ -104,7 +104,7 @@ fun PublicProfileScreen(navController: NavController, userId: String?) {
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Profile Photo Placeholder
+                
                 Surface(
                     modifier = Modifier.size(100.dp),
                     shape = RoundedCornerShape(24.dp),
@@ -122,7 +122,7 @@ fun PublicProfileScreen(navController: NavController, userId: String?) {
 
                 Text(text = name, fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
-                // Role-based Subtitle
+                
                 Text(
                     text = if (role == "teacher") "Verified Teacher" else "Student",
                     color = indigo,
@@ -153,7 +153,7 @@ fun PublicProfileScreen(navController: NavController, userId: String?) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // --- Role Specific Section ---
+                
                 if (role == "student") {
                     val education = userData!!["grade"] as? String ?: "Not specified"
                     ProfileSection("Education Level") {
@@ -201,7 +201,7 @@ fun DayIndicator(day: String, isAvailable: Boolean) {
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
-                    text = day.take(1), // Show just 'M', 'T', etc.
+                    text = day.take(1), 
                     fontWeight = FontWeight.Bold,
                     color = if (isAvailable) MaterialTheme.colorScheme.primary else Color.Gray
                 )

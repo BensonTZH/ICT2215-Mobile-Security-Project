@@ -59,8 +59,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 @Composable
 fun GroupThreadsScreen(
     navController: NavController,
-    groupId: String,   // Receiver for the ID from NavHost
-    groupName: String  // Receiver for the Name from NavHost
+    groupId: String,   
+    groupName: String  
 ) {
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
@@ -120,7 +120,7 @@ fun GroupThreadsScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showCreateThreadDialog = true },
-                containerColor = indigo, // Themed to match top bar
+                containerColor = indigo, 
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.AddComment, null) },
                 text = { Text("New Topic", fontWeight = FontWeight.Bold) }
@@ -133,7 +133,7 @@ fun GroupThreadsScreen(
                 .fillMaxSize()
                 .padding(20.dp)
         ) {
-            // Group Name Header
+            
             Text(
                 text = groupName,
                 style = MaterialTheme.typography.headlineSmall,
@@ -156,7 +156,7 @@ fun GroupThreadsScreen(
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+                    contentPadding = PaddingValues(bottom = 80.dp) 
                 ) {
                     items(threads) { thread ->
                         DiscussionThreadCard(thread) {
@@ -179,7 +179,7 @@ fun GroupThreadsScreen(
                     content = content,
                     creatorName = currentUserName,
                     teacherId = teacherId ?: "",
-                    groupId = groupId // This now works because groupId is in the function header!
+                    groupId = groupId 
                 )
                 db.collection("threads").document(newId).set(newThread)
                 showCreateThreadDialog = false
@@ -268,7 +268,7 @@ fun DiscussionThreadCard(thread: DiscussionThread, onClick: () -> Unit) {
                     text = thread.creatorName,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF6366F1) // Indigo accent for names
+                    color = Color(0xFF6366F1) 
                 )
             }
         }

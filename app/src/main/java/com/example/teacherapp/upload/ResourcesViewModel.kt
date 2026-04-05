@@ -29,16 +29,16 @@ class ResourcesViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
     private var reg: ListenerRegistration? = null
 
-    // TODO: Combine both teacher and student listening funcs
+    
     fun startListeningTeacher(onError: (String) -> Unit) {
-        // Get the current user UID
+        
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) {
             onError("User not logged in.")
             return
         }
 
-        // Prevent double-listening on recomposition
+        
         if (reg != null) return
 
         reg = db.collection("resources")
@@ -61,14 +61,14 @@ class ResourcesViewModel : ViewModel() {
     }
 
     fun startListeningStudent(onError: (String) -> Unit) {
-        // Get the current user UID
+        
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) {
             onError("User not logged in.")
             return
         }
 
-        // Prevent double-listening on recomposition
+        
         if (reg != null) return
 
         reg = db.collection("resources")

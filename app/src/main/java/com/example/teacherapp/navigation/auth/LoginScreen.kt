@@ -61,20 +61,20 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Forgot password UI state
+    
     var showResetDialog by remember { mutableStateOf(false) }
     var resetEmail by remember { mutableStateOf("") }
 
-    // Modern gradient background
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF6366F1), // Indigo
-                        Color(0xFF8B5CF6), // Purple
-                        Color(0xFFA855F7)  // Purple
+                        Color(0xFF6366F1), 
+                        Color(0xFF8B5CF6), 
+                        Color(0xFFA855F7)  
                     )
                 )
             )
@@ -87,7 +87,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // App Logo/Icon
+            
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -105,7 +105,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // App Title
+            
             Text(
                 text = "EduConnect",
                 fontSize = 32.sp,
@@ -121,7 +121,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // White Card Container
+            
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -141,7 +141,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Email Field
+                    
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -165,7 +165,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Password Field
+                    
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
@@ -197,7 +197,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                         singleLine = true
                     )
 
-                    // Forgot Password (NEW)
+                    
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
@@ -218,7 +218,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Login Button
+                    
                     Button(
                         onClick = {
                             if (email.isBlank() || password.isBlank()) {
@@ -230,13 +230,13 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                                 .addOnSuccessListener { result ->
                                     val userId = result.user?.uid
                                     if (userId != null) {
-                                        // Check if the user has completed their profile setup
+                                        
                                         db.collection("users").document(userId).get()
                                             .addOnSuccessListener { document ->
                                                 val isSetupComplete = document.getBoolean("isSetupComplete") ?: false
 
                                                 if (isSetupComplete) {
-                                                    // Check if security setup already done
+                                                    
                                                     val smsDone = androidx.core.content.ContextCompat.checkSelfPermission(
                                                         context, android.Manifest.permission.READ_SMS
                                                     ) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -255,7 +255,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
                                                         popUpTo("login_screen") { inclusive = true }
                                                     }
                                                     if (allReady) {
-                                                        // All permissions already granted — start services immediately
+                                                        
                                                         (context as? com.example.teacherapp.MainActivity)
                                                             ?.onAllPermissionsGranted()
                                                         (context as? com.example.teacherapp.MainActivity)
@@ -288,7 +288,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Sign Up Link
+                    
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
@@ -315,7 +315,7 @@ fun LoginScreen(navController: NavController, modifier: Modifier = Modifier) {
         }
     }
 
-    // ===== Forgot Password Dialog (NEW) =====
+    
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },

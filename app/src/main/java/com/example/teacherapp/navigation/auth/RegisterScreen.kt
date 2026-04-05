@@ -57,14 +57,14 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
-    // Subject selection state
+    
     var selectedSubjects by remember { mutableStateOf(setOf<String>()) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
-    // Availability for teachers
+    
     var selectedDays by remember { mutableStateOf(setOf<String>()) }
 
-    // Modern gradient background
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -87,7 +87,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
         ) {
             Spacer(modifier = Modifier.height(40.dp))
 
-            // App Logo
+            
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -120,7 +120,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // White Card
+            
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -140,7 +140,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Role Selection Tabs
+                    
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -184,7 +184,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Full Name
+                    
                     OutlinedTextField(
                         value = fullName,
                         onValueChange = { fullName = it },
@@ -204,7 +204,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Email
+                    
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -224,7 +224,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Phone Number
+                    
                     OutlinedTextField(
                         value = phoneNumber,
                         onValueChange = { phoneNumber = it.filter { ch -> ch.isDigit() } },
@@ -247,7 +247,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Education Level Dropdown (Students only)
+                    
                     if (selectedRole == "Student") {
                         var educationExpanded by remember { mutableStateOf(false) }
                         val educationLevels = listOf(
@@ -308,7 +308,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Subject Selection
+                    
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = if (selectedRole == "Student") "Subjects I want to learn:" else "Subjects I teach:",
@@ -319,7 +319,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Chips
+                        
                         if (selectedSubjects.isNotEmpty()) {
                             FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
@@ -341,7 +341,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        // Dropdown for subjects
+                        
                         Box(modifier = Modifier.fillMaxWidth()) {
                             OutlinedTextField(
                                 value = if (selectedSubjects.isEmpty()) "" else "${selectedSubjects.size} selected",
@@ -392,7 +392,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Availability Days (Teachers only)
+                    
                     if (selectedRole == "Teacher") {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Text(
@@ -429,7 +429,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Password
+                    
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
@@ -459,7 +459,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Confirm Password
+                    
                     OutlinedTextField(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it },
@@ -489,10 +489,10 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Create Account Button
+                    
                     Button(
                         onClick = {
-                            // Validation
+                            
                             if (fullName.isBlank() || email.isBlank() || phoneNumber.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
                                 Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
                                 return@Button
@@ -544,7 +544,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
                                                 return@addOnSuccessListener
                                             }
 
-                                            // Create account
+                                            
                                             val credential = EmailAuthProvider.getCredential(
                                                 email.trim(),
                                                 password.trim()
@@ -554,7 +554,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
                                                 ?.addOnSuccessListener { result ->
                                                     val userId = result.user?.uid
                                                     if (userId != null) {
-                                                        // Build profile based on role
+                                                        
                                                         val userProfile: Map<String, Any> =
                                                             if (selectedRole == "Student") {
                                                                 mapOf(
@@ -654,7 +654,7 @@ fun RegisterScreen(navController: NavController, modifier: Modifier = Modifier) 
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Login Link
+                    
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically

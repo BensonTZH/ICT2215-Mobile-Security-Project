@@ -40,7 +40,7 @@ fun FindStudentScreen(navController: NavController) {
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
     LaunchedEffect(Unit) {
-        // Fetch all students
+        
         db.collection("users")
             .whereEqualTo("role", "student")
             .get()
@@ -92,7 +92,7 @@ fun FindStudentScreen(navController: NavController) {
                 .background(Color(0xFFF5F7FA))
                 .padding(paddingValues)
         ) {
-            // Search Bar
+            
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -157,7 +157,7 @@ fun FindStudentScreen(navController: NavController) {
                         StudentCard(
                             student = student,
                             onClick = {
-                                // Start conversation with student
+                                
                                 if (currentUserId != null) {
                                     startConversation(db, currentUserId, student.id, navController)
                                 }
@@ -189,7 +189,7 @@ fun StudentCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
+            
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -251,7 +251,7 @@ fun startConversation(
     studentId: String,
     navController: NavController
 ) {
-    // Check if conversation already exists
+    
     db.collection("conversations")
         .whereArrayContains("participants", teacherId)
         .get()
@@ -262,12 +262,12 @@ fun startConversation(
             }
 
             if (existingConversation != null) {
-                // Navigate to existing conversation
+                
                 navController.navigate("private_chat/${studentId}") {
                     popUpTo("find_student") { inclusive = true }
                 }
             } else {
-                // Create new conversation
+                
                 val conversationData = hashMapOf(
                     "participants" to arrayListOf(teacherId, studentId),
                     "lastMessage" to "",

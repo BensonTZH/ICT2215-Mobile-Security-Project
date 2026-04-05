@@ -10,7 +10,7 @@ data class SupportTicket(
     val creatorRole: String = "",
     val subject: String = "",
     val description: String = "",
-    val status: String = "open", // open | resolved
+    val status: String = "open", 
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null,
     val resolvedBy: String = "",

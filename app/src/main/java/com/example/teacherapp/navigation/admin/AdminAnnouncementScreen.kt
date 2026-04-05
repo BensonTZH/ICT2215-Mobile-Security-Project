@@ -59,7 +59,7 @@ fun AdminAnnouncementScreen(navController: NavController) {
                     val authorId = document.getString("authorId") ?: ""
 
                     if (title.isNotBlank() && authorId.isNotBlank()) {
-                        // Get user info from the 'users' collection using teacherId
+                        
                         db.collection("users").document(authorId).get()
                             .addOnSuccessListener { userDoc ->
                                 val teacherName = userDoc.getString("name") ?: "Unknown"

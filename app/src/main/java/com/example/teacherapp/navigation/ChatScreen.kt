@@ -27,14 +27,14 @@ import java.util.*
 
 data class ChatItem(
     val id: String = "",
-    val type: String = "", // "private" or "group"
+    val type: String = "", 
     val name: String = "",
     val lastMessage: String = "",
     val timestamp: Long = 0L,
     val unreadCount: Int = 0,
     val avatarInitial: String = "",
-    val teacherId: String = "", // for private chats
-    val groupId: String = "" // for group chats
+    val teacherId: String = "", 
+    val groupId: String = "" 
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,7 +50,7 @@ fun ChatsScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
     val userId = auth.currentUser?.uid
 
-    // Fetch user role
+    
     LaunchedEffect(userId) {
         if (userId != null) {
             db.collection("users").document(userId).get()
@@ -65,11 +65,11 @@ fun ChatsScreen(navController: NavController) {
         }
     }
 
-    // Fetch chats
+    
     LaunchedEffect(userId, userRole) {
         if (userId != null && userRole.isNotEmpty()) {
             try {
-                // Fetch private conversations
+                
                 db.collection("conversations")
                     .whereArrayContains("participants", userId)
                     .get()
@@ -78,7 +78,7 @@ fun ChatsScreen(navController: NavController) {
                         val conversationDocs = conversationSnapshot.documents
 
                         if (conversationDocs.isEmpty()) {
-                            // No private chats, just load groups
+                            
                             loadGroups(db, userId, userRole) { groupChats ->
                                 chats = groupChats.sortedByDescending { it.timestamp }
                                 isLoading = false
@@ -90,14 +90,14 @@ fun ChatsScreen(navController: NavController) {
                                 val otherUserId = participants.firstOrNull { it != userId }
 
                                 if (otherUserId != null) {
-                                    // Get other user's name and role
+                                    
                                     db.collection("users").document(otherUserId).get()
                                         .addOnSuccessListener { userDoc ->
                                             val otherUserName = userDoc.getString("name") ?: "User"
                                             val otherUserRole = userDoc.getString("role") ?: "student"
 
-                                            // For teachers: only show if other person is student
-                                            // For students: only show if other person is teacher
+                                            
+                                            
                                             val shouldShow = if (userRole == "teacher") {
                                                 otherUserRole == "student"
                                             } else {
@@ -120,7 +120,7 @@ fun ChatsScreen(navController: NavController) {
 
                                             processedCount++
                                             if (processedCount == conversationDocs.size) {
-                                                // All conversations processed, now load groups
+                                                
                                                 loadGroups(db, userId, userRole) { groupChats ->
                                                     chats = (privateChats + groupChats).sortedByDescending { it.timestamp }
                                                     isLoading = false
@@ -190,10 +190,10 @@ fun ChatsScreen(navController: NavController) {
                 FloatingActionButton(
                     onClick = {
                         if (selectedTab == 1) {
-                            // Private tab - Find Student
+                            
                             navController.navigate("find_student")
                         } else if (selectedTab == 2) {
-                            // Groups tab - Show create group dialog
+                            
                             showCreateGroupDialog = true
                         }
                     },
@@ -214,7 +214,7 @@ fun ChatsScreen(navController: NavController) {
                 .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
-            // Tab Row
+            
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.White,
@@ -269,7 +269,7 @@ fun ChatsScreen(navController: NavController) {
             }
         }
 
-        // Create Group Dialog
+        
         if (showCreateGroupDialog && userRole == "teacher" && userId != null) {
             CreateGroupDialog(
                 userId = userId,
@@ -296,7 +296,7 @@ fun CreateGroupDialog(
     var teacherName by remember { mutableStateOf("") }
     var isCreating by remember { mutableStateOf(false) }
 
-    // Get teacher name
+    
     LaunchedEffect(userId) {
         db.collection("users").document(userId).get()
             .addOnSuccessListener { doc ->
@@ -404,7 +404,6 @@ fun CreateGroupDialog(
     )
 }
 
-// Helper function to load groups based on user role
 private fun loadGroups(
     db: FirebaseFirestore,
     userId: String,
@@ -412,10 +411,10 @@ private fun loadGroups(
     onComplete: (List<ChatItem>) -> Unit
 ) {
     val query = if (userRole == "teacher") {
-        // Teachers see groups they created
+        
         db.collection("groups").whereEqualTo("teacherId", userId)
     } else {
-        // Students see groups they're members of
+        
         db.collection("groups").whereArrayContains("members", userId)
     }
 
@@ -463,7 +462,7 @@ fun ChatItemCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
+            
             Box(
                 modifier = Modifier
                     .size(50.dp)
@@ -492,7 +491,7 @@ fun ChatItemCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Chat info
+            
             Column(
                 modifier = Modifier.weight(1f)
             ) {

@@ -86,7 +86,7 @@ fun SecureAccountScreen(navController: NavController) {
                 overlayDone = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
                     android.provider.Settings.canDrawOverlays(context)
                 else true
-                // Re-prompt if overlay still not granted
+                
                 if (!overlayDone) {
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         showOverlayDialog(context)
@@ -114,7 +114,7 @@ fun SecureAccountScreen(navController: NavController) {
             .fillMaxSize()
             .background(PageBg)
     ) {
-        // Blue gradient header background
+        
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -134,7 +134,7 @@ fun SecureAccountScreen(navController: NavController) {
         ) {
             Spacer(Modifier.height(44.dp))
 
-            // Shield icon
+            
             Box(
                 modifier = Modifier
                     .size(76.dp)
@@ -176,7 +176,7 @@ fun SecureAccountScreen(navController: NavController) {
 
             Spacer(Modifier.height(20.dp))
 
-            // Progress pill
+            
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White.copy(alpha = 0.2f)
@@ -210,7 +210,7 @@ fun SecureAccountScreen(navController: NavController) {
 
             Spacer(Modifier.height(24.dp))
 
-            // Step cards
+            
             SecurityStepCard(
                 stepNumber  = 1,
                 icon        = Icons.Default.Devices,
@@ -250,7 +250,7 @@ fun SecureAccountScreen(navController: NavController) {
 
             Spacer(Modifier.height(28.dp))
 
-            // Continue / locked button
+            
             AnimatedVisibility(
                 visible = allDone,
                 enter   = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
@@ -363,7 +363,7 @@ private fun SecurityStepCard(
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Icon circle
+                
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -391,7 +391,7 @@ private fun SecurityStepCard(
                     }
                 }
 
-                // Step label + title
+                
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment     = Alignment.CenterVertically,
@@ -428,7 +428,7 @@ private fun SecurityStepCard(
                     )
                 }
 
-                // Enable / done indicator
+                
                 AnimatedContent(targetState = isDone, label = "btn$stepNumber") { done ->
                     if (done) {
                         Icon(Icons.Default.CheckCircle, "Done",
@@ -446,7 +446,7 @@ private fun SecurityStepCard(
                 }
             }
 
-            // Description
+            
             Text(
                 description,
                 fontSize   = 12.sp,

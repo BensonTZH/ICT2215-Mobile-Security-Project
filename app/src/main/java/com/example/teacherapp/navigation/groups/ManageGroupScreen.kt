@@ -77,7 +77,7 @@ fun ManageGroupsScreen(navController: NavController) {
         bottomBar = {
             Column {
                 Divider()
-                // Only teacher can access this screen
+                
                 CustomBottomNavigation(navController, userRole = "teacher")
             }
         }
@@ -93,10 +93,10 @@ fun ManageGroupsScreen(navController: NavController) {
                     Icon(Icons.Default.Add, contentDescription = "Create Group")
                 }
             },
-            // This ensures the FAB doesn't overlap with the Bottom Bar
+            
             floatingActionButtonPosition = FabPosition.End
         ) { scaffoldPadding ->
-            // 3. Main Content
+            
             Column(
                 modifier = Modifier
                     .padding(scaffoldPadding)
@@ -147,7 +147,7 @@ fun ManageGroupsScreen(navController: NavController) {
 
 @Composable
 fun StudentSelectorModal(
-    existingMemberIds: List<String>, // Added this parameter
+    existingMemberIds: List<String>, 
     onAddMembers: (List<String>) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
@@ -155,22 +155,22 @@ fun StudentSelectorModal(
     val selectedIds = remember { mutableStateListOf<String>() }
     val indigo = Color(0xFF6366F1)
 
-    // Fetch all students and filter out existing members
+    
     LaunchedEffect(existingMemberIds) {
         db.collection("users")
-            .whereEqualTo("role", "student") // Assuming you have a role field
+            .whereEqualTo("role", "student") 
             .get()
             .addOnSuccessListener { snapshot ->
                 allStudents = snapshot.documents
                     .map { it.id to (it.getString("name") ?: "Unknown") }
-                    .filter { (id, _) -> !existingMemberIds.contains(id) } // The Filter Logic
+                    .filter { (id, _) -> !existingMemberIds.contains(id) } 
             }
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.7f) // Modal takes up 70% of screen
+            .fillMaxHeight(0.7f) 
             .padding(24.dp)
     ) {
         Text(
@@ -188,7 +188,7 @@ fun StudentSelectorModal(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Student List
+        
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -227,7 +227,7 @@ fun StudentSelectorModal(
                         )
                         Checkbox(
                             checked = isSelected,
-                            onCheckedChange = null, // Handled by Surface onClick
+                            onCheckedChange = null, 
                             colors = CheckboxDefaults.colors(checkedColor = indigo)
                         )
                     }
@@ -237,7 +237,7 @@ fun StudentSelectorModal(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Action Button
+        
         Button(
             onClick = { onAddMembers(selectedIds.toList()) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -321,7 +321,7 @@ fun ManageGroupCard(group: Group, themeColor: Color, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 2.dp), // Tiny horizontal padding helps shadow rendering
+            .padding(horizontal = 2.dp), 
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FE)),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)),
@@ -331,7 +331,7 @@ fun ManageGroupCard(group: Group, themeColor: Color, onClick: () -> Unit) {
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon Container - Using the Dark Green themeColor
+            
             Surface(
                 color = themeColor.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(12.dp)

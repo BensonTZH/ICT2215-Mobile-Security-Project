@@ -34,7 +34,7 @@ fun ThreadDetailScreen(navController: NavController, threadId: String) {
     var currentUserName by remember { mutableStateOf("User") }
 
     LaunchedEffect(threadId) {
-        //Fetch current User Name
+        
         val uid = auth.currentUser?.uid
         if (uid != null) {
             db.collection("users").document(uid).get().addOnSuccessListener { doc ->
@@ -94,7 +94,7 @@ fun ThreadDetailScreen(navController: NavController, threadId: String) {
         ) {
             item {
                 PostHeader(thread)
-                // Thicker visual break between post and comments
+                
                 HorizontalDivider(thickness = 8.dp, color = Color(0xFFF0F2F8))
             }
 
@@ -144,7 +144,7 @@ fun PostHeader(thread: DiscussionThread?) {
                 color = Color.Gray
             )
             Text(
-                text = " • 2h ago", // You can format actual timestamp here later
+                text = " • 2h ago", 
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Gray
             )
@@ -152,7 +152,7 @@ fun PostHeader(thread: DiscussionThread?) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Title
+        
         Text(
             text = thread?.title ?: "",
             style = MaterialTheme.typography.headlineSmall,
@@ -162,7 +162,7 @@ fun PostHeader(thread: DiscussionThread?) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Body Content
+        
         Text(
             text = thread?.content ?: "",
             style = MaterialTheme.typography.bodyLarge,

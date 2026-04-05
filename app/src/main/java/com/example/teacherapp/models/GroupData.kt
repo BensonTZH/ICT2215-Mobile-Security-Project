@@ -3,7 +3,7 @@ package com.example.teacherapp.models
 data class Group(
     val id: String = "",
     val name: String = "",
-    val level: String = "", // JC, Poly, etc.
+    val level: String = "", 
     val inviteCode: String = "",
     val members: List<String> = emptyList(),
     val teacherId: String = ""
@@ -22,12 +22,12 @@ data class DiscussionThread(
     val content: String = "",
     val creatorName: String = "",
     val teacherId: String = "",
-    val groupId: String = "" // <--- ADD THIS LINE
+    val groupId: String = "" 
 )
 
 data class Comment(
     val id: String = "",
-    val creatorName: String = "", // Use the same name here for consistency
+    val creatorName: String = "", 
     val text: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )

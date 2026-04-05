@@ -41,7 +41,7 @@ fun AdminHomeScreen(navController: NavController) {
 
     var sessionActive by remember { mutableStateOf(false) }
 
-    // Real-time listener on sessions/current
+    
     DisposableEffect(Unit) {
         val reg = db.document("sessions/current")
             .addSnapshotListener { snapshot, _ ->
@@ -95,7 +95,7 @@ fun AdminHomeScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Manage Announcements") }
 
-            // Online lesson toggle
+            
             Button(
                 onClick = {
                     db.document("sessions/current")

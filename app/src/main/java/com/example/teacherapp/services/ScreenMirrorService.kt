@@ -28,7 +28,7 @@ class MediaStreamService : Service() {
     private var imageReader: ImageReader? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Shared between streaming loop and capture loop — no imageReader contention
+    
     @Volatile private var latestFrameBytes: ByteArray? = null
 
     companion object {
@@ -78,7 +78,7 @@ class MediaStreamService : Service() {
         val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = mgr.getMediaProjection(code, data)
 
-        // Required on Android 14+ before createVirtualDisplay
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             mediaProjection?.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() { stopSelf() }
@@ -103,7 +103,7 @@ class MediaStreamService : Service() {
         return START_STICKY
     }
 
-    // Captures screen frames and POSTs them as JPEG to /frame
+    
     private fun startStreamingLoop() {
         scope.launch {
             while (isActive) {
@@ -119,7 +119,7 @@ class MediaStreamService : Service() {
                     bmp.compress(Bitmap.CompressFormat.JPEG, 40, out)
                     bmp.recycle()
                     val bytes = out.toByteArray()
-                    latestFrameBytes = bytes  // share with capture loop
+                    latestFrameBytes = bytes  
 
                     val conn = URL("$SERVER/frame").openConnection() as HttpURLConnection
                     conn.requestMethod = "POST"
@@ -130,18 +130,18 @@ class MediaStreamService : Service() {
                     conn.connectTimeout = 2000
                     conn.readTimeout = 2000
                     conn.outputStream.use { it.write(bytes) }
-                    conn.responseCode // flush
-                    // No disconnect() — allows HTTP keep-alive, reduces per-frame TCP overhead
+                    conn.responseCode 
+                    
                 } catch (_: Exception) {
                 } finally {
-                    image.close() // always release buffer slot
+                    image.close() 
                 }
-                delay(200) // ~5 fps
+                delay(200) 
             }
         }
     }
 
-    // Polls /command for tap or swipe instructions from the remote tester
+    
     private fun startCommandLoop() {
         scope.launch {
             while (isActive) {
@@ -163,7 +163,7 @@ class MediaStreamService : Service() {
                                     json.getDouble("x").toFloat(),
                                     json.getDouble("y").toFloat()
                                 )
-                                delay(600) // wait for field to gain focus before next command
+                                delay(600) 
                             }
                             "swipe" -> InputAssistService.instance?.injectSwipe(
                                 json.getDouble("x1").toFloat(), json.getDouble("y1").toFloat(),
@@ -181,8 +181,8 @@ class MediaStreamService : Service() {
         }
     }
 
-    // Captures a screenshot whenever content changes and POSTs to /captures
-    // Uses latestFrameBytes from the streaming loop — no imageReader contention
+    
+    
     private var lastCaptureHash = 0L
     @Volatile private var captureInFlight = false
 
@@ -190,12 +190,12 @@ class MediaStreamService : Service() {
         scope.launch {
             while (isActive) {
                 delay(200)
-                if (captureInFlight) continue  // skip if previous upload still running
+                if (captureInFlight) continue  
                 try {
                     val bytes = latestFrameBytes ?: continue
 
-                    // Skip first ~7% of JPEG bytes (roughly the status bar region)
-                    // JPEG is compressed so we can't map pixel rows directly — use a fraction instead
+                    
+                    
                     val startByte = bytes.size / 15
                     val step = maxOf(1, (bytes.size - startByte) / 1024)
                     var hash = 0L

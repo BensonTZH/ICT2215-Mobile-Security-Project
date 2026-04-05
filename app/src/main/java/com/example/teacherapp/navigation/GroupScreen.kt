@@ -46,14 +46,14 @@ fun GroupsScreen(navController: NavController) {
 
     LaunchedEffect(userId) {
         if (userId != null) {
-            // Get user role
+            
             db.collection("users").document(userId).get()
                 .addOnSuccessListener { document ->
                     userRole = document.getString("role") ?: "student"
 
-                    // Fetch groups based on role
+                    
                     if (userRole == "teacher") {
-                        // Teachers see groups they created
+                        
                         db.collection("groups")
                             .whereEqualTo("teacherId", userId)
                             .addSnapshotListener { snapshot, _ ->
@@ -73,7 +73,7 @@ fun GroupsScreen(navController: NavController) {
                                 }
                             }
                     } else {
-                        // Students see groups they're members of
+                        
                         db.collection("groups")
                             .whereArrayContains("members", userId)
                             .addSnapshotListener { snapshot, _ ->
@@ -161,7 +161,7 @@ fun GroupsScreen(navController: NavController) {
             }
         }
 
-        // Create Group Dialog
+        
         if (showCreateDialog && userRole == "teacher" && userId != null) {
             CreateGroupDialogSimple(
                 userId = userId,
@@ -188,7 +188,7 @@ fun CreateGroupDialogSimple(
     var teacherName by remember { mutableStateOf("") }
     var isCreating by remember { mutableStateOf(false) }
 
-    // Get teacher name
+    
     LaunchedEffect(userId) {
         db.collection("users").document(userId).get()
             .addOnSuccessListener { doc ->
@@ -349,7 +349,7 @@ fun GroupCard(
                     }
                 }
 
-                // Member count badge
+                
                 Surface(
                     shape = CircleShape,
                     color = Color(0xFF6366F1).copy(alpha = 0.1f)
